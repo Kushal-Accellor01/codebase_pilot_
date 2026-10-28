@@ -177,8 +177,11 @@ def remove_worktree(clone: str | Path, dest: str | Path) -> None:
 
 def diff(worktree: str | Path) -> str:
     """The patch git sees in the worktree (the LLM never writes diffs)."""
-    result = run(["git", "-C", str(worktree), "diff", "--no-color", "HEAD"], cwd=worktree, timeout_s=GIT_TIMEOUT_S)
-    return result.output_tail if result.passed else ""
+    result = run(
+        ["git", "-C", str(worktree), "diff", "--no-color", "HEAD", "--", ".", ":(exclude)package-lock.json"],
+        cwd=worktree, timeout_s=GIT_TIMEOUT_S,
+    )
+    return result.output if result.passed else ""
 
 
 # --- npm ------------------------------------------------------------------------------------------------------------

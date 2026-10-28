@@ -76,7 +76,10 @@ class GitHubClient:
         if reset is not None and reset.isdigit():
             self._reset = float(reset)
 
-    async def request(self, path: str, *, raw: bool = False, params: dict | None = None) -> httpx.Response:
+    async def request(
+        self, path: str, *, raw: bool = False, params: dict | None = None, method: str = "GET",
+        json: dict | list | None = None,
+    ) -> httpx.Response:
         headers = {
             "Accept": "application/vnd.github.raw" if raw else "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
@@ -85,7 +88,9 @@ class GitHubClient:
             headers["Authorization"] = f"Bearer {self._token}"
         for attempt in range(MAX_SECONDARY_RETRIES + 1):
             await self._wait_for_budget()
-            resp = await self._http.get("github", f"{self._base}/{path.lstrip('/')}", headers=headers, params=params)
+            resp = await self._http.request(
+                "github", method, f"{self._base}/{path.lstrip('/')}", headers=headers, params=params, json=json
+            )
             self._record(resp)
             if resp.status_code not in (403, 429):
                 return resp
@@ -115,3 +120,15 @@ class GitHubClient:
             return None
         resp.raise_for_status()
         return resp.text
+
+    async def request_json(self, method: str, path: str, json: dict | list | None = None) -> tuple[int, object]:
+        """(status, parsed body or None) for write calls. 4xx are returned, not raised: the caller knows which
+        ones are fine (422 'already exists', 404 'no such file yet'). Rate limits still raise."""
+        resp = await self.request(path, method=method, json=json)
+        try:
+            body = resp.json() if resp.content else None
+        except ValueError:
+            body = None
+        if resp.status_code >= 500:
+            resp.raise_for_status()
+        return resp.status_code, body

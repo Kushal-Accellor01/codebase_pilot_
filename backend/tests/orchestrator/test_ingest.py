@@ -7,7 +7,7 @@ from app.updates import store
 
 def test_repo_name():
     assert repo_name("https://github.com/acme/shop.git") == "shop"
-    assert repo_name("C:\a\b\shop") == "shop"
+    assert repo_name(r"C:\a\b\shop") == "shop"
     assert repo_name("/x/y/shop/") == "shop"
 
 

@@ -1,0 +1,36 @@
+npm notice run pilot-sandbox-shop@1.0.0 test
+npm notice run mocha
+
+
+  admin
+Wed, 28 Oct 2026 08:35:04 GMT express deprecated app.del: Use app.delete instead at routes\admin.js:9:7
+Wed, 28 Oct 2026 08:35:04 GMT express deprecated res.send(status): Use res.sendStatus(status) instead at routes\admin.js:5:7
+    ✔ clears the cache with 204
+
+  app
+Wed, 28 Oct 2026 08:35:04 GMT express deprecated req.param(name): Use req.params, req.body, or req.query instead at routes\orders.js:8:25
+    ✔ boots and answers the order route
+
+  fallback
+    ✔ answers 404 json for unknown routes
+
+  i18n
+Wed, 28 Oct 2026 08:35:04 GMT express deprecated req.acceptsLanguage: Use acceptsLanguages instead at routes\i18n.js:3:22
+    ✔ greets in English when accepted
+
+  invoices
+Wed, 28 Oct 2026 08:35:04 GMT express deprecated res.sendfile: Use res.sendFile instead at routes\invoices.js:11:7
+    ✔ serves the invoice pdf
+
+  notify
+    ✔ builds name=value pairs
+
+  orders
+    ✔ returns an order by id
+    ✔ returns 404 for an unknown order
+Wed, 28 Oct 2026 08:35:04 GMT express deprecated res.json(obj, status): Use res.status(status).json(obj) instead at routes\orders.js:18:14
+    ✔ creates an order and answers 201
+
+
+  9 passing (90ms)
+

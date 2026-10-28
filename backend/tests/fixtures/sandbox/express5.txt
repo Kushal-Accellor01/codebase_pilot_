@@ -1,0 +1,277 @@
+npm notice run pilot-sandbox-shop@1.0.0 test
+npm notice run mocha
+
+
+  admin
+    1) clears the cache with 204
+
+  app
+    2) boots and answers the order route
+
+  fallback
+    3) answers 404 json for unknown routes
+
+  i18n
+TypeError: req.acceptsLanguage is not a function
+    at C:\Projects\codebase_pilot_\pilot-sandbox-shop\routes\i18n.js:3:22
+    at Layer.handleRequest (C:\Projects\codebase_pilot_\pilot-sandbox-shop\node_modules\router\lib\layer.js:152:17)
+    at next (C:\Projects\codebase_pilot_\pilot-sandbox-shop\node_modules\router\lib\route.js:157:13)
+    at Route.dispatch (C:\Projects\codebase_pilot_\pilot-sandbox-shop\node_modules\router\lib\route.js:117:3)
+    at handle (C:\Projects\codebase_pilot_\pilot-sandbox-shop\node_modules\router\index.js:435:11)
+    at Layer.handleRequest (C:\Projects\codebase_pilot_\pilot-sandbox-shop\node_modules\router\lib\layer.js:152:17)
+    at C:\Projects\codebase_pilot_\pilot-sandbox-shop\node_modules\router\index.js:295:15
+    at processParams (C:\Projects\codebase_pilot_\pilot-sandbox-shop\node_modules\router\index.js:582:12)
+    at next (C:\Projects\codebase_pilot_\pilot-sandbox-shop\node_modules\router\index.js:291:5)
+    at read (C:\Projects\codebase_pilot_\pilot-sandbox-shop\node_modules\body-parser\lib\read.js:59:5)
+    at jsonParser (C:\Projects\codebase_pilot_\pilot-sandbox-shop\node_modules\body-parser\lib\types\json.js:60:5)
+    at Layer.handleRequest (C:\Projects\codebase_pilot_\pilot-sandbox-shop\node_modules\router\lib\layer.js:152:17)
+    at trimPrefix (C:\Projects\codebase_pilot_\pilot-sandbox-shop\node_modules\router\index.js:342:13)
+    at C:\Projects\codebase_pilot_\pilot-sandbox-shop\node_modules\router\index.js:297:9
+    at processParams (C:\Projects\codebase_pilot_\pilot-sandbox-shop\node_modules\router\index.js:582:12)
+    at next (C:\Projects\codebase_pilot_\pilot-sandbox-shop\node_modules\router\index.js:291:5)
+    at router.handle (C:\Projects\codebase_pilot_\pilot-sandbox-shop\node_modules\router\index.js:186:3)
+    at app.handle (C:\Projects\codebase_pilot_\pilot-sandbox-shop\node_modules\express\lib\application.js:177:15)
+    at Server.app (C:\Projects\codebase_pilot_\pilot-sandbox-shop\node_modules\express\lib\express.js:38:9)
+    at Server.emit (node:events:509:28)
+    at parserOnIncoming (node:_http_server:1282:12)
+    at HTTPParser.parserOnHeadersComplete (node:_http_common:125:17)
+    4) greets in English when accepted
+
+  invoices
+TypeError: res.sendfile is not a function
+    at C:\Projects\codebase_pilot_\pilot-sandbox-shop\routes\invoices.js:11:7
+    at Layer.handleRequest (C:\Projects\codebase_pilot_\pilot-sandbox-shop\node_modules\router\lib\layer.js:152:17)
+    at next (C:\Projects\codebase_pilot_\pilot-sandbox-shop\node_modules\router\lib\route.js:157:13)
+    at Route.dispatch (C:\Projects\codebase_pilot_\pilot-sandbox-shop\node_modules\router\lib\route.js:117:3)
+    at handle (C:\Projects\codebase_pilot_\pilot-sandbox-shop\node_modules\router\index.js:435:11)
+    at Layer.handleRequest (C:\Projects\codebase_pilot_\pilot-sandbox-shop\node_modules\router\lib\layer.js:152:17)
+    at C:\Projects\codebase_pilot_\pilot-sandbox-shop\node_modules\router\index.js:295:15
+    at param (C:\Projects\codebase_pilot_\pilot-sandbox-shop\node_modules\router\index.js:600:14)
+    at param (C:\Projects\codebase_pilot_\pilot-sandbox-shop\node_modules\router\index.js:610:14)
+    at processParams (C:\Projects\codebase_pilot_\pilot-sandbox-shop\node_modules\router\index.js:664:3)
+    at next (C:\Projects\codebase_pilot_\pilot-sandbox-shop\node_modules\router\index.js:291:5)
+    at router.handle (C:\Projects\codebase_pilot_\pilot-sandbox-shop\node_modules\router\index.js:186:3)
+    at router (C:\Projects\codebase_pilot_\pilot-sandbox-shop\node_modules\router\index.js:60:12)
+    at Layer.handleRequest (C:\Projects\codebase_pilot_\pilot-sandbox-shop\node_modules\router\lib\layer.js:152:17)
+    at trimPrefix (C:\Projects\codebase_pilot_\pilot-sandbox-shop\node_modules\router\index.js:342:13)
+    at C:\Projects\codebase_pilot_\pilot-sandbox-shop\node_modules\router\index.js:297:9
+    at processParams (C:\Projects\codebase_pilot_\pilot-sandbox-shop\node_modules\router\index.js:582:12)
+    at next (C:\Projects\codebase_pilot_\pilot-sandbox-shop\node_modules\router\index.js:291:5)
+    at read (C:\Projects\codebase_pilot_\pilot-sandbox-shop\node_modules\body-parser\lib\read.js:59:5)
+    at jsonParser (C:\Projects\codebase_pilot_\pilot-sandbox-shop\node_modules\body-parser\lib\types\json.js:60:5)
+    at Layer.handleRequest (C:\Projects\codebase_pilot_\pilot-sandbox-shop\node_modules\router\lib\layer.js:152:17)
+    at trimPrefix (C:\Projects\codebase_pilot_\pilot-sandbox-shop\node_modules\router\index.js:342:13)
+    at C:\Projects\codebase_pilot_\pilot-sandbox-shop\node_modules\router\index.js:297:9
+    at processParams (C:\Projects\codebase_pilot_\pilot-sandbox-shop\node_modules\router\index.js:582:12)
+    at next (C:\Projects\codebase_pilot_\pilot-sandbox-shop\node_modules\router\index.js:291:5)
+    at router.handle (C:\Projects\codebase_pilot_\pilot-sandbox-shop\node_modules\router\index.js:186:3)
+    at app.handle (C:\Projects\codebase_pilot_\pilot-sandbox-shop\node_modules\express\lib\application.js:177:15)
+    at Server.app (C:\Projects\codebase_pilot_\pilot-sandbox-shop\node_modules\express\lib\express.js:38:9)
+    at Server.emit (node:events:509:28)
+    at parserOnIncoming (node:_http_server:1282:12)
+    at HTTPParser.parserOnHeadersComplete (node:_http_common:125:17)
+    5) serves the invoice pdf
+
+  notify
+    ✔ builds name=value pairs
+
+  orders
+TypeError: req.param is not a function
+    at C:\Projects\codebase_pilot_\pilot-sandbox-shop\routes\orders.js:8:25
+    at Layer.handleRequest (C:\Projects\codebase_pilot_\pilot-sandbox-shop\node_modules\router\lib\layer.js:152:17)
+    at next (C:\Projects\codebase_pilot_\pilot-sandbox-shop\node_modules\router\lib\route.js:157:13)
+    at Route.dispatch (C:\Projects\codebase_pilot_\pilot-sandbox-shop\node_modules\router\lib\route.js:117:3)
+    at handle (C:\Projects\codebase_pilot_\pilot-sandbox-shop\node_modules\router\index.js:435:11)
+    at Layer.handleRequest (C:\Projects\codebase_pilot_\pilot-sandbox-shop\node_modules\router\lib\layer.js:152:17)
+    at C:\Projects\codebase_pilot_\pilot-sandbox-shop\node_modules\router\index.js:295:15
+    at param (C:\Projects\codebase_pilot_\pilot-sandbox-shop\node_modules\router\index.js:600:14)
+    at param (C:\Projects\codebase_pilot_\pilot-sandbox-shop\node_modules\router\index.js:610:14)
+    at processParams (C:\Projects\codebase_pilot_\pilot-sandbox-shop\node_modules\router\index.js:664:3)
+    at next (C:\Projects\codebase_pilot_\pilot-sandbox-shop\node_modules\router\index.js:291:5)
+    at router.handle (C:\Projects\codebase_pilot_\pilot-sandbox-shop\node_modules\router\index.js:186:3)
+    at router (C:\Projects\codebase_pilot_\pilot-sandbox-shop\node_modules\router\index.js:60:12)
+    at Layer.handleRequest (C:\Projects\codebase_pilot_\pilot-sandbox-shop\node_modules\router\lib\layer.js:152:17)
+    at trimPrefix (C:\Projects\codebase_pilot_\pilot-sandbox-shop\node_modules\router\index.js:342:13)
+    at C:\Projects\codebase_pilot_\pilot-sandbox-shop\node_modules\router\index.js:297:9
+    at processParams (C:\Projects\codebase_pilot_\pilot-sandbox-shop\node_modules\router\index.js:582:12)
+    at next (C:\Projects\codebase_pilot_\pilot-sandbox-shop\node_modules\router\index.js:291:5)
+    at read (C:\Projects\codebase_pilot_\pilot-sandbox-shop\node_modules\body-parser\lib\read.js:59:5)
+    at jsonParser (C:\Projects\codebase_pilot_\pilot-sandbox-shop\node_modules\body-parser\lib\types\json.js:60:5)
+    at Layer.handleRequest (C:\Projects\codebase_pilot_\pilot-sandbox-shop\node_modules\router\lib\layer.js:152:17)
+    at trimPrefix (C:\Projects\codebase_pilot_\pilot-sandbox-shop\node_modules\router\index.js:342:13)
+    at C:\Projects\codebase_pilot_\pilot-sandbox-shop\node_modules\router\index.js:297:9
+    at processParams (C:\Projects\codebase_pilot_\pilot-sandbox-shop\node_modules\router\index.js:582:12)
+    at next (C:\Projects\codebase_pilot_\pilot-sandbox-shop\node_modules\router\index.js:291:5)
+    at router.handle (C:\Projects\codebase_pilot_\pilot-sandbox-shop\node_modules\router\index.js:186:3)
+    at app.handle (C:\Projects\codebase_pilot_\pilot-sandbox-shop\node_modules\express\lib\application.js:177:15)
+    at Server.app (C:\Projects\codebase_pilot_\pilot-sandbox-shop\node_modules\express\lib\express.js:38:9)
+    at Server.emit (node:events:509:28)
+    at parserOnIncoming (node:_http_server:1282:12)
+    at HTTPParser.parserOnHeadersComplete (node:_http_common:125:17)
+    6) returns an order by id
+TypeError: req.param is not a function
+    at C:\Projects\codebase_pilot_\pilot-sandbox-shop\routes\orders.js:8:25
+    at Layer.handleRequest (C:\Projects\codebase_pilot_\pilot-sandbox-shop\node_modules\router\lib\layer.js:152:17)
+    at next (C:\Projects\codebase_pilot_\pilot-sandbox-shop\node_modules\router\lib\route.js:157:13)
+    at Route.dispatch (C:\Projects\codebase_pilot_\pilot-sandbox-shop\node_modules\router\lib\route.js:117:3)
+    at handle (C:\Projects\codebase_pilot_\pilot-sandbox-shop\node_modules\router\index.js:435:11)
+    at Layer.handleRequest (C:\Projects\codebase_pilot_\pilot-sandbox-shop\node_modules\router\lib\layer.js:152:17)
+    at C:\Projects\codebase_pilot_\pilot-sandbox-shop\node_modules\router\index.js:295:15
+    at param (C:\Projects\codebase_pilot_\pilot-sandbox-shop\node_modules\router\index.js:600:14)
+    at param (C:\Projects\codebase_pilot_\pilot-sandbox-shop\node_modules\router\index.js:610:14)
+    at processParams (C:\Projects\codebase_pilot_\pilot-sandbox-shop\node_modules\router\index.js:664:3)
+    at next (C:\Projects\codebase_pilot_\pilot-sandbox-shop\node_modules\router\index.js:291:5)
+    at router.handle (C:\Projects\codebase_pilot_\pilot-sandbox-shop\node_modules\router\index.js:186:3)
+    at router (C:\Projects\codebase_pilot_\pilot-sandbox-shop\node_modules\router\index.js:60:12)
+    at Layer.handleRequest (C:\Projects\codebase_pilot_\pilot-sandbox-shop\node_modules\router\lib\layer.js:152:17)
+    at trimPrefix (C:\Projects\codebase_pilot_\pilot-sandbox-shop\node_modules\router\index.js:342:13)
+    at C:\Projects\codebase_pilot_\pilot-sandbox-shop\node_modules\router\index.js:297:9
+    at processParams (C:\Projects\codebase_pilot_\pilot-sandbox-shop\node_modules\router\index.js:582:12)
+    at next (C:\Projects\codebase_pilot_\pilot-sandbox-shop\node_modules\router\index.js:291:5)
+    at read (C:\Projects\codebase_pilot_\pilot-sandbox-shop\node_modules\body-parser\lib\read.js:59:5)
+    at jsonParser (C:\Projects\codebase_pilot_\pilot-sandbox-shop\node_modules\body-parser\lib\types\json.js:60:5)
+    at Layer.handleRequest (C:\Projects\codebase_pilot_\pilot-sandbox-shop\node_modules\router\lib\layer.js:152:17)
+    at trimPrefix (C:\Projects\codebase_pilot_\pilot-sandbox-shop\node_modules\router\index.js:342:13)
+    at C:\Projects\codebase_pilot_\pilot-sandbox-shop\node_modules\router\index.js:297:9
+    at processParams (C:\Projects\codebase_pilot_\pilot-sandbox-shop\node_modules\router\index.js:582:12)
+    at next (C:\Projects\codebase_pilot_\pilot-sandbox-shop\node_modules\router\index.js:291:5)
+    at router.handle (C:\Projects\codebase_pilot_\pilot-sandbox-shop\node_modules\router\index.js:186:3)
+    at app.handle (C:\Projects\codebase_pilot_\pilot-sandbox-shop\node_modules\express\lib\application.js:177:15)
+    at Server.app (C:\Projects\codebase_pilot_\pilot-sandbox-shop\node_modules\express\lib\express.js:38:9)
+    at Server.emit (node:events:509:28)
+    at parserOnIncoming (node:_http_server:1282:12)
+    at HTTPParser.parserOnHeadersComplete (node:_http_common:125:17)
+    7) returns 404 for an unknown order
+    8) creates an order and answers 201
+
+
+  1 passing (71ms)
+  8 failing
+
+  1) admin
+       clears the cache with 204:
+     TypeError: app.del is not a function
+      at mountAdmin (routes\admin.js:9:7)
+      at C:\Projects\codebase_pilot_\pilot-sandbox-shop\test\helpers.js:8:29
+      at Array.forEach (<anonymous>)
+      at makeApp (test\helpers.js:8:10)
+      at Context.<anonymous> (test\admin.test.js:8:17)
+      at process.processImmediate (node:internal/timers:534:21)
+
+  2) app
+       boots and answers the order route:
+     TypeError: app.del is not a function
+      at mountAdmin (routes\admin.js:9:7)
+      at Object.<anonymous> (app.js:13:1)
+      at Module._compile (node:internal/modules/cjs/loader:1872:14)
+      at Object..js (node:internal/modules/cjs/loader:2003:10)
+      at Module.load (node:internal/modules/cjs/loader:1594:32)
+      at Module._load (node:internal/modules/cjs/loader:1396:12)
+      at wrapModuleLoad (node:internal/modules/cjs/loader:255:19)
+      at Module.require (node:internal/modules/cjs/loader:1617:12)
+      at require (node:internal/modules/helpers:153:16)
+      at Context.<anonymous> (test\app.test.js:5:17)
+      at process.processImmediate (node:internal/timers:534:21)
+
+  3) fallback
+       answers 404 json for unknown routes:
+     TypeError: Missing parameter name at index 1: *; visit https://git.new/pathToRegexpError for info
+      at consumeUntil (node_modules\path-to-regexp\dist\index.js:108:27)
+      at parse (node_modules\path-to-regexp\dist\index.js:140:26)
+      at process (node_modules\path-to-regexp\dist\index.js:263:56)
+      at pathToRegexp (node_modules\path-to-regexp\dist\index.js:274:5)
+      at Object.match (node_modules\path-to-regexp\dist\index.js:225:30)
+      at matcher (node_modules\router\lib\layer.js:86:23)
+      at new Layer (node_modules\router\lib\layer.js:93:62)
+      at router.route (node_modules\router\index.js:428:17)
+      at app.route (node_modules\express\lib\application.js:257:22)
+      at app.<computed> [as get] (node_modules\express\lib\application.js:478:22)
+      at mountFallback (routes\fallback.js:2:7)
+      at C:\Projects\codebase_pilot_\pilot-sandbox-shop\test\helpers.js:8:29
+      at Array.forEach (<anonymous>)
+      at makeApp (test\helpers.js:8:10)
+      at Context.<anonymous> (test\fallback.test.js:7:17)
+      at process.processImmediate (node:internal/timers:534:21)
+
+  4) i18n
+       greets in English when accepted:
+     Error: expected 200 "OK", got 500 "Internal Server Error"
+      at Context.<anonymous> (test\i18n.test.js:9:82)
+      at process.processImmediate (node:internal/timers:534:21)
+  ----
+      at Test._assertStatus (node_modules\supertest\lib\test.js:252:14)
+      at C:\Projects\codebase_pilot_\pilot-sandbox-shop\node_modules\supertest\lib\test.js:308:13
+      at Test._assertFunction (node_modules\supertest\lib\test.js:285:13)
+      at Test.assert (node_modules\supertest\lib\test.js:164:23)
+      at Server.localAssert (node_modules\supertest\lib\test.js:120:14)
+      at Object.onceWrapper (node:events:630:28)
+      at Server.emit (node:events:509:28)
+      at emitCloseNT (node:net:2661:8)
+      at process.processTicksAndRejections (node:internal/process/task_queues:89:21)
+
+  5) invoices
+       serves the invoice pdf:
+     Error: expected 200 "OK", got 500 "Internal Server Error"
+      at Context.<anonymous> (test\invoices.test.js:9:59)
+      at process.processImmediate (node:internal/timers:534:21)
+  ----
+      at Test._assertStatus (node_modules\supertest\lib\test.js:252:14)
+      at C:\Projects\codebase_pilot_\pilot-sandbox-shop\node_modules\supertest\lib\test.js:308:13
+      at Test._assertFunction (node_modules\supertest\lib\test.js:285:13)
+      at Test.assert (node_modules\supertest\lib\test.js:164:23)
+      at Server.localAssert (node_modules\supertest\lib\test.js:120:14)
+      at Object.onceWrapper (node:events:630:28)
+      at Server.emit (node:events:509:28)
+      at emitCloseNT (node:net:2661:8)
+      at process.processTicksAndRejections (node:internal/process/task_queues:89:21)
+
+  6) orders
+       returns an order by id:
+     Error: expected 200 "OK", got 500 "Internal Server Error"
+      at Context.<anonymous> (test\orders.test.js:10:57)
+      at process.processImmediate (node:internal/timers:534:21)
+  ----
+      at Test._assertStatus (node_modules\supertest\lib\test.js:252:14)
+      at C:\Projects\codebase_pilot_\pilot-sandbox-shop\node_modules\supertest\lib\test.js:308:13
+      at Test._assertFunction (node_modules\supertest\lib\test.js:285:13)
+      at Test.assert (node_modules\supertest\lib\test.js:164:23)
+      at Server.localAssert (node_modules\supertest\lib\test.js:120:14)
+      at Object.onceWrapper (node:events:630:28)
+      at Server.emit (node:events:509:28)
+      at emitCloseNT (node:net:2661:8)
+      at process.processTicksAndRejections (node:internal/process/task_queues:89:21)
+
+  7) orders
+       returns 404 for an unknown order:
+     Error: expected 404 "Not Found", got 500 "Internal Server Error"
+      at Context.<anonymous> (test\orders.test.js:15:46)
+      at process.processImmediate (node:internal/timers:534:21)
+  ----
+      at Test._assertStatus (node_modules\supertest\lib\test.js:252:14)
+      at C:\Projects\codebase_pilot_\pilot-sandbox-shop\node_modules\supertest\lib\test.js:308:13
+      at Test._assertFunction (node_modules\supertest\lib\test.js:285:13)
+      at Test.assert (node_modules\supertest\lib\test.js:164:23)
+      at Server.localAssert (node_modules\supertest\lib\test.js:120:14)
+      at Object.onceWrapper (node:events:630:28)
+      at Server.emit (node:events:509:28)
+      at emitCloseNT (node:net:2661:8)
+      at process.processTicksAndRejections (node:internal/process/task_queues:89:21)
+
+  8) orders
+       creates an order and answers 201:
+     Error: expected 201 "Created", got 200 "OK"
+      at Context.<anonymous> (test\orders.test.js:19:86)
+      at process.processImmediate (node:internal/timers:534:21)
+  ----
+      at Test._assertStatus (node_modules\supertest\lib\test.js:252:14)
+      at C:\Projects\codebase_pilot_\pilot-sandbox-shop\node_modules\supertest\lib\test.js:308:13
+      at Test._assertFunction (node_modules\supertest\lib\test.js:285:13)
+      at Test.assert (node_modules\supertest\lib\test.js:164:23)
+      at Server.localAssert (node_modules\supertest\lib\test.js:120:14)
+      at Object.onceWrapper (node:events:630:28)
+      at Server.emit (node:events:509:28)
+      at emitCloseNT (node:net:2661:8)
+      at process.processTicksAndRejections (node:internal/process/task_queues:89:21)
+
+
+

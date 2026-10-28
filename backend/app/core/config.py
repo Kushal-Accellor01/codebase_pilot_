@@ -35,6 +35,10 @@ class Settings(BaseSettings):
     azure_log_analytics_workspace_id: str | None = None
     log_format: str = ""
     reports_dir: str = "reports"
+    checkpoint_db: str = "checkpoints.db"
+    pilot_git_author: str = "Codebase Pilot <pilot@localhost>"
+    pilot_embedded_worker: bool = False
+    pilot_demo_user: str = "demo"
 
     @field_validator("*", mode="before")
     @classmethod

@@ -17,7 +17,7 @@ import time
 from dataclasses import dataclass
 from pathlib import Path
 
-from app.core.config import get_settings
+from app.core.config import DEFAULT_NPM_REGISTRY, get_settings
 
 logger = logging.getLogger(__name__)
 
@@ -175,13 +175,60 @@ def remove_worktree(clone: str | Path, dest: str | Path) -> None:
     git(clone, "worktree", "prune")
 
 
+def reset_worktree(worktree: str | Path) -> None:
+    """Undo every edit (tracked and untracked) but keep node_modules and .npmrc, so a retry starts from the
+    scanned commit and does not build on a failed attempt."""
+    git(worktree, "checkout", "--", ".")
+    git(worktree, "clean", "-fdq", "-e", "node_modules", "-e", ".npmrc")
+
+
 def diff(worktree: str | Path) -> str:
     """The patch git sees in the worktree (the LLM never writes diffs)."""
     result = run(
-        ["git", "-C", str(worktree), "diff", "--no-color", "HEAD", "--", ".", ":(exclude)package-lock.json"],
+        ["git", "-C", str(worktree), "diff", "--no-color", "HEAD", "--", ".", ":(exclude)package-lock.json",
+         ":(exclude).npmrc"],
         cwd=worktree, timeout_s=GIT_TIMEOUT_S,
     )
     return result.output if result.passed else ""
+
+
+# --- registry passthrough ----------------------------------------------------------------------------------------
+
+
+def write_npmrc(worktree: str | Path) -> bool:
+    """Point npm at NPM_REGISTRY_URL (Artifactory / Azure Artifacts) inside the worktree.
+
+    Nothing is written for the default public registry. The token is never put in the file: it is referenced
+    as ${NPM_TOKEN} and passed through the environment of install commands only.
+    """
+    from urllib.parse import urlparse
+
+    settings = get_settings()
+    url = (settings.npm_registry_url or "").rstrip("/")
+    if not url or url == DEFAULT_NPM_REGISTRY:
+        return False
+    lines = [f"registry={url}/"]
+    if settings.npm_registry_token:
+        parsed = urlparse(url)
+        lines.append(f"//{parsed.netloc}{parsed.path.rstrip('/')}/:_authToken=${{NPM_TOKEN}}")
+    with (Path(worktree) / ".npmrc").open("w", encoding="utf-8", newline="\n") as handle:
+        handle.write("\n".join(lines) + "\n")
+    exclude = git(worktree, "rev-parse", "--git-path", "info/exclude")
+    if exclude.passed:
+        target = Path(exclude.output.strip())
+        target = target if target.is_absolute() else Path(worktree) / target
+        target.parent.mkdir(parents=True, exist_ok=True)
+        existing = target.read_text(encoding="utf-8").splitlines() if target.exists() else []
+        if ".npmrc" not in existing:
+            # LF only: git would read a trailing CR as part of the pattern.
+            with target.open("w", encoding="utf-8", newline="\n") as handle:
+                handle.write("\n".join([*existing, ".npmrc"]) + "\n")
+    return True
+
+
+def _install_env() -> dict[str, str]:
+    token = get_settings().npm_registry_token
+    return {"NPM_TOKEN": token} if token else {}
 
 
 # --- npm ------------------------------------------------------------------------------------------------------------
@@ -192,7 +239,7 @@ def npm_ci(worktree: str | Path, repo: str | None) -> CommandResult:
     assert_exec_allowed(repo)
     has_lock = (Path(worktree) / "package-lock.json").exists()
     cmd = ["npm", "ci" if has_lock else "install", "--ignore-scripts", "--no-audit", "--no-fund"]
-    return run(cmd, worktree, timeout_s=INSTALL_TIMEOUT_S)
+    return run(cmd, worktree, timeout_s=INSTALL_TIMEOUT_S, env_extra=_install_env())
 
 
 def npm_install_exact(worktree: str | Path, repo: str | None, package: str, version: str) -> CommandResult:
@@ -202,12 +249,25 @@ def npm_install_exact(worktree: str | Path, repo: str | None, package: str, vers
     if not re.fullmatch(r"(@[a-z0-9~][a-z0-9._~-]*/)?[a-z0-9~][a-z0-9._~-]*@[0-9A-Za-z.+-]+", spec):
         raise ValueError(f"refusing to install an unexpected package spec: {spec!r}")
     return run(["npm", "install", spec, "--save-exact", "--ignore-scripts", "--no-audit", "--no-fund"],
-               worktree, timeout_s=INSTALL_TIMEOUT_S)
+               worktree, timeout_s=INSTALL_TIMEOUT_S, env_extra=_install_env())
+
+
+TEST_RUNNERS = {"npm", "node", "npx", "yarn", "pnpm"}
 
 
 def npm_test(worktree: str | Path, repo: str | None) -> CommandResult:
     assert_exec_allowed(repo)
     return run(["npm", "test"], worktree, timeout_s=TEST_TIMEOUT_S)
+
+
+def run_tests(worktree: str | Path, repo: str | None, args: list[str] | None = None) -> CommandResult:
+    """The repository's configured test command (.codebase-pilot.yml). Only known runners may be started,
+    and the install token is never in the environment."""
+    assert_exec_allowed(repo)
+    args = args or ["npm", "test"]
+    if not args or args[0] not in TEST_RUNNERS:
+        raise ValueError(f"test command must start with one of {sorted(TEST_RUNNERS)}, got {args[:1]}")
+    return run(list(args), worktree, timeout_s=TEST_TIMEOUT_S)
 
 
 _PASSING = re.compile(r"(\d+)\s+passing")

@@ -94,4 +94,19 @@ class RunStats(BaseModel):
     errors: int = 0
     undeclared_imports: int = 0
     statuses: dict[str, int] = Field(default_factory=dict)
+    warnings: list[str] = Field(default_factory=list)  # non-fatal problems; the run is marked 'partial'
     duration_s: float = 0.0
+
+
+class VulnRecord(BaseModel):
+    """An OSV advisory as cached in the `vulnerabilities` table."""
+
+    id: str
+    aliases: list[str] = Field(default_factory=list)
+    summary: str | None = None
+    severity: str = "unknown"  # critical | high | medium | low | unknown
+    cvss_vector: str | None = None
+    published_at: str | None = None
+    modified_at: str | None = None
+    url: str
+    raw: dict

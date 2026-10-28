@@ -1,6 +1,6 @@
-"""Step 2 pipeline (deterministic part): inventory -> registry -> versions -> priority -> risk -> upsert.
+"""Step 2 pipeline (deterministic part): inventory -> registry -> versions -> security -> priority -> risk -> upsert.
 
-Notes, source repositories, OSV and LLM analysis are added by later tickets. Until then a package that
+Source repositories, release notes and LLM analysis are added by later tickets. Until then a package that
 needs attention is stored with status 'pending' and a provisional risk level.
 """
 import asyncio
@@ -17,11 +17,13 @@ from app.updates.registry.base import RegistryAdapter
 from app.updates.registry.batch import BatchResult, fetch_many
 from app.updates.registry.npm import NpmRegistry
 from app.updates.risk import RiskFacts, needs_attention, priority, recommended_target, risk_level
-from app.updates.versions import parse_scan_time, resolve_versions
+from app.updates.security import PackageVuln, check_security, min_safe_version
+from app.updates.versions import parse_scan_time, resolve_versions, satisfies_range
 
 logger = logging.getLogger(__name__)
 
 SUPPORTED_ECOSYSTEMS = {"npm"}
+SEVERITY_ORDER = ["unknown", "low", "medium", "high", "critical"]
 
 
 def _base_row(scan_id: str, dep: Dependency) -> UpdateRow:
@@ -37,8 +39,22 @@ def _base_row(scan_id: str, dep: Dependency) -> UpdateRow:
     )
 
 
-def evaluate(scan_id: str, dep: Dependency, batch: BatchResult, scan_time) -> UpdateRow:
-    """Turn one dependency plus registry data into a row. Pure: no I/O."""
+def _verdict(dep: Dependency, batch: BatchResult, scan_time) -> UpdateVerdict | None:
+    """Version facts, or None when the dependency can't be resolved (see evaluate for the status)."""
+    info = batch.packages.get(dep.name)
+    if info is None or info.status != "ok":
+        return None
+    return resolve_versions(dep.declared_constraint, info, scan_time)
+
+
+def evaluate(
+    scan_id: str,
+    dep: Dependency,
+    batch: BatchResult,
+    scan_time,
+    vulns: list[PackageVuln] | None = None,
+) -> UpdateRow:
+    """Turn one dependency plus registry (and optional OSV) data into a row. Pure: no I/O."""
     row = _base_row(scan_id, dep)
 
     if dep.ecosystem not in SUPPORTED_ECOSYSTEMS:
@@ -55,7 +71,7 @@ def evaluate(scan_id: str, dep: Dependency, batch: BatchResult, scan_time) -> Up
         row.status = "not_in_registry"
         return row
 
-    verdict: UpdateVerdict = resolve_versions(dep.declared_constraint, info, scan_time)
+    verdict = resolve_versions(dep.declared_constraint, info, scan_time)
     if verdict.error:
         row.status = "invalid_declaration" if verdict.error_kind == "invalid_declaration" else "error"
         row.error = verdict.error
@@ -63,7 +79,11 @@ def evaluate(scan_id: str, dep: Dependency, batch: BatchResult, scan_time) -> Up
         row.latest_version = verdict.latest_version
         return row
 
+    vulns = vulns or []
     facts = RiskFacts.from_verdict(verdict, dep.dependency_type, dep.importer_count)
+    facts.vuln_severities = [v.severity for v in vulns]
+    safe = min_safe_version(vulns)
+
     row.current_version = verdict.current_version
     row.current_version_basis = verdict.current_version_basis
     row.latest_in_range = verdict.latest_in_range
@@ -74,15 +94,22 @@ def evaluate(scan_id: str, dep: Dependency, batch: BatchResult, scan_time) -> Up
     row.runtime_requirement_change = verdict.runtime_requirement_change
     row.is_deprecated = verdict.is_deprecated
     row.deprecation_message = verdict.deprecation_message
-    row.recommended_target = recommended_target(verdict)
+    row.vuln_count = len(vulns)
+    row.max_severity = max((v.severity for v in vulns), key=SEVERITY_ORDER.index, default=None)
+    row.min_safe_version = safe
+    safe_in_range = bool(safe) and satisfies_range(safe, dep.declared_constraint)
+    row.recommended_target = recommended_target(verdict, safe, safe_in_range)
+    if safe and not safe_in_range:
+        row.requires_manifest_change = True  # the security fix is outside the declared range
     row.priority_score = priority(facts)
     row.risk_level = risk_level(facts)
     row.status = "pending" if needs_attention(facts) else "up_to_date"
     return row
 
 
-def _stats(rows: list[UpdateRow], undeclared: int, duration: float) -> RunStats:
+def _stats(rows: list[UpdateRow], undeclared: int, duration: float, warnings: list[str]) -> RunStats:
     stats = RunStats(deps_total=len(rows), undeclared_imports=undeclared, duration_s=round(duration, 2))
+    stats.warnings = warnings
     stats.statuses = dict(Counter(r.status for r in rows))
     stats.up_to_date = stats.statuses.get("up_to_date", 0)
     stats.errors = stats.statuses.get("error", 0)
@@ -104,6 +131,8 @@ async def run_dependency_updates_async(
     only: list[str] | None = None,
     refresh: bool = False,
     registry: RegistryAdapter | None = None,
+    http: HttpClient | None = None,
+    security: bool = True,
 ) -> tuple[str, RunStats]:
     """Run the step for one scan. Returns (run_id, stats).
 
@@ -113,6 +142,8 @@ async def run_dependency_updates_async(
     started = time.perf_counter()
     conn = store.connect(db_path)
     run_id = str(uuid.uuid4())
+    own_http = http is None
+    http = http or HttpClient()
     try:
         store.migrate(conn)
         report = run_preflight(conn, scan)  # raises if there is no scan or no dependencies
@@ -124,9 +155,12 @@ async def run_dependency_updates_async(
             deps = [d for d in deps if d.name in wanted]
         store.start_pipeline_run(conn, run_id, scan_id)
         try:
-            rows = await _process(conn, scan_id, scan_time, deps, refresh, registry)
-            stats = _stats(rows, store.count_undeclared_imports(conn, scan_id), time.perf_counter() - started)
-            status = "partial" if stats.errors else "succeeded"
+            warnings: list[str] = []
+            rows = await _process(
+                conn, http, scan_id, scan_time, deps, refresh, registry or NpmRegistry(http), security, warnings
+            )
+            stats = _stats(rows, store.count_undeclared_imports(conn, scan_id), time.perf_counter() - started, warnings)
+            status = "partial" if stats.errors or warnings else "succeeded"
             store.finish_pipeline_run(conn, run_id, status, stats.model_dump())
         except Exception as exc:
             store.finish_pipeline_run(conn, run_id, "failed", None, f"{type(exc).__name__}: {exc}")
@@ -134,28 +168,46 @@ async def run_dependency_updates_async(
         return run_id, stats
     finally:
         conn.close()
+        if own_http:
+            await http.aclose()
 
 
-async def _process(conn, scan_id, scan_time, deps, refresh, registry) -> list[UpdateRow]:
+async def _process(conn, http, scan_id, scan_time, deps, refresh, registry, security, warnings) -> list[UpdateRow]:
     npm_names = [d.name for d in deps if d.ecosystem == "npm"]
     batch = BatchResult()
     if npm_names:
-        if registry is not None:
-            batch = await fetch_many(registry, conn, npm_names, refresh=refresh)
-        else:
-            async with HttpClient() as http:
-                batch = await fetch_many(NpmRegistry(http), conn, npm_names, refresh=refresh)
+        batch = await fetch_many(registry, conn, npm_names, refresh=refresh)
+
+    vulns_by_target: dict[tuple[str, str], list[PackageVuln]] = {}
+    if security:
+        targets = []
+        for dep in deps:
+            if dep.ecosystem == "npm" and dep.name not in batch.errors:
+                verdict = _verdict(dep, batch, scan_time)
+                if verdict and verdict.current_version:
+                    targets.append((dep.name, verdict.current_version))
+        if targets:
+            try:
+                vulns_by_target = await check_security(http, conn, targets)
+            except Exception as exc:  # OSV down must not stop the run, but must not look clean either
+                logger.exception("OSV check failed")
+                warnings.append(f"security check failed: {type(exc).__name__}: {exc}")
 
     rows: list[UpdateRow] = []
     for dep in deps:
+        vulns: list[PackageVuln] = []
         try:
-            row = evaluate(scan_id, dep, batch, scan_time)
+            verdict = _verdict(dep, batch, scan_time) if dep.ecosystem == "npm" else None
+            if verdict and verdict.current_version:
+                vulns = vulns_by_target.get((dep.name, verdict.current_version), [])
+            row = evaluate(scan_id, dep, batch, scan_time, vulns)
         except Exception as exc:  # one package never stops the run
             logger.exception("evaluation failed for %s", dep.name, extra={"package": dep.name})
             row = _base_row(scan_id, dep)
             row.status, row.error = "error", f"{type(exc).__name__}: {exc}"
         try:
-            store.upsert_dependency_update(conn, row)
+            update_id = store.upsert_dependency_update(conn, row)
+            store.replace_update_vulns(conn, update_id, [(v.id, v.fixed_in) for v in vulns])
         except Exception as exc:
             logger.exception("saving failed for %s", dep.name, extra={"package": dep.name})
             row.status, row.error = "error", f"could not save: {exc}"

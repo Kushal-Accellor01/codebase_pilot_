@@ -106,3 +106,6 @@ class HttpClient:
 
     async def get(self, host: str, url: str, **kwargs) -> httpx.Response:
         return await self.request(host, "GET", url, **kwargs)
+
+    async def post(self, host: str, url: str, **kwargs) -> httpx.Response:
+        return await self.request(host, "POST", url, **kwargs)

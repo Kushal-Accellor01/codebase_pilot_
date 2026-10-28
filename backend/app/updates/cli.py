@@ -129,7 +129,9 @@ def _cmd_run(args: argparse.Namespace) -> int:
         print("WARN: LLM analysis is not built yet; running the deterministic steps only (same as --no-llm).",
               file=sys.stderr)
     only = [n for n in args.only.split(",") if n] if args.only else None
-    run_id, stats = run_dependency_updates(args.db, args.scan, only=only, refresh=args.refresh)
+    run_id, stats = run_dependency_updates(
+        args.db, args.scan, only=only, refresh=args.refresh, security=not args.skip_security
+    )
     conn = store.connect(args.db)
     try:
         run = store.get_pipeline_run(conn, run_id)
@@ -181,6 +183,7 @@ def build_parser() -> argparse.ArgumentParser:
             p.add_argument("--refresh", action="store_true", help="ignore the cache")
         if name == "run":
             p.add_argument("--no-llm", action="store_true", help="skip LLM analysis (the only mode for now)")
+            p.add_argument("--skip-security", action="store_true", help="do not query OSV (offline runs)")
         p.set_defaults(func=fn)
     return parser
 

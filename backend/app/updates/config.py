@@ -9,7 +9,7 @@ USER_AGENT = os.environ.get("PILOT_USER_AGENT", "codebase-pilot/0.1 (hackathon)"
 REGISTRY_TTL_HOURS = 6
 
 # Max concurrent requests per host.
-HOST_CONCURRENCY = {"npm": 8, "github": 4, "deps_dev": 4, "osv": 1}
+HOST_CONCURRENCY = {"npm": 8, "github": 4, "deps_dev": 4, "osv": 4}
 
 
 def default_db_path() -> str:

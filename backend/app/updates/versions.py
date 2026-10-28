@@ -168,3 +168,12 @@ def resolve_versions(
     elif cur_info and cur_info.deprecation_message:
         verdict.is_deprecated, verdict.deprecation_message = True, cur_info.deprecation_message
     return verdict
+
+
+def satisfies_range(version: str, constraint: str | None) -> bool:
+    """Does `version` fall inside the declared range? False for ranges that aren't registry ranges."""
+    try:
+        range_ = normalize_constraint(constraint)
+    except ConstraintError:
+        return False
+    return bool(semver.satisfies(version, range_, False, bool(_PRERELEASE_IN_RANGE.search(range_))))

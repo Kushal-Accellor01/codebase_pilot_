@@ -9,7 +9,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from app.updates.config import MIGRATIONS_DIR
-from app.updates.models import Dependency, ImportingFile, UpdateRow
+from app.updates.models import Dependency, ImportingFile, UpdateRow, VulnRecord
 from app.updates.registry.base import PackageInfo, VersionInfo
 
 LOCKFILE_NAMES = (
@@ -336,8 +336,8 @@ _UPSERT_COLUMNS = (
 )
 
 
-def upsert_dependency_update(conn: sqlite3.Connection, row: UpdateRow) -> None:
-    """One short transaction. analysis_id is left alone: it belongs to the analysis step."""
+def upsert_dependency_update(conn: sqlite3.Connection, row: UpdateRow) -> int:
+    """One short transaction; returns the row id. analysis_id is left alone: it belongs to the analysis step."""
     data = row.model_dump()
     for key in ("requires_manifest_change", "runtime_requirement_change", "is_deprecated"):
         data[key] = int(data[key])
@@ -352,6 +352,10 @@ def upsert_dependency_update(conn: sqlite3.Connection, row: UpdateRow) -> None:
                     {updates}, checked_at = excluded.checked_at""",  # noqa: S608
             data,
         )
+        return conn.execute(
+            "SELECT id FROM dependency_updates WHERE scan_id = ? AND dep_node_id = ? AND manifest_file_id = ?",
+            (row.scan_id, row.dep_node_id, row.manifest_file_id),
+        ).fetchone()["id"]
 
 
 def list_dependency_updates(conn: sqlite3.Connection, scan_id: str) -> list[sqlite3.Row]:
@@ -381,3 +385,51 @@ def finish_pipeline_run(
 
 def get_pipeline_run(conn: sqlite3.Connection, run_id: str) -> sqlite3.Row | None:
     return conn.execute("SELECT * FROM pipeline_runs WHERE id = ?", (run_id,)).fetchone()
+
+
+def load_vulnerability(conn: sqlite3.Connection, vuln_id: str) -> dict | None:
+    row = conn.execute("SELECT * FROM vulnerabilities WHERE id = ?", (vuln_id,)).fetchone()
+    if row is None:
+        return None
+    data = dict(row)
+    data["raw"] = json.loads(data["raw"])
+    return data
+
+
+def save_vulnerability(conn: sqlite3.Connection, rec: VulnRecord) -> None:
+    with conn:
+        conn.execute(
+            """
+            INSERT INTO vulnerabilities
+                (id, aliases, summary, severity, cvss_vector, published_at, modified_at, url, raw, fetched_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%SZ','now'))
+            ON CONFLICT(id) DO UPDATE SET
+                aliases = excluded.aliases, summary = excluded.summary, severity = excluded.severity,
+                cvss_vector = excluded.cvss_vector, published_at = excluded.published_at,
+                modified_at = excluded.modified_at, url = excluded.url, raw = excluded.raw,
+                fetched_at = excluded.fetched_at
+            """,
+            (
+                rec.id, json.dumps(rec.aliases), rec.summary, rec.severity, rec.cvss_vector,
+                rec.published_at, rec.modified_at, rec.url, json.dumps(rec.raw),
+            ),
+        )
+
+
+def replace_update_vulns(conn: sqlite3.Connection, update_id: int, vulns: list[tuple[str, str | None]]) -> None:
+    """Set the (vuln_id, fixed_in) links of one dependency_updates row."""
+    with conn:
+        conn.execute("DELETE FROM dependency_update_vulns WHERE update_id = ?", (update_id,))
+        conn.executemany(
+            "INSERT INTO dependency_update_vulns (update_id, vuln_id, fixed_in) VALUES (?, ?, ?)",
+            [(update_id, vid, fixed) for vid, fixed in vulns],
+        )
+
+
+def list_update_vulns(conn: sqlite3.Connection, update_id: int) -> list[sqlite3.Row]:
+    return conn.execute(
+        """SELECT v.id, v.severity, v.summary, v.url, l.fixed_in
+           FROM dependency_update_vulns l JOIN vulnerabilities v ON v.id = l.vuln_id
+           WHERE l.update_id = ? ORDER BY v.id""",
+        (update_id,),
+    ).fetchall()

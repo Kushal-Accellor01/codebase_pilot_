@@ -216,15 +216,27 @@ def test_source_override_writes_yaml_and_forgets_the_cached_source(client, seede
     assert client.post("/api/sources/override", json={"name": "", "owner": "a", "repo": "b"}).status_code == 422
 
 
-def test_scan_request_queues_a_job(client, seeded):
-    r = client.post("/api/scans", json={"repo_url": "https://github.com/acme/shop", "only": ["express"]})
-    assert r.status_code == 202
+def test_scan_request_queues_a_job(seeded):
+    with client_for(seeded, exec_allowed_repos="acme/shop") as client:
+        r = client.post("/api/scans", json={"repo_url": "https://github.com/acme/shop", "only": ["express"]})
+        assert r.status_code == 202
+        conn = core_db.connect(seeded.db)
+        job = conn.execute("SELECT * FROM jobs WHERE id = ?", (r.json()["job_id"],)).fetchone()
+        assert job["kind"] == "scan" and json.loads(job["payload"])["repo_url"] == "https://github.com/acme/shop"
+        assert client.post("/api/scans", json={"repo_url": ""}).status_code == 422
+        with conn:
+            conn.execute("DELETE FROM jobs WHERE id = ?", (r.json()["job_id"],))
+
+
+def test_scan_request_for_a_repository_outside_the_allowlist_is_refused(seeded):
+    """B-10: the API never clones a URL or path just because someone posted it."""
+    with client_for(seeded, exec_allowed_repos="acme/shop") as client:
+        for url in ("https://github.com/evil/repo", "C:/Users/someone/private", "https://github.com/acme/shop-fork"):
+            assert client.post("/api/scans", json={"repo_url": url}).status_code == 403
+    with client_for(seeded) as client:  # nothing allowed at all
+        assert client.post("/api/scans", json={"repo_url": "https://github.com/acme/shop"}).status_code == 403
     conn = core_db.connect(seeded.db)
-    job = conn.execute("SELECT * FROM jobs WHERE id = ?", (r.json()["job_id"],)).fetchone()
-    assert job["kind"] == "scan" and json.loads(job["payload"])["repo_url"] == "https://github.com/acme/shop"
-    assert client.post("/api/scans", json={"repo_url": ""}).status_code == 422
-    with conn:
-        conn.execute("DELETE FROM jobs WHERE id = ?", (r.json()["job_id"],))
+    assert conn.execute("SELECT count(*) FROM jobs WHERE kind = 'scan' AND status = 'queued'").fetchone()[0] == 0
 
 
 def test_decision_flow_approve_then_conflict(fresh):

@@ -246,8 +246,8 @@ def test_fallback_never_pushes_to_a_remote_url(worktree, tmp_path):
     """H4: a GitHub repo without a token pushes into the local clone, never to the URL."""
     origin, _wt = worktree
     url = "https://github.com/acme/pilot-sandbox-shop"
-    assert publish.local_origin(url, str(origin)) == str(origin)  # the clone stands in for the remote
-    assert publish.local_origin(str(origin), None) == str(origin)  # a local repository is pushed to as before
+    assert publish.local_origin(url, str(origin)) == str(origin.resolve())  # the clone stands in for the remote
+    assert publish.local_origin(str(origin), None) == str(origin.resolve())  # a local repository, as before
     with pytest.raises(RuntimeError, match="no local repository"):
         publish.local_origin(url, str(tmp_path / "gone"))
     with pytest.raises(RuntimeError, match="no local repository"):
@@ -264,3 +264,38 @@ def test_only_a_failed_fix_needs_an_engineer():
     assert publish.final_status("issue", green) == "issue_opened"
     assert publish.final_status("issue", red) == "needs_engineer"
     assert publish.final_status("issue", None) == "needs_engineer"
+
+
+def test_deleted_and_renamed_files_are_reported_as_deletions(worktree):
+    """B-14: a fix that removes a file must remove it from the pull request too."""
+    _, wt = worktree
+    (wt / "data" / "invoice-1.pdf").unlink()
+    subprocess.run(["git", "-C", str(wt), "mv", "routes/i18n.js", "routes/intl.js"], check=True, capture_output=True)
+    (wt / "routes" / "orders.js").write_bytes(b"// fixed\n")
+    files, deleted = publish.changes(wt)
+    assert deleted == ["data/invoice-1.pdf", "routes/i18n.js"]
+    assert set(files) == {"routes/orders.js", "routes/intl.js"}
+
+
+@respx.mock
+def test_pull_request_flow_deletes_files_through_the_contents_api():
+    mock_pr_flow(file_sha="abc")
+    respx.post(f"{GH}/repos/{REPO}/pulls").respond(201, json={"number": 7, "html_url": "https://x/7"})
+    respx.post(f"{GH}/repos/{REPO}/issues/7/labels").respond(200, json=[])
+    gone = respx.delete(f"{GH}/repos/{REPO}/contents/data/old.pdf").respond(200, json={})
+
+    async def go():
+        async with HttpClient(wait_scale=0) as http:
+            return await gh_writes.open_or_update_pr(
+                GitHubClient(http, "tok"), repo=REPO, base="main", branch="pilot/express-5.3.0",
+                files={"package.json": b"{}"}, title="T", body="B", commit_message="msg", deleted=["data/old.pdf"])
+
+    run(go())
+    assert json.loads(gone.calls[0].request.content) == {"message": "msg", "sha": "abc", "branch": "pilot/express-5.3.0"}
+
+
+def test_a_relative_origin_becomes_absolute(worktree, monkeypatch):
+    """The push runs inside the worktree, so a relative origin path (found by the browser smoke test) must not leak."""
+    origin, _wt = worktree
+    monkeypatch.chdir(origin.parent)
+    assert publish.local_origin(origin.name, None) == str(origin.resolve())

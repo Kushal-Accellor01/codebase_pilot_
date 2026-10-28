@@ -119,12 +119,13 @@ async def prepare(ctx: RunContext, state: UpgradeState) -> dict:
     workspace.write_npmrc(worktree)
     run_store.set_run_status(ctx.conn, run_id, "analyzing", node="prepare")
     allowed = _exec_allowed(repo)
-    for warning in warnings:
-        events.emit(ctx.conn, run_id, "prepare", "finished", warning)
+    # Warnings ride on the one finished event: a separate event per warning made the step look finished repeatedly.
+    summary = f"worktree ready, repository {'may' if allowed else 'may not'} be executed ({event.package})"
+    if warnings:
+        summary += "; " + "; ".join(warnings)
     return {
         "worktree": str(worktree), "repo": repo, "clone": clone, "config": config.model_dump(), "attempts": 0,
-        "exec_allowed": allowed, "route": "full",
-        "_summary": f"worktree ready, repository {'may' if allowed else 'may not'} be executed ({event.package})",
+        "exec_allowed": allowed, "route": "full", "_summary": summary,
     }
 
 

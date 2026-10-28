@@ -34,6 +34,15 @@ appears (a `pilot/express-5.3.0` branch in the sandbox mirror and a Markdown bod
 3. `python scripts/dev.py api` and `python scripts/dev.py web`; `PILOT_EMBEDDED_WORKER=1` runs the worker inside the API.
 4. For a GitHub PR instead of a local one, set `GITHUB_TOKEN` and `EXEC_ALLOWED_REPOS=<org>/pilot-sandbox-shop`.
 
+Notes for real runs:
+
+- `POST /api/scans` (and the header's "Scan now") only accepts repositories listed in `EXEC_ALLOWED_REPOS`.
+- With a token, each scan also queues `repo_actions`: a comment on open Dependabot/Renovate PRs (`BOT_PR_MODE`)
+  and the dependency dashboard and team issues. By hand: `python -m app.orchestrator.cli bot-prs` / `issues`.
+- `.codebase-pilot.yml`: `fixes.allowed_paths` limits which files an edit may touch; `owners` is the reviewer for
+  files without a CODEOWNERS rule. `mode` is `shadow`, `advisory` or `assisted`.
+- There is no login yet: run the API on localhost or behind your own authentication.
+
 ## Layout
 
 | Path | What |

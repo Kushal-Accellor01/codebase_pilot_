@@ -25,21 +25,31 @@ logger = logging.getLogger(__name__)
 EXCLUDED = ("node_modules/", ".npmrc")
 
 
-def changed_files(worktree: Path) -> dict[str, bytes]:
-    """Files the fix touched (edits, package.json and the lockfile), read from the worktree."""
+def changes(worktree: Path) -> tuple[dict[str, bytes], list[str]]:
+    """(files the fix wrote, files it deleted): edits, package.json and the lockfile, read from the worktree."""
     status = workspace.run(["git", "-c", "core.quotepath=false", "-C", str(worktree), "status", "--porcelain", "-uall"],
                            worktree, timeout_s=workspace.GIT_TIMEOUT_S)
     files: dict[str, bytes] = {}
+    deleted: list[str] = []
     for line in status.output.splitlines():
         code, path = line[:2], line[3:].strip().strip('"')
         if " -> " in path:
-            path = path.split(" -> ", 1)[1]
-        if "D" in code or any(path.startswith(p) or path == p.rstrip("/") for p in EXCLUDED):
+            old, path = path.split(" -> ", 1)
+            if not any(old.startswith(p) or old == p.rstrip("/") for p in EXCLUDED):
+                deleted.append(old.strip('"'))  # a rename is a delete plus a write
+        if any(path.startswith(p) or path == p.rstrip("/") for p in EXCLUDED):
+            continue
+        if "D" in code:
+            deleted.append(path)
             continue
         target = worktree / path
         if target.is_file():
             files[path] = target.read_bytes()
-    return files
+    return files, sorted(set(deleted) - set(files))
+
+
+def changed_files(worktree: Path) -> dict[str, bytes]:
+    return changes(worktree)[0]
 
 
 def _diff_stat(worktree: Path) -> str | None:
@@ -73,10 +83,11 @@ def local_origin(repo_url: str | None, clone: str | None) -> str:
     """Where the fallback pushes: the scanned repository when it is a local path, else the clone.
 
     Never a remote URL: without a token that push has no credentials and would hang or fail the run."""
+    # Absolute: the push runs with the worktree as its working directory, where a relative path means something else.
     if repo_url and Path(repo_url).is_dir():
-        return repo_url
+        return str(Path(repo_url).resolve())
     if clone and Path(clone).is_dir():
-        return clone
+        return str(Path(clone).resolve())
     raise RuntimeError("no local repository to push the branch to (no token for GitHub, and the clone is gone)")
 
 
@@ -149,10 +160,12 @@ async def publish(ctx, state) -> dict:
 
     if use_github:
         client = GitHubClient(ctx.http)
+        files, deleted = changes(worktree)
         if kind == "pull_request":
             published = await gh_writes.open_or_update_pr(
-                client, repo=repo, base=source["branch"] or "main", branch=branch, files=changed_files(worktree),
+                client, repo=repo, base=source["branch"] or "main", branch=branch, files=files,
                 title=title, body=body, commit_message=f"Upgrade {event.package} to {event.target_version}",
+                deleted=deleted,
             )
         else:
             published = await gh_writes.open_issue(client, repo=repo, title=title, body=body,

@@ -59,9 +59,22 @@ async def _commit_files(client: GitHubClient, repo: str, branch: str, files: dic
         _check(status, body, f"committing {path}")
 
 
+async def _delete_files(client: GitHubClient, repo: str, branch: str, paths: list[str], message: str) -> None:
+    """Remove files the fix deleted. A file that is already gone on the branch (a re-run) is fine."""
+    for path in sorted(paths):
+        status, body = await client.request_json("GET", f"repos/{repo}/contents/{path}?ref={branch}")
+        if status == 404:
+            continue
+        sha = _check(status, body, f"reading {path}")["sha"]  # type: ignore[index]
+        status, out = await client.request_json(
+            "DELETE", f"repos/{repo}/contents/{path}", {"message": message, "sha": sha, "branch": branch}
+        )
+        _check(status, out, f"deleting {path}")
+
+
 async def open_or_update_pr(
     client: GitHubClient, *, repo: str, base: str, branch: str, files: dict[str, bytes], title: str, body: str,
-    commit_message: str,
+    commit_message: str, deleted: list[str] | None = None,
 ) -> Published:
     owner = repo.split("/")[0]
     status, existing = await client.request_json("GET", f"repos/{repo}/pulls?head={owner}:{branch}&state=open")
@@ -76,6 +89,7 @@ async def open_or_update_pr(
         _check(status, created, f"creating branch {branch}")
 
     await _commit_files(client, repo, branch, files, commit_message)
+    await _delete_files(client, repo, branch, deleted or [], commit_message)
 
     if open_pr:
         status, pr = await client.request_json(

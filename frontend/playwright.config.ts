@@ -14,7 +14,7 @@ export default defineConfig({
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
   webServer: [
     {
-      command: `python scripts/demo_server.py --port ${API}`,
+      command: `python scripts/demo_server.py --port ${API} --dir workspace/e2e-demo`,
       cwd: "../backend",
       url: `http://127.0.0.1:${API}/api/health`,
       timeout: 120_000,

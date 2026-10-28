@@ -254,3 +254,19 @@ def test_reset_demo_clears_runs_branches_and_checkpoints(env):
     assert not (env["tmp"] / "ck.db").exists()
     assert "pilot/" not in subprocess.run(["git", "-C", str(env["origin"]), "branch"], capture_output=True, text=True).stdout
     json.dumps(summary)
+
+
+@respx.mock
+def test_config_warnings_do_not_repeat_the_prepare_step(env):
+    """B-13: a bad .codebase-pilot.yml shows up in the one finished event of `prepare`."""
+    origin = env["origin"]
+    (origin / ".codebase-pilot.yml").write_text("mode: yolo\n", encoding="utf-8")
+    for args in (["add", "-A"], ["-c", "user.name=t", "-c", "user.email=t@t", "commit", "-q", "-m", "bad config"]):
+        subprocess.run(["git", "-C", str(origin), *args], check=True, capture_output=True)
+    golden.mock_github()
+    go(env, ScriptedLLM(), scan_job(env))
+    conn = core_db.connect(env["db"])
+    run = express_run(conn)
+    prepare = [e for e in events.list_events(conn, run["id"]) if e.node == "prepare"]
+    assert [e.status for e in prepare] == ["started", "finished"]
+    assert "ignored, using defaults" in prepare[1].summary

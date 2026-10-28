@@ -60,7 +60,10 @@ async def dispatch(job: jobs.Job, db_path: str, settings: Settings, services: Se
                 db_path, scan_id, only=payload.get("only"), registry=services.registry, http=services.http,
                 github=services.github, llm=services.llm, **services.update_options,
             )
-            push_tracker.close_resolved_runs(conn, scan_id)
+            pr_states = None
+            if settings.github_token and services.http is not None:
+                pr_states = await push_tracker.fetch_pr_states(conn, GitHubClient(services.http))
+            push_tracker.close_resolved_runs(conn, scan_id, pr_states)
             runner.enqueue_runs_for_scan(conn, scan_id, only=payload.get("only"))
             if settings.github_token:  # comments on bot PRs, dashboard and team issues
                 jobs.enqueue(conn, "repo_actions", {"scan_id": scan_id}, dedupe_key=f"repo_actions:{scan_id}")

@@ -18,7 +18,7 @@ from sse_starlette.sse import EventSourceResponse
 
 from app.api import queries, schemas
 from app.core import db as core_db
-from app.core import events, jobs
+from app.core import events, jobs, workspace
 from app.core.config import Settings, get_settings
 from app.core.logging import configure_logging
 from app.database import GraphDatabase
@@ -126,6 +126,10 @@ def create_app(
 
     @app.post("/api/scans", response_model=schemas.JobAccepted, status_code=202)
     def start_scan(body: schemas.ScanRequest, conn=Depends(get_conn)):
+        # The API clones whatever it is given, so it only accepts repositories Pilot is configured to work on.
+        allowed = {a.replace("\\", "/").rstrip("/") for a in settings.exec_allowed}
+        if workspace.repo_identity(body.repo_url) not in allowed:
+            raise HTTPException(403, "this repository is not in EXEC_ALLOWED_REPOS; ask an administrator to add it")
         return {"job_id": jobs.enqueue(conn, "scan", {"repo_url": body.repo_url, "only": body.only})}
 
     @app.post("/api/upgrades/{run_id}/decision", response_model=schemas.DecisionAccepted, status_code=202)

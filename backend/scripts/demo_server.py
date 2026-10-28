@@ -38,7 +38,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--dir", default=str(ROOT / "backend" / "workspace" / "offline-demo"))
     args = parser.parse_args(argv)
 
-    directory = Path(args.dir)
+    directory = Path(args.dir).resolve()
     if directory.exists():
         shutil.rmtree(directory, onexc=_writable) if sys.version_info >= (3, 12) else shutil.rmtree(directory)
     directory.mkdir(parents=True)

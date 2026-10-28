@@ -1,0 +1,412 @@
+{
+  "run": {
+    "id": "829bf606-a994-4e4d-8ab1-9ddee36c6b2f",
+    "scan_id": "5929e487-6457-4c97-baf9-435673629011",
+    "package": "express",
+    "ecosystem": "npm",
+    "from": "4.21.2",
+    "to": "5.3.0",
+    "status": "awaiting_approval",
+    "status_label": "Awaiting approval",
+    "pill": "wait",
+    "risk": "critical",
+    "current_node": "validate",
+    "error": null,
+    "effort_hours": 6.5,
+    "created_at": "2026-10-28T11:37:07Z",
+    "updated_at": "2026-10-28T11:37:09Z"
+  },
+  "event": {
+    "event_id": "5929e487-6457-4c97-baf9-435673629011:npm:express:4.21.2->5.3.0",
+    "scan_id": "5929e487-6457-4c97-baf9-435673629011",
+    "ecosystem": "npm",
+    "package": "express",
+    "dependency_type": "unknown",
+    "manifest_path": "package.json",
+    "declared_constraint": "4.21.2",
+    "current_version": "4.21.2",
+    "current_version_basis": "lockfile",
+    "target_version": "5.3.0",
+    "latest_version": "5.3.0",
+    "update_type": "major",
+    "requires_manifest_change": true,
+    "runtime_requirement_change": true,
+    "is_deprecated": false,
+    "deprecation_message": null,
+    "vulnerabilities": [],
+    "changes": [
+      {
+        "id": 5,
+        "kind": "behavior_changed",
+        "breaking": true,
+        "api_symbols": [],
+        "description": "Route path syntax changed: path-to-regexp 8 needs named wildcards",
+        "migration_hint": null,
+        "version": "5.0.0",
+        "evidence_url": "https://github.com/expressjs/express/releases/tag/v5.0.0",
+        "evidence_quote": "Updated to `path-to-regexp@8.x`, removing sub-expression regex patterns"
+      },
+      {
+        "id": 1,
+        "kind": "removed",
+        "breaking": true,
+        "api_symbols": [
+          "app.del"
+        ],
+        "description": "app.del was removed",
+        "migration_hint": null,
+        "version": "5.0.0-alpha.1",
+        "evidence_url": "https://github.com/expressjs/express/blob/master/History.md",
+        "evidence_quote": "`app.del` - use `app.delete`"
+      },
+      {
+        "id": 2,
+        "kind": "removed",
+        "breaking": true,
+        "api_symbols": [
+          "req.acceptsLanguage"
+        ],
+        "description": "req.acceptsLanguage was removed",
+        "migration_hint": null,
+        "version": "5.0.0-alpha.1",
+        "evidence_url": "https://github.com/expressjs/express/blob/master/History.md",
+        "evidence_quote": "`req.acceptsLanguage` - use `req.acceptsLanguages`"
+      },
+      {
+        "id": 3,
+        "kind": "signature_changed",
+        "breaking": true,
+        "api_symbols": [
+          "res.json(obj, status)"
+        ],
+        "description": "the res.json(obj, status) signature was removed",
+        "migration_hint": null,
+        "version": "5.0.0-alpha.1",
+        "evidence_url": "https://github.com/expressjs/express/blob/master/History.md",
+        "evidence_quote": "`res.json(obj, status)` signature - use `res.json(status, obj)`"
+      },
+      {
+        "id": 4,
+        "kind": "removed",
+        "breaking": true,
+        "api_symbols": [
+          "req.param"
+        ],
+        "description": "req.param() was removed",
+        "migration_hint": null,
+        "version": "5.0.0-alpha.2",
+        "evidence_url": "https://github.com/expressjs/express/blob/master/History.md",
+        "evidence_quote": "`req.param()` -- use `req.params`, `req.body`, or `req.query` instead"
+      }
+    ],
+    "summary": "Express 5 removes several APIs.",
+    "notes_coverage": 1.0,
+    "source_repo": "github.com/expressjs/express",
+    "importer_count": 4,
+    "importing_files": [
+      {
+        "path": "app.js",
+        "lines": []
+      },
+      {
+        "path": "routes/invoices.js",
+        "lines": []
+      },
+      {
+        "path": "routes/orders.js",
+        "lines": []
+      },
+      {
+        "path": "test/helpers.js",
+        "lines": []
+      }
+    ],
+    "priority_score": 45.3,
+    "risk_level": "high",
+    "status": "analyzed",
+    "id": 2,
+    "run_id": "829bf606-a994-4e4d-8ab1-9ddee36c6b2f",
+    "run_status": "awaiting_approval",
+    "error": null
+  },
+  "findings": [
+    {
+      "file_path": "routes/admin.js",
+      "line": 5,
+      "end_line": null,
+      "snippet": "res.send(204);",
+      "symbol": "res.send",
+      "change_id": null,
+      "sources": [
+        "runtime_deprecation"
+      ],
+      "confidence": 1.0,
+      "confirmed": null,
+      "reason": "",
+      "id": 1,
+      "owners": [
+        "@acme/team-shop"
+      ]
+    },
+    {
+      "file_path": "routes/admin.js",
+      "line": 9,
+      "end_line": null,
+      "snippet": "app.del('/admin/cache', clearCache);",
+      "symbol": "app.del",
+      "change_id": 1,
+      "sources": [
+        "pattern",
+        "runtime_deprecation",
+        "test_failure"
+      ],
+      "confidence": 1.0,
+      "confirmed": null,
+      "reason": "",
+      "id": 2,
+      "owners": [
+        "@acme/team-shop"
+      ]
+    },
+    {
+      "file_path": "routes/fallback.js",
+      "line": 2,
+      "end_line": null,
+      "snippet": "app.get('*', (req, res) => {",
+      "symbol": "path-syntax",
+      "change_id": 5,
+      "sources": [
+        "pattern",
+        "test_failure"
+      ],
+      "confidence": 1.0,
+      "confirmed": null,
+      "reason": "",
+      "id": 3,
+      "owners": [
+        "@acme/team-shop"
+      ]
+    },
+    {
+      "file_path": "routes/i18n.js",
+      "line": 3,
+      "end_line": null,
+      "snippet": "const lang = req.acceptsLanguage('en') ? 'en' : 'other';",
+      "symbol": "req.acceptsLanguage",
+      "change_id": 2,
+      "sources": [
+        "pattern",
+        "runtime_deprecation",
+        "test_failure"
+      ],
+      "confidence": 1.0,
+      "confirmed": null,
+      "reason": "",
+      "id": 4,
+      "owners": [
+        "@acme/team-shop"
+      ]
+    },
+    {
+      "file_path": "routes/invoices.js",
+      "line": 11,
+      "end_line": null,
+      "snippet": "res.sendfile(pdfPath(req.params.id));",
+      "symbol": "res.sendfile",
+      "change_id": null,
+      "sources": [
+        "runtime_deprecation",
+        "test_failure"
+      ],
+      "confidence": 1.0,
+      "confirmed": null,
+      "reason": "",
+      "id": 5,
+      "owners": [
+        "@acme/team-shop"
+      ]
+    },
+    {
+      "file_path": "routes/orders.js",
+      "line": 8,
+      "end_line": null,
+      "snippet": "const id = Number(req.param('id'));",
+      "symbol": "req.param",
+      "change_id": 4,
+      "sources": [
+        "pattern",
+        "runtime_deprecation",
+        "test_failure"
+      ],
+      "confidence": 1.0,
+      "confirmed": null,
+      "reason": "",
+      "id": 6,
+      "owners": [
+        "@acme/team-shop"
+      ]
+    },
+    {
+      "file_path": "routes/orders.js",
+      "line": 18,
+      "end_line": null,
+      "snippet": "return res.json(order, 201);",
+      "symbol": "res.json",
+      "change_id": 3,
+      "sources": [
+        "pattern",
+        "runtime_deprecation"
+      ],
+      "confidence": 1.0,
+      "confirmed": null,
+      "reason": "",
+      "id": 7,
+      "owners": [
+        "@acme/team-shop"
+      ]
+    }
+  ],
+  "telemetry": [
+    {
+      "source": "seeded_logs",
+      "signature": "express deprecated req.acceptsLanguage: Use acceptsLanguages instead at routes/i18n.js:<n>:<n>",
+      "count": 32,
+      "first_seen": "2026-10-21T17:16:27Z",
+      "last_seen": "2026-10-28T10:15:22Z",
+      "sample": "express deprecated req.acceptsLanguage: Use acceptsLanguages instead at routes/i18n.js:3:22",
+      "related_symbol": "req.acceptsLanguage"
+    },
+    {
+      "source": "seeded_logs",
+      "signature": "express deprecated res.json(obj, status): Use res.status(status).json(obj) instead at routes/orders.js:<n>:<n>",
+      "count": 27,
+      "first_seen": "2026-10-22T04:37:54Z",
+      "last_seen": "2026-10-28T08:56:04Z",
+      "sample": "express deprecated res.json(obj, status): Use res.status(status).json(obj) instead at routes/orders.js:18:14",
+      "related_symbol": "res.json"
+    },
+    {
+      "source": "seeded_logs",
+      "signature": "express deprecated res.sendfile: Use res.sendFile instead at routes/invoices.js:<n>:<n>",
+      "count": 26,
+      "first_seen": "2026-10-22T10:52:55Z",
+      "last_seen": "2026-10-28T09:35:37Z",
+      "sample": "express deprecated res.sendfile: Use res.sendFile instead at routes/invoices.js:11:7",
+      "related_symbol": "res.sendfile"
+    },
+    {
+      "source": "seeded_logs",
+      "signature": "express deprecated req.param(name): Use req.params, req.body, or req.query instead at routes/orders.js:<n>:<n>",
+      "count": 25,
+      "first_seen": "2026-10-22T00:12:58Z",
+      "last_seen": "2026-10-27T18:36:38Z",
+      "sample": "express deprecated req.param(name): Use req.params, req.body, or req.query instead at routes/orders.js:8:25",
+      "related_symbol": "req.param"
+    }
+  ],
+  "plan": {
+    "severity": "critical",
+    "effort_hours": 6.5,
+    "rationale": "The new version breaks tests and production already warns.",
+    "steps": [
+      "Upgrade express.",
+      "Replace the removed APIs."
+    ],
+    "validation": [
+      "Tests pass."
+    ]
+  },
+  "patches": [
+    {
+      "id": 2,
+      "attempt": 1,
+      "method": "llm_edits",
+      "diff": "diff --git a/package.json b/package.json\nindex 99f2e34..52bf21c 100644\n--- a/package.json\n+++ b/package.json\n@@ -9,7 +9,7 @@\n     \"test\": \"mocha\"\n   },\n   \"dependencies\": {\n-    \"express\": \"4.21.2\"\n+    \"express\": \"5.3.0\"\n   },\n   \"devDependencies\": {\n     \"mocha\": \"10.8.2\",\ndiff --git a/routes/admin.js b/routes/admin.js\nindex 9c96b18..f9dc24d 100644\n--- a/routes/admin.js\n+++ b/routes/admin.js\n@@ -2,10 +2,10 @@ let cacheEntries = 3;\n \n function clearCache(req, res) {\n   cacheEntries = 0;\n-  res.send(204);\n+  res.sendStatus(204);\n }\n \n module.exports = function mountAdmin(app) {\n-  app.del('/admin/cache', clearCache);\n+  app.delete('/admin/cache', clearCache);\n   app.get('/admin/cache', (req, res) => res.json({ entries: cacheEntries }));\n };\ndiff --git a/routes/fallback.js b/routes/fallback.js\nindex 78b41cb..9d78c49 100644\n--- a/routes/fallback.js\n+++ b/routes/fallback.js\n@@ -1,5 +1,5 @@\n module.exports = function mountFallback(app) {\n-  app.get('*', (req, res) => {\n+  app.get('/*splat', (req, res) => {\n     res.status(404).json({ error: 'no such route' });\n   });\n };\ndiff --git a/routes/i18n.js b/routes/i18n.js\nindex 1ddb2c8..fd22834 100644\n--- a/routes/i18n.js\n+++ b/routes/i18n.js\n@@ -1,6 +1,6 @@\n module.exports = function mountI18n(app) {\n   app.get('/greeting', (req, res) => {\n-    const lang = req.acceptsLanguage('en') ? 'en' : 'other';\n+    const lang = req.acceptsLanguages('en') ? 'en' : 'other';\n     res.json({ message: lang === 'en' ? 'Welcome' : 'Bienvenue' });\n   });\n };\ndiff --git a/routes/invoices.js b/routes/invoices.js\nindex 28634d4..a5b11ca 100644\n--- a/routes/invoices.js\n+++ b/routes/invoices.js\n@@ -8,7 +8,7 @@ function pdfPath(id) {\n }\n \n router.get('/:id/pdf', (req, res) => {\n-  res.sendfile(pdfPath(req.params.id));\n+  res.sendFile(pdfPath(req.params.id));\n });\n \n module.exports = router;\ndiff --git a/routes/orders.js b/routes/orders.js\nindex f579569..215756f 100644\n--- a/routes/orders.js\n+++ b/routes/orders.js\n@@ -5,7 +5,7 @@ const router = express.Router();\n const orders = new Map([[1, { id: 1, item: 'book', qty: 2 }]]);\n \n router.get('/:id', (req, res) => {\n-  const id = Number(req.param('id'));\n+  const id = Number(req.params.id);\n   const order = orders.get(id);\n   if (!order) return res.status(404).json({ error: 'not found' });\n   res.json(order);\n@@ -15,7 +15,7 @@ router.post('/', (req, res) => {\n   const order = { id: orders.size + 1, item: req.body.item, qty: req.body.qty || 1 };\n   orders.set(order.id, order);\n   notify.orderCreated(order);\n-  return res.json(order, 201);\n+  return res.status(201).json(order);\n });\n \n module.exports = router;\n",
+      "edits": [
+        {
+          "file": "routes/orders.js",
+          "find": "req.param('id')",
+          "replace": "req.params.id"
+        },
+        {
+          "file": "routes/orders.js",
+          "find": "res.json(order, 201)",
+          "replace": "res.status(201).json(order)"
+        },
+        {
+          "file": "routes/invoices.js",
+          "find": "res.sendfile(",
+          "replace": "res.sendFile("
+        },
+        {
+          "file": "routes/admin.js",
+          "find": "app.del(",
+          "replace": "app.delete("
+        },
+        {
+          "file": "routes/admin.js",
+          "find": "res.send(204)",
+          "replace": "res.sendStatus(204)"
+        },
+        {
+          "file": "routes/i18n.js",
+          "find": "req.acceptsLanguage('en')",
+          "replace": "req.acceptsLanguages('en')"
+        },
+        {
+          "file": "routes/fallback.js",
+          "find": "app.get('*'",
+          "replace": "app.get('/*splat'"
+        }
+      ],
+      "manifest_change": "diff --git a/package.json b/package.json\nindex 99f2e34..52bf21c 100644\n--- a/package.json\n+++ b/package.json\n@@ -9,7 +9,7 @@\n     \"test\": \"mocha\"\n   },\n   \"dependencies\": {\n-    \"express\": \"4.21.2\"\n+    \"express\": \"5.3.0\"\n   },\n   \"devDependencies\": {\n     \"mocha\": \"10.8.2\",",
+      "rejected": [],
+      "validation": {
+        "id": 1,
+        "patch_id": 2,
+        "command": "npm test",
+        "exit_code": 0,
+        "passed": 1,
+        "tests_passed": 9,
+        "tests_total": 9,
+        "duration_ms": 5,
+        "output_tail": "  9 passing (120ms)",
+        "started_at": "2026-10-28T11:37:09Z"
+      }
+    }
+  ],
+  "tests": {
+    "current": {
+      "passed": true,
+      "tests_passed": 9,
+      "tests_total": 9
+    },
+    "unpatched": {
+      "passed": false,
+      "tests_passed": 1,
+      "tests_total": 9
+    },
+    "patched": {
+      "id": 1,
+      "patch_id": 2,
+      "command": "npm test",
+      "exit_code": 0,
+      "passed": 1,
+      "tests_passed": 9,
+      "tests_total": 9,
+      "duration_ms": 5,
+      "output_tail": "  9 passing (120ms)",
+      "started_at": "2026-10-28T11:37:09Z"
+    }
+  },
+  "evidence": {
+    "pattern_lines": 5,
+    "runtime_warnings": 6,
+    "failing_places": 5,
+    "production_lines": 110
+  },
+  "approval": null,
+  "pull_request": null,
+  "can_decide": true,
+  "needs_engineer": false
+}

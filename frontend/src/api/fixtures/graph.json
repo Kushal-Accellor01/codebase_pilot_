@@ -1,0 +1,177 @@
+{
+  "nodes": [
+    {
+      "id": "dep:express",
+      "kind": "dependency",
+      "label": "express 5.3.0",
+      "status": "target",
+      "findings": 0,
+      "owner": null
+    },
+    {
+      "id": "file:routes/orders.js",
+      "kind": "file",
+      "label": "routes/orders.js",
+      "status": "affected",
+      "findings": 2,
+      "owner": "@acme/team-shop"
+    },
+    {
+      "id": "file:routes/admin.js",
+      "kind": "file",
+      "label": "routes/admin.js",
+      "status": "affected",
+      "findings": 2,
+      "owner": "@acme/team-shop"
+    },
+    {
+      "id": "file:routes/invoices.js",
+      "kind": "file",
+      "label": "routes/invoices.js",
+      "status": "affected",
+      "findings": 1,
+      "owner": "@acme/team-shop"
+    },
+    {
+      "id": "file:routes/fallback.js",
+      "kind": "file",
+      "label": "routes/fallback.js",
+      "status": "affected",
+      "findings": 1,
+      "owner": "@acme/team-shop"
+    },
+    {
+      "id": "file:routes/i18n.js",
+      "kind": "file",
+      "label": "routes/i18n.js",
+      "status": "affected",
+      "findings": 1,
+      "owner": "@acme/team-shop"
+    },
+    {
+      "id": "file:app.js",
+      "kind": "file",
+      "label": "app.js",
+      "status": "blast_radius",
+      "findings": 0,
+      "owner": "@acme/team-shop"
+    },
+    {
+      "id": "file:test/helpers.js",
+      "kind": "file",
+      "label": "test/helpers.js",
+      "status": "blast_radius",
+      "findings": 0,
+      "owner": "@acme/team-shop"
+    },
+    {
+      "id": "file:lib/notify.js",
+      "kind": "file",
+      "label": "lib/notify.js",
+      "status": "blast_radius",
+      "findings": 0,
+      "owner": "@acme/team-shop"
+    },
+    {
+      "id": "team:@acme/team-shop",
+      "kind": "team",
+      "label": "@acme/team-shop",
+      "status": "normal",
+      "findings": 0,
+      "owner": "@acme/team-shop"
+    }
+  ],
+  "edges": [
+    {
+      "source": "file:routes/orders.js",
+      "target": "dep:express",
+      "kind": "resolves_to"
+    },
+    {
+      "source": "file:routes/invoices.js",
+      "target": "dep:express",
+      "kind": "resolves_to"
+    },
+    {
+      "source": "file:app.js",
+      "target": "dep:express",
+      "kind": "resolves_to"
+    },
+    {
+      "source": "file:test/helpers.js",
+      "target": "dep:express",
+      "kind": "resolves_to"
+    },
+    {
+      "source": "file:app.js",
+      "target": "file:routes/invoices.js",
+      "kind": "imports"
+    },
+    {
+      "source": "file:app.js",
+      "target": "file:routes/i18n.js",
+      "kind": "imports"
+    },
+    {
+      "source": "file:app.js",
+      "target": "file:routes/fallback.js",
+      "kind": "imports"
+    },
+    {
+      "source": "file:app.js",
+      "target": "file:routes/orders.js",
+      "kind": "imports"
+    },
+    {
+      "source": "file:app.js",
+      "target": "file:routes/admin.js",
+      "kind": "imports"
+    },
+    {
+      "source": "file:routes/orders.js",
+      "target": "file:lib/notify.js",
+      "kind": "imports"
+    },
+    {
+      "source": "team:@acme/team-shop",
+      "target": "file:routes/orders.js",
+      "kind": "owns"
+    },
+    {
+      "source": "team:@acme/team-shop",
+      "target": "file:routes/admin.js",
+      "kind": "owns"
+    },
+    {
+      "source": "team:@acme/team-shop",
+      "target": "file:routes/invoices.js",
+      "kind": "owns"
+    },
+    {
+      "source": "team:@acme/team-shop",
+      "target": "file:routes/fallback.js",
+      "kind": "owns"
+    },
+    {
+      "source": "team:@acme/team-shop",
+      "target": "file:routes/i18n.js",
+      "kind": "owns"
+    },
+    {
+      "source": "team:@acme/team-shop",
+      "target": "file:app.js",
+      "kind": "owns"
+    },
+    {
+      "source": "team:@acme/team-shop",
+      "target": "file:test/helpers.js",
+      "kind": "owns"
+    },
+    {
+      "source": "team:@acme/team-shop",
+      "target": "file:lib/notify.js",
+      "kind": "owns"
+    }
+  ],
+  "capped": false
+}

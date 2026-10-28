@@ -58,7 +58,7 @@ def test_dependencies(client):
 
 def test_overview_headline_board_and_files(client):
     ov = client.get("/api/scans/latest/overview").json()
-    assert ov["headline"].startswith("1 upgrade needs a decision. express 5 would break ")
+    assert ov["headline"].startswith("1 upgrade needs a decision. Express 5 would break ")
     assert "already warn" in ov["headline"] and ov["lede"].startswith("Pilot checked 1 dependency against")
     top = ov["upgrades"][0]
     assert top["package"] == "express" and top["risk"] == "critical" and top["from"] == "4.21.2"

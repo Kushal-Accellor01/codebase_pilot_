@@ -30,12 +30,12 @@ MIGRATIONS = (
 )
 
 
-def connect(db_path: str, *, must_exist: bool = True) -> sqlite3.Connection:
+def connect(db_path: str, *, must_exist: bool = True, check_same_thread: bool = True) -> sqlite3.Connection:
     if sqlite3.sqlite_version_info < MIN_SQLITE:
         raise DatabaseError(f"SQLite {sqlite3.sqlite_version} is too old; 3.35 or newer is required")
     if must_exist and not Path(db_path).is_file():
         raise DatabaseError(f"Database not found: {db_path}")
-    conn = sqlite3.connect(db_path, timeout=5)
+    conn = sqlite3.connect(db_path, timeout=5, check_same_thread=check_same_thread)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA foreign_keys = ON")
     conn.execute("PRAGMA journal_mode = WAL")

@@ -62,7 +62,9 @@ def create_app(
     app.add_middleware(CORSMiddleware, allow_origins=CORS_ORIGINS, allow_methods=["*"], allow_headers=["*"])
 
     def get_conn() -> Iterator:
-        conn = core_db.connect(db)
+        # FastAPI may create a dependency in one worker thread and run the endpoint in another; a connection is
+        # still used by one request at a time, so cross-thread use is safe here.
+        conn = core_db.connect(db, check_same_thread=False)
         try:
             yield conn
         finally:

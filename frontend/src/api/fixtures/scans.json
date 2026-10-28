@@ -1,0 +1,14 @@
+[
+  {
+    "id": "5929e487-6457-4c97-baf9-435673629011",
+    "repo": "pilot-sandbox-shop",
+    "repo_url": "C:\\Users\\KUSHAL~1\\AppData\\Local\\Temp\\tmpzhpkqxuz\\origin\\pilot-sandbox-shop",
+    "commit_sha": "91c2232724289e2af221d9409da17c9e144ad764",
+    "scanned_at": "2026-10-28 11:37:07",
+    "has_nodes": true,
+    "dependencies": 3,
+    "analysed": 3,
+    "updates": 1,
+    "critical": 1
+  }
+]

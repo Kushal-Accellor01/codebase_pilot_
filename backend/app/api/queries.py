@@ -219,7 +219,7 @@ def headline(counts: dict, top: dict | None) -> tuple[str, str]:
         t = top
         sentence = f"{decisions} {'upgrade needs' if decisions == 1 else 'upgrades need'} a decision."
         if t["lines"]:
-            tail = f" {t['package']} {t['to'].split('.')[0]} would break {plural(t['lines'], 'line')}"
+            tail = f" {t['package'].capitalize()} {t['to'].split('.')[0]} would break {plural(t['lines'], 'line')}"
             if t["in_production"]:
                 verb = "warns" if t["in_production"] == 1 else "warn"
                 tail += f", and {t['in_production']} of them already {verb} in production"
@@ -398,7 +398,16 @@ def get_upgrade(conn: sqlite3.Connection, run_id: str) -> dict:
     plan = run_store.load_plan(conn, run_id)
     facts = _run_facts(conn, run_id)
     owners = _owners(conn, run, [f.file_path for f in findings])
-    finding_rows = [{**f.model_dump(), "owners": owners.get(f.file_path, [])} for f in findings]
+    ids = {
+        (r["file_path"], r["line"], r["symbol"] or None): r["id"]
+        for r in conn.execute(
+            "SELECT id, file_path, line, symbol FROM impact_findings WHERE upgrade_run_id = ?", (run_id,)
+        )
+    }
+    finding_rows = [
+        {**f.model_dump(), "id": ids.get((f.file_path, f.line, f.symbol)), "owners": owners.get(f.file_path, [])}
+        for f in findings
+    ]
     signals = {
         s: sum(1 for f in findings if s in f.sources and f.confirmed is not False)
         for s in ("pattern", "runtime_deprecation", "test_failure")

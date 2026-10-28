@@ -1,0 +1,1832 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Codebase Pilot",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/api/health": {
+      "get": {
+        "summary": "Health",
+        "operationId": "health_api_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Health"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/scans": {
+      "get": {
+        "summary": "Scans",
+        "operationId": "scans_api_scans_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ScanOut"
+                  },
+                  "type": "array",
+                  "title": "Response Scans Api Scans Get"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Start Scan",
+        "operationId": "start_scan_api_scans_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ScanRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobAccepted"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/scans/{scan}/dependencies": {
+      "get": {
+        "summary": "Dependencies",
+        "operationId": "dependencies_api_scans__scan__dependencies_get",
+        "parameters": [
+          {
+            "name": "scan",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Scan"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/DependencyRow"
+                  },
+                  "title": "Response Dependencies Api Scans  Scan  Dependencies Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/scans/{scan}/overview": {
+      "get": {
+        "summary": "Overview",
+        "operationId": "overview_api_scans__scan__overview_get",
+        "parameters": [
+          {
+            "name": "scan",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Scan"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Overview"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/scans/{scan}/graph": {
+      "get": {
+        "summary": "Graph",
+        "operationId": "graph_api_scans__scan__graph_get",
+        "parameters": [
+          {
+            "name": "scan",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Scan"
+            }
+          },
+          {
+            "name": "run_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Run Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Graph"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/dependency-updates/{update_id}": {
+      "get": {
+        "summary": "Dependency Update",
+        "operationId": "dependency_update_api_dependency_updates__update_id__get",
+        "parameters": [
+          {
+            "name": "update_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Update Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/upgrades": {
+      "get": {
+        "summary": "Upgrades",
+        "operationId": "upgrades_api_upgrades_get",
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "name": "scan_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Scan Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/UpgradeSummary"
+                  },
+                  "title": "Response Upgrades Api Upgrades Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/upgrades/{run_id}": {
+      "get": {
+        "summary": "Upgrade",
+        "operationId": "upgrade_api_upgrades__run_id__get",
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Run Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UpgradeDetail"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/upgrades/{run_id}/decision": {
+      "post": {
+        "summary": "Decide",
+        "operationId": "decide_api_upgrades__run_id__decision_post",
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Run Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DecisionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DecisionAccepted"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/feedback": {
+      "post": {
+        "summary": "Feedback",
+        "operationId": "feedback_api_feedback_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FeedbackRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FeedbackSaved"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/sources/override": {
+      "post": {
+        "summary": "Source Override",
+        "operationId": "source_override_api_sources_override_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SourceOverride"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/upgrades/{run_id}/events": {
+      "get": {
+        "summary": "Run Events",
+        "operationId": "run_events_api_upgrades__run_id__events_get",
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Run Id"
+            }
+          },
+          {
+            "name": "after",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "After"
+            }
+          },
+          {
+            "name": "last-event-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Last-Event-Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AffectedFile": {
+        "properties": {
+          "path": {
+            "type": "string",
+            "title": "Path"
+          },
+          "lines": {
+            "type": "integer",
+            "title": "Lines"
+          },
+          "packages": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Packages"
+          },
+          "strongest_evidence": {
+            "type": "string",
+            "title": "Strongest Evidence"
+          }
+        },
+        "type": "object",
+        "required": [
+          "path",
+          "lines",
+          "packages",
+          "strongest_evidence"
+        ],
+        "title": "AffectedFile"
+      },
+      "BoardItem": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "run_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Run Id"
+          },
+          "package": {
+            "type": "string",
+            "title": "Package"
+          },
+          "type": {
+            "type": "string",
+            "title": "Type"
+          },
+          "from": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "From"
+          },
+          "to": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "To"
+          },
+          "kind": {
+            "type": "string",
+            "title": "Kind"
+          },
+          "risk": {
+            "type": "string",
+            "enum": [
+              "critical",
+              "high",
+              "medium",
+              "low",
+              "none"
+            ],
+            "title": "Risk"
+          },
+          "why": {
+            "type": "string",
+            "title": "Why"
+          },
+          "why_bold": {
+            "type": "string",
+            "title": "Why Bold"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "status_label": {
+            "type": "string",
+            "title": "Status Label"
+          },
+          "pill": {
+            "type": "string",
+            "title": "Pill"
+          },
+          "effort_hours": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Effort Hours"
+          },
+          "tests_pass": {
+            "type": "boolean",
+            "title": "Tests Pass",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "package",
+          "type",
+          "kind",
+          "risk",
+          "why",
+          "why_bold",
+          "status",
+          "status_label",
+          "pill"
+        ],
+        "title": "BoardItem"
+      },
+      "DecisionAccepted": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "title": "Status"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status"
+        ],
+        "title": "DecisionAccepted"
+      },
+      "DecisionRequest": {
+        "properties": {
+          "decision": {
+            "type": "string",
+            "enum": [
+              "approved",
+              "rejected"
+            ],
+            "title": "Decision"
+          },
+          "decided_by": {
+            "type": "string",
+            "maxLength": 80,
+            "minLength": 1,
+            "title": "Decided By"
+          },
+          "comment": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 1000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Comment"
+          }
+        },
+        "type": "object",
+        "required": [
+          "decision",
+          "decided_by"
+        ],
+        "title": "DecisionRequest"
+      },
+      "DependencyRow": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "ecosystem": {
+            "type": "string",
+            "title": "Ecosystem"
+          },
+          "dependency_type": {
+            "type": "string",
+            "title": "Dependency Type"
+          },
+          "declared_constraint": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Declared Constraint"
+          },
+          "current_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Current Version"
+          },
+          "latest_in_range": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latest In Range"
+          },
+          "latest_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latest Version"
+          },
+          "recommended_target": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recommended Target"
+          },
+          "update_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Update Type"
+          },
+          "requires_manifest_change": {
+            "type": "boolean",
+            "title": "Requires Manifest Change"
+          },
+          "vuln_count": {
+            "type": "integer",
+            "title": "Vuln Count"
+          },
+          "max_severity": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Severity"
+          },
+          "is_deprecated": {
+            "type": "boolean",
+            "title": "Is Deprecated"
+          },
+          "importer_count": {
+            "type": "integer",
+            "title": "Importer Count"
+          },
+          "risk_level": {
+            "type": "string",
+            "enum": [
+              "critical",
+              "high",
+              "medium",
+              "low",
+              "none"
+            ],
+            "title": "Risk Level"
+          },
+          "priority_score": {
+            "type": "number",
+            "title": "Priority Score"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "reachability": {
+            "type": "string",
+            "enum": [
+              "reachable_in_code",
+              "imported",
+              "declared_only"
+            ],
+            "title": "Reachability"
+          },
+          "run_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Run Id"
+          },
+          "run_status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Run Status"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "ecosystem",
+          "dependency_type",
+          "requires_manifest_change",
+          "vuln_count",
+          "is_deprecated",
+          "importer_count",
+          "risk_level",
+          "priority_score",
+          "status",
+          "reachability"
+        ],
+        "title": "DependencyRow"
+      },
+      "FeedbackRequest": {
+        "properties": {
+          "target_kind": {
+            "type": "string",
+            "enum": [
+              "impact_finding",
+              "update_change"
+            ],
+            "title": "Target Kind"
+          },
+          "target_id": {
+            "type": "integer",
+            "title": "Target Id"
+          },
+          "verdict": {
+            "type": "string",
+            "enum": [
+              "correct",
+              "not_relevant"
+            ],
+            "title": "Verdict"
+          },
+          "comment": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 1000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Comment"
+          },
+          "user_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "User Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "target_kind",
+          "target_id",
+          "verdict"
+        ],
+        "title": "FeedbackRequest"
+      },
+      "FeedbackSaved": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id"
+        ],
+        "title": "FeedbackSaved"
+      },
+      "Graph": {
+        "properties": {
+          "nodes": {
+            "items": {
+              "$ref": "#/components/schemas/GraphNode"
+            },
+            "type": "array",
+            "title": "Nodes"
+          },
+          "edges": {
+            "items": {
+              "$ref": "#/components/schemas/GraphEdge"
+            },
+            "type": "array",
+            "title": "Edges"
+          },
+          "capped": {
+            "type": "boolean",
+            "title": "Capped",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "nodes",
+          "edges"
+        ],
+        "title": "Graph"
+      },
+      "GraphEdge": {
+        "properties": {
+          "source": {
+            "type": "string",
+            "title": "Source"
+          },
+          "target": {
+            "type": "string",
+            "title": "Target"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "imports",
+              "resolves_to",
+              "owns"
+            ],
+            "title": "Kind"
+          }
+        },
+        "type": "object",
+        "required": [
+          "source",
+          "target",
+          "kind"
+        ],
+        "title": "GraphEdge"
+      },
+      "GraphNode": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "file",
+              "dependency",
+              "team"
+            ],
+            "title": "Kind"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "target",
+              "affected",
+              "blast_radius",
+              "normal"
+            ],
+            "title": "Status"
+          },
+          "findings": {
+            "type": "integer",
+            "title": "Findings"
+          },
+          "owner": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Owner"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "kind",
+          "label",
+          "status",
+          "findings"
+        ],
+        "title": "GraphNode"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "Health": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "migrations": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Migrations"
+          },
+          "llm_mode": {
+            "type": "string",
+            "title": "Llm Mode"
+          },
+          "jobs_queued": {
+            "type": "integer",
+            "title": "Jobs Queued"
+          },
+          "embedded_worker": {
+            "type": "boolean",
+            "title": "Embedded Worker",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "migrations",
+          "llm_mode",
+          "jobs_queued"
+        ],
+        "title": "Health"
+      },
+      "JobAccepted": {
+        "properties": {
+          "job_id": {
+            "type": "string",
+            "title": "Job Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "job_id"
+        ],
+        "title": "JobAccepted"
+      },
+      "Overview": {
+        "properties": {
+          "scan_id": {
+            "type": "string",
+            "title": "Scan Id"
+          },
+          "headline": {
+            "type": "string",
+            "title": "Headline"
+          },
+          "lede": {
+            "type": "string",
+            "title": "Lede"
+          },
+          "risk": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Risk"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "upgrades": {
+            "items": {
+              "$ref": "#/components/schemas/BoardItem"
+            },
+            "type": "array",
+            "title": "Upgrades"
+          },
+          "waiting": {
+            "items": {
+              "$ref": "#/components/schemas/WaitingItem"
+            },
+            "type": "array",
+            "title": "Waiting"
+          },
+          "security": {
+            "items": {
+              "$ref": "#/components/schemas/SecurityItem"
+            },
+            "type": "array",
+            "title": "Security"
+          },
+          "affected_files": {
+            "items": {
+              "$ref": "#/components/schemas/AffectedFile"
+            },
+            "type": "array",
+            "title": "Affected Files"
+          },
+          "approvals_waiting": {
+            "type": "integer",
+            "title": "Approvals Waiting"
+          }
+        },
+        "type": "object",
+        "required": [
+          "scan_id",
+          "headline",
+          "lede",
+          "risk",
+          "total",
+          "upgrades",
+          "waiting",
+          "security",
+          "affected_files",
+          "approvals_waiting"
+        ],
+        "title": "Overview"
+      },
+      "ScanOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "repo": {
+            "type": "string",
+            "title": "Repo"
+          },
+          "repo_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Repo Url"
+          },
+          "commit_sha": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Commit Sha"
+          },
+          "scanned_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scanned At"
+          },
+          "has_nodes": {
+            "type": "boolean",
+            "title": "Has Nodes"
+          },
+          "dependencies": {
+            "type": "integer",
+            "title": "Dependencies"
+          },
+          "analysed": {
+            "type": "integer",
+            "title": "Analysed"
+          },
+          "updates": {
+            "type": "integer",
+            "title": "Updates"
+          },
+          "critical": {
+            "type": "integer",
+            "title": "Critical"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "repo",
+          "has_nodes",
+          "dependencies",
+          "analysed",
+          "updates",
+          "critical"
+        ],
+        "title": "ScanOut"
+      },
+      "ScanRequest": {
+        "properties": {
+          "repo_url": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Repo Url"
+          },
+          "only": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Only"
+          }
+        },
+        "type": "object",
+        "required": [
+          "repo_url"
+        ],
+        "title": "ScanRequest"
+      },
+      "SecurityItem": {
+        "properties": {
+          "package": {
+            "type": "string",
+            "title": "Package"
+          },
+          "version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Version"
+          },
+          "count": {
+            "type": "integer",
+            "title": "Count"
+          },
+          "severity": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Severity"
+          },
+          "fixed_in": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fixed In"
+          }
+        },
+        "type": "object",
+        "required": [
+          "package",
+          "count"
+        ],
+        "title": "SecurityItem"
+      },
+      "SourceOverride": {
+        "properties": {
+          "ecosystem": {
+            "type": "string",
+            "title": "Ecosystem",
+            "default": "npm"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Name"
+          },
+          "owner": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Owner"
+          },
+          "repo": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Repo"
+          },
+          "directory": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Directory"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "owner",
+          "repo"
+        ],
+        "title": "SourceOverride"
+      },
+      "UpgradeDetail": {
+        "properties": {
+          "run": {
+            "$ref": "#/components/schemas/UpgradeSummary"
+          },
+          "event": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Event"
+          },
+          "findings": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Findings"
+          },
+          "telemetry": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Telemetry"
+          },
+          "plan": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Plan"
+          },
+          "patches": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Patches"
+          },
+          "tests": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Tests"
+          },
+          "evidence": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Evidence"
+          },
+          "approval": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approval"
+          },
+          "pull_request": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pull Request"
+          },
+          "can_decide": {
+            "type": "boolean",
+            "title": "Can Decide"
+          },
+          "needs_engineer": {
+            "type": "boolean",
+            "title": "Needs Engineer"
+          }
+        },
+        "type": "object",
+        "required": [
+          "run",
+          "event",
+          "findings",
+          "telemetry",
+          "patches",
+          "tests",
+          "evidence",
+          "can_decide",
+          "needs_engineer"
+        ],
+        "title": "UpgradeDetail"
+      },
+      "UpgradeSummary": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "scan_id": {
+            "type": "string",
+            "title": "Scan Id"
+          },
+          "package": {
+            "type": "string",
+            "title": "Package"
+          },
+          "ecosystem": {
+            "type": "string",
+            "title": "Ecosystem"
+          },
+          "from": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "From"
+          },
+          "to": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "To"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "status_label": {
+            "type": "string",
+            "title": "Status Label"
+          },
+          "pill": {
+            "type": "string",
+            "title": "Pill"
+          },
+          "risk": {
+            "type": "string",
+            "enum": [
+              "critical",
+              "high",
+              "medium",
+              "low",
+              "none"
+            ],
+            "title": "Risk"
+          },
+          "current_node": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Current Node"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "effort_hours": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Effort Hours"
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "scan_id",
+          "package",
+          "ecosystem",
+          "status",
+          "status_label",
+          "pill",
+          "risk",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "UpgradeSummary"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      },
+      "WaitingItem": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "run_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Run Id"
+          },
+          "package": {
+            "type": "string",
+            "title": "Package"
+          },
+          "type": {
+            "type": "string",
+            "title": "Type"
+          },
+          "from": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "From"
+          },
+          "to": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "To"
+          },
+          "kind": {
+            "type": "string",
+            "title": "Kind"
+          },
+          "risk": {
+            "type": "string",
+            "enum": [
+              "critical",
+              "high",
+              "medium",
+              "low",
+              "none"
+            ],
+            "title": "Risk"
+          },
+          "why": {
+            "type": "string",
+            "title": "Why"
+          },
+          "why_bold": {
+            "type": "string",
+            "title": "Why Bold"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "status_label": {
+            "type": "string",
+            "title": "Status Label"
+          },
+          "pill": {
+            "type": "string",
+            "title": "Pill"
+          },
+          "effort_hours": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Effort Hours"
+          },
+          "tests_pass": {
+            "type": "boolean",
+            "title": "Tests Pass",
+            "default": false
+          },
+          "detail": {
+            "type": "string",
+            "title": "Detail",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "package",
+          "type",
+          "kind",
+          "risk",
+          "why",
+          "why_bold",
+          "status",
+          "status_label",
+          "pill"
+        ],
+        "title": "WaitingItem"
+      }
+    }
+  }
+}

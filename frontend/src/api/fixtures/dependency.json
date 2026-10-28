@@ -1,0 +1,113 @@
+{
+  "event_id": "5929e487-6457-4c97-baf9-435673629011:npm:express:4.21.2->5.3.0",
+  "scan_id": "5929e487-6457-4c97-baf9-435673629011",
+  "ecosystem": "npm",
+  "package": "express",
+  "dependency_type": "unknown",
+  "manifest_path": "package.json",
+  "declared_constraint": "4.21.2",
+  "current_version": "4.21.2",
+  "current_version_basis": "lockfile",
+  "target_version": "5.3.0",
+  "latest_version": "5.3.0",
+  "update_type": "major",
+  "requires_manifest_change": true,
+  "runtime_requirement_change": true,
+  "is_deprecated": false,
+  "deprecation_message": null,
+  "vulnerabilities": [],
+  "changes": [
+    {
+      "id": 5,
+      "kind": "behavior_changed",
+      "breaking": true,
+      "api_symbols": [],
+      "description": "Route path syntax changed: path-to-regexp 8 needs named wildcards",
+      "migration_hint": null,
+      "version": "5.0.0",
+      "evidence_url": "https://github.com/expressjs/express/releases/tag/v5.0.0",
+      "evidence_quote": "Updated to `path-to-regexp@8.x`, removing sub-expression regex patterns"
+    },
+    {
+      "id": 1,
+      "kind": "removed",
+      "breaking": true,
+      "api_symbols": [
+        "app.del"
+      ],
+      "description": "app.del was removed",
+      "migration_hint": null,
+      "version": "5.0.0-alpha.1",
+      "evidence_url": "https://github.com/expressjs/express/blob/master/History.md",
+      "evidence_quote": "`app.del` - use `app.delete`"
+    },
+    {
+      "id": 2,
+      "kind": "removed",
+      "breaking": true,
+      "api_symbols": [
+        "req.acceptsLanguage"
+      ],
+      "description": "req.acceptsLanguage was removed",
+      "migration_hint": null,
+      "version": "5.0.0-alpha.1",
+      "evidence_url": "https://github.com/expressjs/express/blob/master/History.md",
+      "evidence_quote": "`req.acceptsLanguage` - use `req.acceptsLanguages`"
+    },
+    {
+      "id": 3,
+      "kind": "signature_changed",
+      "breaking": true,
+      "api_symbols": [
+        "res.json(obj, status)"
+      ],
+      "description": "the res.json(obj, status) signature was removed",
+      "migration_hint": null,
+      "version": "5.0.0-alpha.1",
+      "evidence_url": "https://github.com/expressjs/express/blob/master/History.md",
+      "evidence_quote": "`res.json(obj, status)` signature - use `res.json(status, obj)`"
+    },
+    {
+      "id": 4,
+      "kind": "removed",
+      "breaking": true,
+      "api_symbols": [
+        "req.param"
+      ],
+      "description": "req.param() was removed",
+      "migration_hint": null,
+      "version": "5.0.0-alpha.2",
+      "evidence_url": "https://github.com/expressjs/express/blob/master/History.md",
+      "evidence_quote": "`req.param()` -- use `req.params`, `req.body`, or `req.query` instead"
+    }
+  ],
+  "summary": "Express 5 removes several APIs.",
+  "notes_coverage": 1.0,
+  "source_repo": "github.com/expressjs/express",
+  "importer_count": 4,
+  "importing_files": [
+    {
+      "path": "app.js",
+      "lines": []
+    },
+    {
+      "path": "routes/invoices.js",
+      "lines": []
+    },
+    {
+      "path": "routes/orders.js",
+      "lines": []
+    },
+    {
+      "path": "test/helpers.js",
+      "lines": []
+    }
+  ],
+  "priority_score": 45.3,
+  "risk_level": "high",
+  "status": "analyzed",
+  "id": 2,
+  "run_id": "829bf606-a994-4e4d-8ab1-9ddee36c6b2f",
+  "run_status": "awaiting_approval",
+  "error": null
+}

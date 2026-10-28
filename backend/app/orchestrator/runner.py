@@ -115,13 +115,15 @@ async def resume_run(
         raise KeyError(f"unknown upgrade run {run_id}")
     if run["status"] != "awaiting_approval":
         raise RunConflict(f"run {run_id} is {run['status']}, not awaiting approval")
-    run_store.save_approval(ctx.conn, run_id, decision, decided_by, comment)
-    run_store.set_run_status(ctx.conn, run_id, "approved" if decision == "approved" else "rejected", node="approval")
-    events.emit(ctx.conn, run_id, "approval", "started", f"{decision} by {decided_by}")
     cfg = graph_module.thread_config(run_id)
     async with open_graph(ctx, overrides=overrides) as graph:
+        # Check the checkpoint before recording anything: a missing one must leave the run awaiting approval.
         if not await graph_module.is_paused(graph, run_id):
             raise RunConflict(f"run {run_id} has no paused graph thread to resume")
+        run_store.save_approval(ctx.conn, run_id, decision, decided_by, comment)
+        run_store.set_run_status(ctx.conn, run_id, "approved" if decision == "approved" else "rejected",
+                                 node="approval")
+        events.emit(ctx.conn, run_id, "approval", "started", f"{decision} by {decided_by}")
         try:
             await graph.ainvoke(Command(resume={"decision": decision, "by": decided_by}), cfg)
         except Exception as exc:

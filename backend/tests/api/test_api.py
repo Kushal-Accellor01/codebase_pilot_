@@ -249,8 +249,11 @@ def test_decision_flow_approve_then_conflict(fresh):
             ).status_code
             == 409
         )
+        queued = client.get(f"/api/upgrades/{run_id}").json()
+        assert queued["decision_pending"] is True and queued["can_decide"] is False  # H3: the UI keeps polling
         fresh.work()  # the worker picks the job up
         detail = client.get(f"/api/upgrades/{run_id}").json()
+        assert detail["decision_pending"] is False
         assert detail["run"]["status"] == "pr_opened" and detail["can_decide"] is False
         assert detail["approval"]["decided_by"] == "alice" and detail["pull_request"]["state"] == "local"
         assert (
@@ -286,3 +289,38 @@ def test_embedded_worker_processes_a_decision_without_a_separate_process(fresh):
         assert client.get(f"/api/upgrades/{run_id}").json()["run"]["status"] == "rejected"
         assert run_store.load_approval(core_db.connect(fresh.db), run_id)["decision"] == "rejected"
     assert jobs.counts(core_db.connect(fresh.db)).get("failed", 0) == 0
+
+
+def test_graph_of_a_run_from_an_older_scan_still_loads(fresh):
+    """H5/B-6: the graph is asked for with the run's own scan id."""
+    with client_for(fresh) as client:
+        run_id = express_run_id(client)
+        scan_id = client.get(f"/api/upgrades/{run_id}").json()["run"]["scan_id"]
+        fresh.work(("scan", {"repo_url": str(fresh.origin), "only": ["express"]}))  # a newer scan exists now
+        assert client.get("/api/scans").json()[0]["id"] != scan_id
+        assert client.get(f"/api/scans/{scan_id}/graph?run_id={run_id}").status_code == 200
+        assert len([r for r in client.get("/api/upgrades").json() if r["package"] == "express"]) == 1  # H2
+
+
+def test_resume_without_a_checkpoint_conflicts_and_leaves_the_run_alone(fresh):
+    """H5/B-5: nothing is recorded when the paused graph thread is gone."""
+    import asyncio
+    import os
+
+    from app.orchestrator import runner
+
+    conn = core_db.connect(fresh.db)
+    run_id = run_store.list_runs(conn)[0]["id"]
+    for suffix in ("", "-wal", "-shm"):
+        path = str(fresh.tmp / "ck.db") + suffix
+        if os.path.exists(path):
+            os.remove(path)
+
+    async def go():
+        ctx = runner.make_context(conn, None, llm=fresh.llm)
+        await runner.resume_run(ctx, run_id, "approved", "alice")
+
+    with pytest.raises(runner.RunConflict):
+        asyncio.run(go())
+    assert run_store.get_run(conn, run_id)["status"] == "awaiting_approval"
+    assert run_store.load_approval(conn, run_id) is None

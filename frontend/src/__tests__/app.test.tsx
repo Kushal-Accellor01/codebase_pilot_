@@ -195,6 +195,16 @@ describe("Decisions", () => {
   });
 });
 
+describe("Pending decision", () => {
+  it("shows that the decision was sent and keeps both buttons disabled", async () => {
+    vi.spyOn(api, "upgrade").mockResolvedValue({ ...fixtures.upgrade, decision_pending: true, can_decide: false });
+    renderAt(`/upgrades/${runId}`);
+    expect(await screen.findByRole("button", { name: "Decision sent" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Reject" })).toBeDisabled();
+    expect(screen.getByText(/Waiting for the worker/)).toBeInTheDocument();
+  });
+});
+
 describe("States", () => {
   it("shows a loading state, then data", async () => {
     renderAt("/approvals");

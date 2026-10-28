@@ -256,7 +256,7 @@ function Detail({ detail }: { detail: UpgradeDetail }) {
   const id = useId();
   const run = detail.run;
   const event = asEvent(detail);
-  const graph = useGraph(run.id, tab === "Blast radius");
+  const graph = useGraph(run.id, run.scan_id, tab === "Blast radius");
   const patches = asPatches(detail);
   const prLabel = detail.needs_engineer ? "an issue with the evidence" : `a pull request on ${event.source_repo ?? "the repository"}`;
   const pr = detail.pull_request as { url?: string; state?: string; branch?: string; kind?: string } | null;
@@ -281,8 +281,9 @@ function Detail({ detail }: { detail: UpgradeDetail }) {
         <div className="actions">
           <button className="btn" disabled={!detail.can_decide} onClick={() => setDecision("rejected")}>Reject</button>
           <button className="btn btn-primary" disabled={!detail.can_decide} onClick={() => setDecision("approved")}>
-            {detail.needs_engineer ? "Approve and open issue" : "Approve and open PR"}
+            {detail.decision_pending ? "Decision sent" : detail.needs_engineer ? "Approve and open issue" : "Approve and open PR"}
           </button>
+          {detail.decision_pending ? <span className="small" role="status">Waiting for the worker to pick it up…</span> : null}
         </div>
       </div>
 

@@ -551,6 +551,11 @@ export interface components {
             pull_request?: {
                 [key: string]: unknown;
             } | null;
+            /**
+             * Decision Pending
+             * @default false
+             */
+            decision_pending: boolean;
             /** Can Decide */
             can_decide: boolean;
             /** Needs Engineer */

@@ -1525,6 +1525,11 @@
             ],
             "title": "Pull Request"
           },
+          "decision_pending": {
+            "type": "boolean",
+            "title": "Decision Pending",
+            "default": false
+          },
           "can_decide": {
             "type": "boolean",
             "title": "Can Decide"

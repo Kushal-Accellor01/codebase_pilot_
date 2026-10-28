@@ -50,7 +50,7 @@ export const api = {
       : request(`/upgrades${status ? `?status=${status}` : ""}`),
   upgrade: (id: string): Promise<UpgradeDetail> =>
     fixtureMode() ? delay(fixtures.upgrade) : request(`/upgrades/${id}`),
-  graph: (runId: string, scan = "latest"): Promise<Graph> =>
+  graph: (runId: string, scan: string): Promise<Graph> =>
     fixtureMode() ? delay(fixtures.graph) : request(`/scans/${scan}/graph?run_id=${runId}`),
   decide: (runId: string, body: DecisionRequest): Promise<{ status: string }> =>
     fixtureMode()

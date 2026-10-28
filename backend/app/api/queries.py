@@ -397,6 +397,7 @@ def get_upgrade(conn: sqlite3.Connection, run_id: str) -> dict:
     patches = run_store.load_patches(conn, run_id)
     plan = run_store.load_plan(conn, run_id)
     facts = _run_facts(conn, run_id)
+    pending = has_pending_decision(conn, run_id)
     owners = _owners(conn, run, [f.file_path for f in findings])
     ids = {
         (r["file_path"], r["line"], r["symbol"] or None): r["id"]
@@ -433,7 +434,8 @@ def get_upgrade(conn: sqlite3.Connection, run_id: str) -> dict:
         },
         "approval": dict(approval) if approval else None,
         "pull_request": dict(pr) if pr else None,
-        "can_decide": run["status"] == "awaiting_approval",
+        "decision_pending": pending,
+        "can_decide": run["status"] == "awaiting_approval" and not pending,
         "needs_engineer": bool(patches) and not facts["tests_pass"],
     }
 

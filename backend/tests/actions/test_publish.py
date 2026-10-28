@@ -240,3 +240,15 @@ def test_last_failure_and_slug_helpers():
     assert publish.last_failure([{"validation": {"passed": False, "output_tail": "boom"}}]) == "boom"
     assert publish._is_github_slug("acme/shop") and not publish._is_github_slug("C:/a/b") and not publish._is_github_slug(None)
     assert publish._parse_author("A B <a@b.c>") == ("A B", "a@b.c") and publish._parse_author("solo")[1] == "pilot@localhost"
+
+
+def test_fallback_never_pushes_to_a_remote_url(worktree, tmp_path):
+    """H4: a GitHub repo without a token pushes into the local clone, never to the URL."""
+    origin, _wt = worktree
+    url = "https://github.com/acme/pilot-sandbox-shop"
+    assert publish.local_origin(url, str(origin)) == str(origin)  # the clone stands in for the remote
+    assert publish.local_origin(str(origin), None) == str(origin)  # a local repository is pushed to as before
+    with pytest.raises(RuntimeError, match="no local repository"):
+        publish.local_origin(url, str(tmp_path / "gone"))
+    with pytest.raises(RuntimeError, match="no local repository"):
+        publish.local_origin(url, None)

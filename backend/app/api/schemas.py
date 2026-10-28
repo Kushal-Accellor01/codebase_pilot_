@@ -138,6 +138,7 @@ class UpgradeDetail(BaseModel):
     evidence: dict[str, int]
     approval: dict[str, Any] | None = None
     pull_request: dict[str, Any] | None = None
+    decision_pending: bool = False
     can_decide: bool
     needs_engineer: bool
 

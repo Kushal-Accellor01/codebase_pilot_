@@ -54,7 +54,7 @@ def _parse_author(text: str) -> tuple[str, str]:
 
 
 def push_local(worktree: Path, origin: str, branch: str, message: str) -> None:
-    """Commit the worktree on `branch` and push it to the origin repository (a path or URL)."""
+    """Commit the worktree on `branch` and push it to the origin repository (a local path; see local_origin)."""
     name, email = _parse_author(get_settings().pilot_git_author)
     steps = [
         ["git", "-C", str(worktree), "checkout", "-B", branch],
@@ -67,6 +67,17 @@ def push_local(worktree: Path, origin: str, branch: str, message: str) -> None:
         result = workspace.run(step, worktree, timeout_s=workspace.GIT_TIMEOUT_S * 2)
         if not result.passed:
             raise RuntimeError(f"{' '.join(step[3:6])} failed: {result.output_tail[-300:]}")
+
+
+def local_origin(repo_url: str | None, clone: str | None) -> str:
+    """Where the fallback pushes: the scanned repository when it is a local path, else the clone.
+
+    Never a remote URL: without a token that push has no credentials and would hang or fail the run."""
+    if repo_url and Path(repo_url).is_dir():
+        return repo_url
+    if clone and Path(clone).is_dir():
+        return clone
+    raise RuntimeError("no local repository to push the branch to (no token for GitHub, and the clone is gone)")
 
 
 def last_failure(patches: list[dict]) -> str | None:
@@ -143,8 +154,8 @@ async def publish(ctx, state) -> dict:
         path = reports / f"{'pr' if kind == 'pull_request' else 'issue'}_{run_id}.md"
         path.write_text(f"# {title}\n\n{body}", encoding="utf-8")
         if kind == "pull_request":
-            origin = source["repo_url"] or state.get("clone")
-            push_local(worktree, origin, branch, f"Upgrade {event.package} to {event.target_version}")
+            push_local(worktree, local_origin(source["repo_url"], state.get("clone")), branch,
+                       f"Upgrade {event.package} to {event.target_version}")
         record = dict(kind=kind, repo=repo or "local", number=None, url=str(path.resolve()),
                       branch=branch if kind == "pull_request" else None, state="local")
 

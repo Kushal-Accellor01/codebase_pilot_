@@ -29,13 +29,16 @@ export const useUpgrade = (id: string) =>
     queryFn: () => api.upgrade(id),
     refetchInterval: (query) => {
       if (!live) return false;
-      const status = query.state.data?.run.status;
+      const data = query.state.data;
+      const status = data?.run.status;
+      if (data?.decision_pending) return 2000; // the worker has not picked the decision up yet
       return status && (TERMINAL.includes(status) || status === "awaiting_approval") ? false : 2000;
     },
   });
 
-export const useGraph = (runId: string, enabled: boolean) =>
-  useQuery({ queryKey: ["graph", runId], queryFn: () => api.graph(runId), enabled });
+/** The graph belongs to the scan the run started on, not the latest scan. */
+export const useGraph = (runId: string, scanId: string, enabled: boolean) =>
+  useQuery({ queryKey: ["graph", runId, scanId], queryFn: () => api.graph(runId, scanId), enabled });
 
 export const useScans = () => useQuery({ queryKey: ["scans"], queryFn: () => api.scans() });
 

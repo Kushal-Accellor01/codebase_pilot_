@@ -407,6 +407,7 @@
   },
   "approval": null,
   "pull_request": null,
+  "decision_pending": false,
   "can_decide": true,
   "needs_engineer": false
 }

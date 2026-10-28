@@ -69,7 +69,8 @@ def main(argv: list[str] | None = None) -> int:
                 write(fixtures / "scans.json", scans)
                 write(fixtures / "overview.json", client.get("/api/scans/latest/overview").json())
                 write(fixtures / "dependencies.json", dependencies)
-                write(fixtures / "dependency.json", client.get(f"/api/dependency-updates/{dependencies[0]['id']}").json())
+                first = dependencies[0]["id"]
+                write(fixtures / "dependency.json", client.get(f"/api/dependency-updates/{first}").json())
                 write(fixtures / "upgrades.json", upgrades)
                 write(fixtures / "upgrade.json", client.get(f"/api/upgrades/{run_id}").json())
                 write(fixtures / "graph.json", client.get(f"/api/scans/latest/graph?run_id={run_id}").json())

@@ -49,7 +49,8 @@ def main(argv: list[str] | None = None) -> int:
     print(f"seeded {env.db}; mirror at {env.origin}", flush=True)
 
     settings = Settings(_env_file=None, codebase_pilot_db=env.db, pilot_embedded_worker=True)
-    services = Services(llm=env.llm, registry=golden.registry(), update_options={"security": False, "write_report": False})
+    options = {"security": False, "write_report": False}
+    services = Services(llm=env.llm, registry=golden.registry(), update_options=options)
     uvicorn.run(create_app(env.db, settings, services), host="127.0.0.1", port=args.port, log_level="warning")
     return 0
 

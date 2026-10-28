@@ -109,10 +109,12 @@ def package(name: str, versions: list[str]) -> PackageInfo:
     return PackageInfo(ecosystem="npm", name=name, versions=[VersionInfo(version=v) for v in versions])
 
 
-def test_versions_in_range_excludes_current_and_prereleases():
-    info = package("p", ["1.0.0", "1.1.0", "1.2.0", "2.0.0-beta.1", "2.0.0", "2.1.0", "weird"])
-    assert versions_in_range(info, "1.0.0", "2.0.0") == ["1.1.0", "1.2.0", "2.0.0"]
-    assert versions_in_range(info, "1.0.0", "2.0.0-beta.1") == ["1.1.0", "1.2.0", "2.0.0-beta.1"]
+def test_versions_in_range_excludes_current_and_most_prereleases():
+    info = package("p", ["1.0.0", "1.1.0", "1.2.0", "1.3.0-rc.1", "2.0.0-beta.1", "2.0.0", "2.1.0", "weird"])
+    # 1.3.0-rc.1 is not a major's pre-release, so it stays out; 2.0.0-beta.1 belongs to the major 2.0.0
+    assert versions_in_range(info, "1.0.0", "2.0.0") == ["1.1.0", "1.2.0", "2.0.0-beta.1", "2.0.0"]
+    assert versions_in_range(info, "2.0.0", "2.1.0") == ["2.1.0"]  # a major we are already on adds nothing
+    assert versions_in_range(info, "1.0.0", "2.0.0-beta.1") == ["1.1.0", "1.2.0", "1.3.0-rc.1", "2.0.0-beta.1"]
     assert versions_in_range(info, "2.1.0", "2.1.0") == []
 
 

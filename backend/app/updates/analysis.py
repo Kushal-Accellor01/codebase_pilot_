@@ -72,8 +72,10 @@ def chunk_by_major(notes: NotesResult, limit: int | None = None) -> list[list[st
     size = 0
     for v in versions:
         block = len(version_block(notes.notes[v]))
+        # Prefer a cut at a major boundary, but never let one chunk outgrow the limit: a single major with
+        # dozens of pre-release sections (Express 5) is split by size.
         starts_new_major = bool(current) and v.split(".")[0] != current[-1].split(".")[0]
-        if current and size + block > limit and starts_new_major:
+        if current and size + block > limit and (starts_new_major or size > limit * 0.75):
             chunks.append(current)
             current, size = [], 0
         current.append(v)

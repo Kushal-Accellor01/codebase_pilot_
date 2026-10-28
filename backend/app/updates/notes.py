@@ -6,6 +6,7 @@ Per version, newest first, the first source that has it wins:
 import logging
 import re
 import sqlite3
+from functools import cmp_to_key
 from urllib.parse import quote
 
 from app.updates import store
@@ -75,18 +76,30 @@ def tag_candidates(name: str, version: str) -> list[str]:
 # --- helpers -----------------------------------------------------------------------------------------------
 
 
+def _core(version: str) -> str:
+    return version.split("-", 1)[0]
+
+
 def versions_in_range(info: PackageInfo, current: str, target: str) -> list[str]:
-    """Versions v with current < v <= target, oldest first. Pre-releases only when the target is one."""
+    """Versions v with current < v <= target, oldest first.
+
+    Pre-releases are left out unless the target is one, with one exception: the pre-releases of a *major*
+    release (X.0.0-alpha.1, -beta.2 ...) that falls inside the range. Maintainers often list the removals of
+    a major only in those sections (Express 5 does), and the stable X.0.0 notes just summarise them.
+    """
     target_is_pre = "-" in target
     found = set()
     for v in info.versions:
         clean = clean_version(v.version)
-        if clean is None or ("-" in clean and not target_is_pre):
+        if clean is None:
             continue
+        if "-" in clean and not target_is_pre:
+            core = _core(clean)
+            is_major_in_range = compare_versions(core, current) > 0 and compare_versions(core, target) <= 0
+            if not (core.endswith(".0.0") and is_major_in_range):
+                continue
         if compare_versions(clean, current) > 0 and compare_versions(clean, target) <= 0:
             found.add(clean)
-    from functools import cmp_to_key
-
     return sorted(found, key=cmp_to_key(compare_versions))
 
 

@@ -50,7 +50,8 @@ def enqueue_runs_for_scan(conn: sqlite3.Connection, scan_id: str, *, only: list[
         if not row["current_version"] or not row["recommended_target"]:
             continue
         open_run = run_store.find_open_run(
-            conn, repo_url=repo_url, ecosystem=row["ecosystem"], package=row["name"], to_version=row["recommended_target"]
+            conn, repo_url=repo_url, ecosystem=row["ecosystem"], package=row["name"],
+            to_version=row["recommended_target"],
         )
         if open_run is not None and open_run["scan_id"] != scan_id:
             continue  # an earlier scan already has this upgrade in play: no second run, no repeated LLM calls

@@ -17,10 +17,10 @@ from pathlib import Path
 
 from app.core import db as core_db
 from app.core.config import get_settings
-from app.orchestrator import store as run_store
 from app.database import GraphDatabase
 from app.dependency_extractor import extract_dependencies
 from app.js_analyzer import analyze_js_code
+from app.orchestrator import store as run_store
 from app.python_analyzer import analyze_python_code
 from app.resolver import resolve_imports
 from app.scanner import scan_repository

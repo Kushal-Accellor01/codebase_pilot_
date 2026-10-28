@@ -4,12 +4,16 @@ pipeline <repo_url_or_path> [--only express]   ingest -> updates -> upgrade runs
 approve|reject <run_id> --by NAME [--comment]  decide a run that awaits approval
 worker [--until-idle]                          process queued jobs
 runs                                           list upgrade runs
+bot-prs [--scan ID]                            comment on open Dependabot / Renovate PRs (needs GITHUB_TOKEN)
+issues [--scan ID]                             publish the dashboard and team issues (local files without a token)
 reset-demo                                     clear run data, checkpoints, worktrees and local PR branches
 """
 import argparse
 import asyncio
 import sys
 
+from app.actions import bot_prs, issues
+from app.actions.repo_actions import eligible_repo
 from app.core import db as core_db
 from app.core import jobs
 from app.core.config import get_settings
@@ -17,6 +21,9 @@ from app.core.logging import configure_logging
 from app.orchestrator import demo
 from app.orchestrator import store as run_store
 from app.orchestrator.worker import Services, run_worker
+from app.updates import store as updates_store
+from app.updates.github import GitHubClient
+from app.updates.http import HttpClient
 
 
 def _db(args: argparse.Namespace) -> str:
@@ -95,6 +102,51 @@ def _cmd_reset(args: argparse.Namespace) -> int:
     return 0
 
 
+def _scan_id(conn, args: argparse.Namespace) -> str | None:
+    return args.scan or updates_store.latest_scan_id(conn)
+
+
+def _cmd_bot_prs(args: argparse.Namespace) -> int:
+    async def main() -> int:
+        conn = core_db.connect(_db(args))
+        settings = get_settings()
+        scan_id = _scan_id(conn, args)
+        if scan_id is None:
+            print("ERROR: no scan yet", file=sys.stderr)
+            return 1
+        repo, reason = eligible_repo(conn, scan_id, settings)
+        if repo is None:
+            print(f"ERROR: {reason}", file=sys.stderr)
+            return 1
+        async with HttpClient() as http:
+            authors = [a.strip() for a in settings.bot_authors.split(",") if a.strip()]
+            results = await bot_prs.enrich_bot_prs(
+                conn, GitHubClient(http), repo=repo, mode=settings.bot_pr_mode, bot_authors=authors
+            )
+        for r in results:
+            print(f"PR #{r['pr']} {r['package']}: {r['action']}")
+        print(f"{len(results)} bot PR changes handled (BOT_PR_MODE={settings.bot_pr_mode})")
+        return 0
+
+    return asyncio.run(main())
+
+
+def _cmd_issues(args: argparse.Namespace) -> int:
+    async def main() -> int:
+        conn = core_db.connect(_db(args))
+        scan_id = _scan_id(conn, args)
+        if scan_id is None:
+            print("ERROR: no scan yet", file=sys.stderr)
+            return 1
+        async with HttpClient() as http:
+            published = await issues.publish_issues(conn, scan_id, http)
+        for item in published:
+            print(f"{item['kind']:<9} {item.get('team', ''):<20} {item['state']:<7} {item['url']}")
+        return 0
+
+    return asyncio.run(main())
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="app.orchestrator.cli")
     parser.add_argument("--db", default=None)
@@ -113,6 +165,10 @@ def build_parser() -> argparse.ArgumentParser:
     p = sub.add_parser("worker")
     p.add_argument("--until-idle", action="store_true")
     p.set_defaults(func=_cmd_worker)
+    for name, func in (("bot-prs", _cmd_bot_prs), ("issues", _cmd_issues)):
+        p = sub.add_parser(name)
+        p.add_argument("--scan")
+        p.set_defaults(func=func)
     sub.add_parser("runs").set_defaults(func=_cmd_runs)
     sub.add_parser("reset-demo").set_defaults(func=_cmd_reset)
     return parser

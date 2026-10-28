@@ -5,6 +5,7 @@ Job kinds
   dependency_updates    {scan_id, only?}         Step 2, then queue an upgrade_run per dependency needing attention
   upgrade_run           {run_id}                 run the graph to the approval pause
   resume_upgrade        {run_id, decision, decided_by, comment?}
+  repo_actions          {scan_id}                comment on bot PRs, publish the dashboard and team issues (token only)
 """
 import asyncio
 import logging
@@ -12,6 +13,7 @@ import os
 import socket
 from dataclasses import dataclass, field
 
+from app.actions.repo_actions import run_repo_actions
 from app.core import db as core_db
 from app.core import jobs
 from app.core.config import Settings, get_settings
@@ -60,6 +62,10 @@ async def dispatch(job: jobs.Job, db_path: str, settings: Settings, services: Se
             )
             push_tracker.close_resolved_runs(conn, scan_id)
             runner.enqueue_runs_for_scan(conn, scan_id, only=payload.get("only"))
+            if settings.github_token:  # comments on bot PRs, dashboard and team issues
+                jobs.enqueue(conn, "repo_actions", {"scan_id": scan_id}, dedupe_key=f"repo_actions:{scan_id}")
+        elif job.kind == "repo_actions":
+            await run_repo_actions(conn, payload["scan_id"], settings, services.http)
         elif job.kind == "upgrade_run":
             ctx = runner.make_context(conn, services.http, settings, llm=services.llm, publisher=services.publisher)
             await runner.start_run(ctx, payload["run_id"], overrides=services.graph_overrides)

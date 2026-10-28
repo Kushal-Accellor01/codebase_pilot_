@@ -62,8 +62,11 @@ def parse_scan_time(scanned_at: str) -> datetime:
     raise ValueError(f"unrecognised scanned_at: {scanned_at!r}")
 
 
-def _cmp(a: str, b: str) -> int:
+def compare_versions(a: str, b: str) -> int:
     return semver.compare(a, b, False)
+
+
+_cmp = compare_versions
 
 
 def _max(versions: list[str], range_: str, include_prerelease: bool) -> str | None:
@@ -101,7 +104,7 @@ def resolve_versions(
     try:
         range_ = normalize_constraint(constraint)
     except ConstraintError as exc:
-        verdict.error = str(exc)
+        verdict.error, verdict.error_kind = str(exc), "invalid_declaration"
         verdict.current_version_basis = "unresolvable"
         return verdict
 
@@ -139,6 +142,7 @@ def resolve_versions(
         )
     if verdict.current_version is None:
         verdict.error = f"no published version satisfies {constraint!r} on the scan date"
+        verdict.error_kind = "unresolvable"
         return verdict
 
     current, latest = verdict.current_version, verdict.latest_version
@@ -157,6 +161,7 @@ def resolve_versions(
         verdict.runtime_requirement_change = cur_node != latest_node
         verdict.engines_current, verdict.engines_target = cur_node, latest_node
 
+    verdict.latest_deprecated = info.is_deprecated
     # Deprecated if the package's latest release is, or the version we are on is.
     if info.is_deprecated:
         verdict.is_deprecated, verdict.deprecation_message = True, info.deprecation_message

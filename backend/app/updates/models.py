@@ -34,8 +34,10 @@ class UpdateVerdict(BaseModel):
     engines_target: str | None = None
     is_deprecated: bool = False
     deprecation_message: str | None = None
+    latest_deprecated: bool = False  # the package's latest release is deprecated: nothing safe to move to
     skipped_versions: int = 0  # non-semver version strings ignored
     error: str | None = None
+    error_kind: str | None = None  # 'invalid_declaration' (not a registry range) | 'unresolvable'
 
 
 class PreflightReport(BaseModel):
@@ -45,3 +47,51 @@ class PreflightReport(BaseModel):
     missing_dependency_type: int
     lockfiles: int
     warnings: list[str] = Field(default_factory=list)
+
+
+class UpdateRow(BaseModel):
+    """One dependency_updates row, as written by the pipeline."""
+
+    scan_id: str
+    dep_node_id: str
+    ecosystem: str
+    name: str
+    manifest_file_id: str = ""
+    dependency_type: str = "unknown"
+    declared_constraint: str | None = None
+    current_version: str | None = None
+    current_version_basis: str | None = None
+    latest_in_range: str | None = None
+    latest_version: str | None = None
+    recommended_target: str | None = None
+    update_type: str | None = None
+    requires_manifest_change: bool = False
+    versions_behind: int | None = None
+    runtime_requirement_change: bool = False
+    is_deprecated: bool = False
+    deprecation_message: str | None = None
+    vuln_count: int = 0
+    max_severity: str | None = None
+    min_safe_version: str | None = None
+    importer_count: int = 0
+    priority_score: float | None = None
+    risk_level: str | None = None
+    status: str = "pending"
+    error: str | None = None
+
+
+class RunStats(BaseModel):
+    deps_total: int = 0
+    up_to_date: int = 0
+    updates: dict[str, int] = Field(default_factory=lambda: {"patch": 0, "minor": 0, "major": 0})
+    vulnerable: int = 0
+    deprecated: int = 0
+    analysed: int = 0
+    llm_calls: int = 0
+    cache_hits: int = 0
+    notes_unavailable: int = 0
+    source_unknown: int = 0
+    errors: int = 0
+    undeclared_imports: int = 0
+    statuses: dict[str, int] = Field(default_factory=dict)
+    duration_s: float = 0.0

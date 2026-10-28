@@ -120,6 +120,34 @@ async def _show_versions(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_run(args: argparse.Namespace) -> int:
+    import json
+
+    from app.updates.pipeline import run_dependency_updates
+
+    if not args.no_llm:
+        print("WARN: LLM analysis is not built yet; running the deterministic steps only (same as --no-llm).",
+              file=sys.stderr)
+    only = [n for n in args.only.split(",") if n] if args.only else None
+    run_id, stats = run_dependency_updates(args.db, args.scan, only=only, refresh=args.refresh)
+    conn = store.connect(args.db)
+    try:
+        run = store.get_pipeline_run(conn, run_id)
+        rows = store.list_dependency_updates(conn, run["scan_id"])
+    finally:
+        conn.close()
+    print(f"Run {run_id}: {run['status']} (scan {run['scan_id']})")
+    print(json.dumps(stats.model_dump(), indent=2))
+    shown = [r for r in rows if r["status"] != "up_to_date"][:15]
+    if shown:
+        print(f"\nTop {len(shown)} by priority:")
+        for r in shown:
+            move = f"{r['current_version']} -> {r['recommended_target']}" if r["current_version"] else "-"
+            print(f"{r['priority_score'] or 0:>6}  {r['risk_level'] or '-':<8} {r['name']:<24} {move:<22} "
+                  f"{r['update_type'] or '-':<7} {r['status']}")
+    return 1 if run["status"] == "failed" else 0
+
+
 def _cmd_versions(args: argparse.Namespace) -> int:
     import asyncio
 
@@ -140,6 +168,7 @@ def build_parser() -> argparse.ArgumentParser:
         ("preflight", _cmd_preflight, "check the latest scan"),
         ("inventory", _cmd_inventory, "print the dependency inventory"),
         ("versions", _cmd_versions, "resolve current / latest versions for the scan's npm dependencies"),
+        ("run", _cmd_run, "run the dependency-updates pipeline for a scan"),
         ("registry", _cmd_registry, "fetch npm registry data for the scan's dependencies into the cache"),
     ):
         p = sub.add_parser(name, help=help_)
@@ -147,9 +176,11 @@ def build_parser() -> argparse.ArgumentParser:
         p.add_argument("--verbose", "-v", action="store_true", help="log one line per package to stderr")
         if name != "migrate":
             p.add_argument("--scan", default="latest")
-        if name == "registry":
+        if name in ("registry", "run"):
             p.add_argument("--only", help="comma-separated package names")
             p.add_argument("--refresh", action="store_true", help="ignore the cache")
+        if name == "run":
+            p.add_argument("--no-llm", action="store_true", help="skip LLM analysis (the only mode for now)")
         p.set_defaults(func=fn)
     return parser
 

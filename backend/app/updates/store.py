@@ -9,7 +9,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from app.updates.config import MIGRATIONS_DIR
-from app.updates.models import Dependency, ImportingFile
+from app.updates.models import Dependency, ImportingFile, UpdateRow
 from app.updates.registry.base import PackageInfo, VersionInfo
 
 LOCKFILE_NAMES = (
@@ -326,3 +326,58 @@ def load_inventory(conn: sqlite3.Connection, scan_id: str) -> list[Dependency]:
             )
         )
     return deps
+
+
+_UPSERT_COLUMNS = (
+    "ecosystem", "name", "dependency_type", "declared_constraint", "current_version", "current_version_basis",
+    "latest_in_range", "latest_version", "recommended_target", "update_type", "requires_manifest_change",
+    "versions_behind", "runtime_requirement_change", "is_deprecated", "deprecation_message", "vuln_count",
+    "max_severity", "min_safe_version", "importer_count", "priority_score", "risk_level", "status", "error",
+)
+
+
+def upsert_dependency_update(conn: sqlite3.Connection, row: UpdateRow) -> None:
+    """One short transaction. analysis_id is left alone: it belongs to the analysis step."""
+    data = row.model_dump()
+    for key in ("requires_manifest_change", "runtime_requirement_change", "is_deprecated"):
+        data[key] = int(data[key])
+    columns = ("scan_id", "dep_node_id", "manifest_file_id", *_UPSERT_COLUMNS)
+    placeholders = ", ".join(f":{c}" for c in columns)
+    updates = ", ".join(f"{c} = excluded.{c}" for c in _UPSERT_COLUMNS)
+    with conn:
+        conn.execute(
+            f"""INSERT INTO dependency_updates ({", ".join(columns)}, checked_at)
+                VALUES ({placeholders}, strftime('%Y-%m-%dT%H:%M:%SZ','now'))
+                ON CONFLICT(scan_id, dep_node_id, manifest_file_id) DO UPDATE SET
+                    {updates}, checked_at = excluded.checked_at""",  # noqa: S608
+            data,
+        )
+
+
+def list_dependency_updates(conn: sqlite3.Connection, scan_id: str) -> list[sqlite3.Row]:
+    return conn.execute(
+        "SELECT * FROM dependency_updates WHERE scan_id = ? ORDER BY priority_score DESC, name", (scan_id,)
+    ).fetchall()
+
+
+def start_pipeline_run(conn: sqlite3.Connection, run_id: str, scan_id: str, step: str = "dependency_updates") -> None:
+    with conn:
+        conn.execute(
+            "INSERT INTO pipeline_runs (id, scan_id, step, status) VALUES (?, ?, ?, 'running')",
+            (run_id, scan_id, step),
+        )
+
+
+def finish_pipeline_run(
+    conn: sqlite3.Connection, run_id: str, status: str, stats: dict | None = None, error: str | None = None
+) -> None:
+    with conn:
+        conn.execute(
+            """UPDATE pipeline_runs SET status = ?, stats = ?, error = ?,
+                   finished_at = strftime('%Y-%m-%dT%H:%M:%SZ','now') WHERE id = ?""",
+            (status, json.dumps(stats) if stats is not None else None, error, run_id),
+        )
+
+
+def get_pipeline_run(conn: sqlite3.Connection, run_id: str) -> sqlite3.Row | None:
+    return conn.execute("SELECT * FROM pipeline_runs WHERE id = ?", (run_id,)).fetchone()

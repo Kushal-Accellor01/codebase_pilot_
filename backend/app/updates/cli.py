@@ -3,6 +3,7 @@ import argparse
 import sys
 from collections import Counter
 
+from app.core.logging import configure_logging
 from app.updates import store
 from app.updates.config import default_db_path
 from app.updates.preflight import PreflightError, resolve_scan, run_preflight
@@ -143,6 +144,7 @@ def build_parser() -> argparse.ArgumentParser:
     ):
         p = sub.add_parser(name, help=help_)
         p.add_argument("--db", default=default_db_path())
+        p.add_argument("--verbose", "-v", action="store_true", help="log one line per package to stderr")
         if name != "migrate":
             p.add_argument("--scan", default="latest")
         if name == "registry":
@@ -154,6 +156,7 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
+    configure_logging("INFO" if args.verbose else "WARNING")
     try:
         return args.func(args)
     except (PreflightError, store.StoreError) as exc:

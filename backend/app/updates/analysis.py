@@ -13,7 +13,7 @@ from functools import cache
 
 from app.core.llm import LLM
 from app.updates import store
-from app.updates.config import PROMPT_VERSION, PROMPTS_DIR
+from app.updates.config import PROMPT_VERSION, PROMPTS_DIR, SHARED_PROMPTS_DIR
 from app.updates.evidence import validate_changes
 from app.updates.models import ChangeRef, NotesResult, ReleaseNote, SummaryOut, UpdateAnalysisOut
 from app.updates.notes import truncate_notes
@@ -38,7 +38,10 @@ class AnalysisResult:
 @cache
 def load_prompt(name: str) -> tuple[str, str]:
     """(system, user_template) from prompts/<name>.md, which has '## SYSTEM' and '## USER' sections."""
-    text = (PROMPTS_DIR / f"{name}.md").read_text(encoding="utf-8")
+    path = PROMPTS_DIR / f"{name}.md"
+    if not path.exists():  # step-specific prompts live next to their step; shared ones in app/prompts
+        path = SHARED_PROMPTS_DIR / f"{name}.md"
+    text = path.read_text(encoding="utf-8")
     system, _, user = text.partition("## USER")
     return system.replace("## SYSTEM", "", 1).strip(), user.strip()
 

@@ -7,6 +7,7 @@ PROMPT_VERSION = "v1"
 
 MIGRATIONS_DIR = Path(__file__).parent / "migrations"
 PROMPTS_DIR = Path(__file__).parent / "prompts"
+SHARED_PROMPTS_DIR = Path(__file__).resolve().parents[1] / "prompts"
 
 USER_AGENT = "codebase-pilot/0.1 (hackathon)"
 REGISTRY_TTL_HOURS = 6

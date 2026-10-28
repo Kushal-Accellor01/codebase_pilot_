@@ -10,6 +10,7 @@ from pydantic import BaseModel, Field
 
 from app.core.contracts import Finding
 from app.core.llm import LLM, LLMError
+from app.updates.analysis import load_prompt
 from app.updates.models import ChangeRef
 
 logger = logging.getLogger(__name__)
@@ -61,7 +62,7 @@ async def confirm_findings(
     """
     pending = [(i, f) for i, f in enumerate(findings) if needs_confirmation(f)]
     by_id = {c.id: c for c in changes}
-    system, template = load_prompt_file()
+    system, template = load_prompt(PROMPT_VERSION)
     calls = 0
     for start in range(0, len(pending), BATCH_SIZE):
         batch = pending[start:start + BATCH_SIZE]
@@ -82,10 +83,3 @@ async def confirm_findings(
                 findings[verdict.id].confirmed = verdict.affected
                 findings[verdict.id].reason = verdict.reason
     return calls
-
-
-def load_prompt_file() -> tuple[str, str]:
-    text = (Path(__file__).resolve().parent.parent / "prompts" / f"{PROMPT_VERSION}.md").read_text(encoding="utf-8")
-    system, _, user = text.partition("## USER")
-    return system.replace("## SYSTEM", "", 1).strip(), user.strip()
-

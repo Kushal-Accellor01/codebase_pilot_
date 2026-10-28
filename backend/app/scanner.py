@@ -29,14 +29,15 @@ def sha256_file(path: Path) -> str:
     except Exception:
         return "unhashable"
 
-def scan_repository(repo_path: str, db: GraphDatabase, commit_sha: str = "HEAD"):
+def scan_repository(repo_path: str, db: GraphDatabase, commit_sha: str = "HEAD",
+                    repo_url: str = None, branch: str = None):
     root_path = Path(repo_path).resolve()
     
     if not root_path.exists() or not root_path.is_dir():
         raise ValueError(f"Invalid repository path: {repo_path}")
 
     # Initialize the scan in the database
-    scan_id = db.create_scan(str(root_path), commit_sha)
+    scan_id = db.create_scan(str(root_path), commit_sha, repo_url=repo_url, branch=branch)
     
     # Add the root directory as the first node
     root_node_id = f"dir:."
@@ -50,6 +51,8 @@ def scan_repository(repo_path: str, db: GraphDatabase, commit_sha: str = "HEAD")
 
     for path in sorted(root_path.rglob("*")):
         relative_path = path.relative_to(root_path)
+        # Always store POSIX paths ('lib/router.js'), so ids match on Windows, macOS and Linux.
+        rel = relative_path.as_posix()
         
         # Skip ignored directories
         if any(part in IGNORED_DIRS for part in relative_path.parts):
@@ -58,23 +61,23 @@ def scan_repository(repo_path: str, db: GraphDatabase, commit_sha: str = "HEAD")
         if path.is_symlink():
             continue
 
-        parent_relative = relative_path.parent
-        parent_id = f"dir:{parent_relative}" if str(parent_relative) != "." else root_node_id
+        parent_rel = relative_path.parent.as_posix()
+        parent_id = f"dir:{parent_rel}" if parent_rel != "." else root_node_id
 
         if path.is_dir():
-            dir_id = f"dir:{relative_path}"
+            dir_id = f"dir:{rel}"
             db.add_node(
                 node_id=dir_id,
                 scan_id=scan_id,
                 node_type="directory",
                 name=path.name,
-                properties={"path": str(relative_path)}
+                properties={"path": rel}
             )
             # Link parent dir -> contains -> this dir
             db.add_edge(parent_id, dir_id, "CONTAINS", scan_id)
 
         elif path.is_file():
-            file_id = f"file:{relative_path}"
+            file_id = f"file:{rel}"
             is_manifest = path.name in MANIFESTS
             
             db.add_node(
@@ -83,7 +86,7 @@ def scan_repository(repo_path: str, db: GraphDatabase, commit_sha: str = "HEAD")
                 node_type="file",
                 name=path.name,
                 properties={
-                    "path": str(relative_path),
+                    "path": rel,
                     "extension": path.suffix,
                     "is_manifest": is_manifest,
                     "size_bytes": path.stat().st_size,

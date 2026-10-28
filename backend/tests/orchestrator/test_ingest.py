@@ -63,3 +63,15 @@ def test_clone_of_an_unfinished_run_survives_a_rescan(sandbox_origin, tmp_path):
                          from_version="4.21.2", to_version="5.3.0", risk_level="high", status="awaiting_approval")
     ingest(str(sandbox_origin), str(db), tmp_path / "ws")
     assert len(list((tmp_path / "ws" / "clones").glob("*/*"))) == 2
+
+
+def test_two_scans_keep_both_node_sets(sandbox_origin, tmp_path):
+    """A2: the ingestion fixes scope nodes and edges to their scan, so an older scan stays readable."""
+    db = tmp_path / "t.db"
+    first = ingest(str(sandbox_origin), str(db), tmp_path / "ws")
+    second = ingest(str(sandbox_origin), str(db), tmp_path / "ws")
+    conn = core_db.connect(str(db))
+    counts = {s: conn.execute("SELECT count(*) FROM nodes WHERE scan_id = ?", (s,)).fetchone()[0] for s in (first, second)}
+    assert counts[first] > 0 and counts[first] == counts[second]
+    edges = {s: conn.execute("SELECT count(*) FROM edges WHERE scan_id = ?", (s,)).fetchone()[0] for s in (first, second)}
+    assert edges[first] > 0 and edges[first] == edges[second]

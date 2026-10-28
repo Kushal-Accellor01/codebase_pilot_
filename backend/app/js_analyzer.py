@@ -1,4 +1,5 @@
 import json
+import posixpath
 import re
 from pathlib import Path
 from app.database import GraphDatabase
@@ -15,6 +16,15 @@ SYMBOL_PATTERN = re.compile(r"(?:export\s+)?(?:default\s+)?(function|class)\s+([
 
 # Matches: const myArrowFunc = () =>
 ARROW_FUNC_PATTERN = re.compile(r"(?:export\s+)?(?:const|let|var)\s+([a-zA-Z_$][0-9a-zA-Z_$]*)\s*=\s*(?:async\s*)?(?:\([^)]*\)|[a-zA-Z_$][0-9a-zA-Z_$]*)\s*=>")
+
+def package_root(specifier: str) -> str:
+    """'lodash/fp' -> 'lodash', '@babel/core/lib/x' -> '@babel/core'; relative paths are kept as-is."""
+    if specifier.startswith((".", "/")):
+        return specifier
+    parts = specifier.split("/")
+    if specifier.startswith("@") and len(parts) > 1:
+        return "/".join(parts[:2])
+    return parts[0]
 
 def analyze_js_code(db: GraphDatabase, scan_id: str, repo_root: str):
     cursor = db.conn.cursor()
@@ -44,39 +54,54 @@ def analyze_js_code(db: GraphDatabase, scan_id: str, repo_root: str):
             with absolute_path.open("r", encoding="utf-8") as f:
                 content = f.read()
                 
-            # 1. Extract Imports & Requires
-            found_modules = set()
-            found_modules.update(REQUIRE_PATTERN.findall(content))
-            found_modules.update(IMPORT_PATTERN.findall(content))
-            
-            for mod in found_modules:
-                # Basic cleanup to get the root module (e.g., 'lodash/fp' -> 'lodash')
-                # Note: internal paths start with '.' or '/'
-                root_module = mod.split('/')[0] if not mod.startswith(('.', '/')) else mod
-                
-                mod_id = f"mod:{root_module}"
+            # 1. Extract Imports & Requires, with line numbers
+            # root module -> {"lines": [...], "specifiers": [...]}; one IMPORTS edge per (file, module).
+            found_modules = {}
+            for pattern in (REQUIRE_PATTERN, IMPORT_PATTERN):
+                for match in pattern.finditer(content):
+                    mod = match.group(1)
+                    line = content.count("\n", 0, match.start()) + 1
+                    entry = found_modules.setdefault(package_root(mod), {"lines": set(), "specifiers": set()})
+                    entry["lines"].add(line)
+                    entry["specifiers"].add(mod)
+
+            file_dir = posixpath.dirname(props["path"].replace("\\", "/"))
+            for root_module, entry in found_modules.items():
+                properties = {"is_import": True, "language": "javascript"}
+                if root_module.startswith("."):
+                    # './user' means a different file in every folder: key the module by the
+                    # repo-relative path it points to, so it can't resolve to another folder's file.
+                    resolved = posixpath.normpath(posixpath.join(file_dir, root_module))
+                    resolved = "" if resolved == "." else resolved
+                    mod_id = f"mod:rel:{resolved}"
+                    properties.update({"relative": True, "resolved_path": resolved})
+                else:
+                    mod_id = f"mod:{root_module}"
                 db.add_node(
                     node_id=mod_id,
                     scan_id=scan_id,
                     node_type="module",
                     name=root_module,
-                    properties={"is_import": True, "language": "javascript"}
+                    properties=properties
                 )
-                db.add_edge(source_id=file_id, target_id=mod_id, edge_type="IMPORTS", scan_id=scan_id)
+                db.add_edge(
+                    source_id=file_id, target_id=mod_id, edge_type="IMPORTS", scan_id=scan_id,
+                    properties={"lines": sorted(entry["lines"]), "specifiers": sorted(entry["specifiers"])}
+                )
                 total_imports += 1
 
-            # 2. Extract Symbols (Functions, Classes, Arrow Functions)
-            # We approximate line numbers by finding the string index and counting newlines,
-            # but for this fast regex pass, we'll keep it simple without lines first.
+            # 2. Extract Symbols (Functions, Classes, Arrow Functions), with line numbers
             symbols = []
-            
+
             for match in SYMBOL_PATTERN.finditer(content):
                 sym_type, sym_name = match.groups()
-                symbols.append({"type": sym_type, "name": sym_name})
-                
+                symbols.append({"type": sym_type, "name": sym_name,
+                                "line": content.count("\n", 0, match.start()) + 1})
+
             for match in ARROW_FUNC_PATTERN.finditer(content):
                 sym_name = match.group(1)
-                symbols.append({"type": "arrow_function", "name": sym_name})
+                symbols.append({"type": "arrow_function", "name": sym_name,
+                                "line": content.count("\n", 0, match.start()) + 1})
 
             for sym in symbols:
                 sym_id = f"sym:{props['path']}:{sym['name']}"
@@ -88,7 +113,8 @@ def analyze_js_code(db: GraphDatabase, scan_id: str, repo_root: str):
                     properties={
                         "file_path": props["path"],
                         "symbol_type": sym["type"],
-                        "language": "javascript"
+                        "language": "javascript",
+                        "line": sym["line"]
                     }
                 )
                 db.add_edge(source_id=file_id, target_id=sym_id, edge_type="DEFINES", scan_id=scan_id)

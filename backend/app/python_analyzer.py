@@ -104,23 +104,32 @@ def analyze_python_code(db: GraphDatabase, scan_id: str, repo_root: str):
                 db.add_edge(source_id=file_id, target_id=sym_id, edge_type="DEFINES", scan_id=scan_id)
                 total_symbols += 1
             
-            # 2. Store Imports and link them to the File
+            # 2. Store Imports and link them to the File, keeping line numbers and imported names
+            # root module -> {"lines": [...], "names": [...]}; one IMPORTS edge per (file, module).
+            found_modules = {}
             for imp in visitor.imports:
                 # We extract the root module (e.g., 'fastapi' from 'fastapi.responses')
-                root_module = imp["module"].split(".")[0] 
+                root_module = imp["module"].split(".")[0]
+                entry = found_modules.setdefault(root_module, {"lines": set(), "names": set()})
+                entry["lines"].add(imp["line"])
+                entry["names"].add(imp["module"])
+
+            for root_module, entry in found_modules.items():
                 mod_id = f"mod:{root_module}"
-                
                 # Add a lightweight module node (the Resolver will link this to real dependencies later)
                 db.add_node(
                     node_id=mod_id,
                     scan_id=scan_id,
                     node_type="module",
                     name=root_module,
-                    properties={"is_import": True}
+                    properties={"is_import": True, "language": "python"}
                 )
-                db.add_edge(source_id=file_id, target_id=mod_id, edge_type="IMPORTS", scan_id=scan_id)
+                db.add_edge(
+                    source_id=file_id, target_id=mod_id, edge_type="IMPORTS", scan_id=scan_id,
+                    properties={"lines": sorted(entry["lines"]), "names": sorted(entry["names"])}
+                )
                 total_imports += 1
-                
+
         except SyntaxError as e:
             print(f"Syntax error skipping {props['path']}: {e}")
         except Exception as e:

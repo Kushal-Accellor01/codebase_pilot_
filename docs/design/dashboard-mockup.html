@@ -1,0 +1,496 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Codebase Pilot dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#1C2632; --ink-2:#4A5765; --ink-3:#6B7785;
+  --bg:#FAFBFC; --panel:#EEF2F5; --panel-2:#F4F6F8; --rule:#D6DDE4; --white:#FFFFFF;
+  --critical:#C4321C; --critical-bg:#FBEAE6;
+  --high:#B86E00; --high-bg:#FDF1DD;
+  --medium:#2F6CB0; --medium-bg:#E6EFF9;
+  --low:#2E7A4E; --low-bg:#E5F2EA;
+  --focus:#2F6CB0;
+  --sans:"Public Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  --r-sm:4px; --r-md:8px;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ink:#E6ECF2; --ink-2:#B3BECA; --ink-3:#8C98A6;
+    --bg:#141B23; --panel:#1C252F; --panel-2:#18212A; --rule:#2C3743; --white:#1A232C;
+    --critical:#F0715C; --critical-bg:#3A1F1B; --high:#E7A440; --high-bg:#36291A;
+    --medium:#6FA6E8; --medium-bg:#1C2C40; --low:#67C08C; --low-bg:#1A3226; --focus:#6FA6E8;
+  }
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font:15px/1.5 var(--sans);font-variant-numeric:tabular-nums;-webkit-font-smoothing:antialiased}
+a{color:var(--medium)}
+button{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--focus);outline-offset:2px;border-radius:var(--r-sm)}
+code,.mono{font-family:var(--mono);font-size:13px}
+
+/* shell */
+.shell{display:grid;grid-template-columns:220px 1fr;min-height:100vh}
+.rail{border-right:1px solid var(--rule);padding:20px 14px;position:sticky;top:0;height:100vh;background:var(--panel-2)}
+.brand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:16px;margin:0 6px 24px}
+.brand svg{flex:none}
+.nav{display:flex;flex-direction:column;gap:2px}
+.nav a{display:flex;justify-content:space-between;align-items:center;padding:8px 10px;border-radius:var(--r-sm);color:var(--ink-2);text-decoration:none;font-weight:500}
+.nav a:hover{background:var(--panel);color:var(--ink)}
+.nav a[aria-current="page"]{background:var(--white);color:var(--ink);box-shadow:inset 3px 0 0 var(--ink)}
+.count{font-size:12px;background:var(--critical);color:#fff;border-radius:10px;padding:0 7px;line-height:18px}
+.rail-foot{position:absolute;bottom:18px;left:20px;right:20px;font-size:12px;color:var(--ink-3)}
+main{min-width:0}
+.topbar{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px 32px;border-bottom:1px solid var(--rule);flex-wrap:wrap}
+.scope{display:flex;align-items:center;gap:14px;flex-wrap:wrap;color:var(--ink-2);font-size:14px}
+.select{display:inline-flex;align-items:center;gap:8px;padding:6px 10px;border:1px solid var(--rule);border-radius:var(--r-sm);background:var(--white);color:var(--ink);font-weight:600}
+.page{padding:28px 32px 56px;max-width:1280px}
+.page:focus{outline:none}
+
+/* buttons */
+.btn{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--rule);background:var(--white);padding:8px 14px;border-radius:var(--r-sm);cursor:pointer;font-weight:600;font-size:14px}
+.btn:hover{border-color:var(--ink-3)}
+.btn-primary{background:var(--ink);border-color:var(--ink);color:var(--bg)}
+.btn-primary:hover{opacity:.9}
+.btn[disabled]{opacity:.5;cursor:not-allowed}
+
+/* type */
+h1{font-size:30px;line-height:1.2;font-weight:700;letter-spacing:-.01em;margin:0 0 6px;max-width:30ch}
+h2{font-size:18px;font-weight:700;margin:0 0 12px}
+h3{font-size:15px;font-weight:700;margin:0 0 8px}
+.lede{color:var(--ink-2);margin:0 0 28px;max-width:72ch}
+.muted{color:var(--ink-3)}
+.small{font-size:13px}
+
+/* risk */
+.risk{display:inline-flex;align-items:center;gap:6px;font-weight:600;font-size:13px}
+.risk::before{content:"";width:9px;height:9px;border-radius:2px;background:currentColor}
+.risk.critical{color:var(--critical)} .risk.high{color:var(--high)} .risk.medium{color:var(--medium)} .risk.low{color:var(--low)} .risk.none{color:var(--ink-3)}
+.pill{display:inline-block;padding:2px 9px;border-radius:999px;font-size:12.5px;font-weight:600;background:var(--panel);color:var(--ink-2);white-space:nowrap}
+.pill.wait{background:var(--high-bg);color:var(--high)}
+.pill.run{background:var(--medium-bg);color:var(--medium)}
+.pill.done{background:var(--low-bg);color:var(--low)}
+.pill.fail{background:var(--critical-bg);color:var(--critical)}
+
+/* overview grid */
+.overview{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:32px;align-items:start}
+
+/* the upgrade board: the one bold element */
+.board{border:1px solid var(--rule);border-radius:var(--r-md);background:var(--white);overflow:hidden}
+.board-head{display:flex;justify-content:space-between;align-items:baseline;gap:4px 12px;flex-wrap:wrap;padding:16px 20px;border-bottom:1px solid var(--rule)}
+.board-row{display:grid;grid-template-columns:6px minmax(130px,1.1fr) minmax(250px,1.6fr) minmax(0,2fr) 150px;gap:18px;align-items:center;padding:16px 20px 16px 0;border-bottom:1px solid var(--rule);text-decoration:none;color:inherit}
+.board-row:last-child{border-bottom:0}
+.board-row:hover{background:var(--panel-2)}
+.board-row .bar{align-self:stretch;margin:-16px 0}
+.bar.critical{background:var(--critical)} .bar.high{background:var(--high)} .bar.medium{background:var(--medium)} .bar.low{background:var(--low)}
+.pkg{font-weight:700;font-size:17px}
+.pkg small{display:block;font-weight:500;font-size:12.5px;color:var(--ink-3)}
+.journey{display:flex;align-items:center;gap:12px;font-size:26px;font-weight:600;letter-spacing:-.01em;white-space:nowrap}
+.journey .from{color:var(--ink-3)}
+.journey svg{flex:none;color:var(--ink-3)}
+.journey .kind{font-size:12px;font-weight:600;color:var(--ink-2);border:1px solid var(--rule);border-radius:var(--r-sm);padding:1px 6px;letter-spacing:0}
+.why{color:var(--ink-2);font-size:14px}
+.why b{color:var(--ink);font-weight:600}
+.state{text-align:right}
+
+/* side column */
+.side section{margin-bottom:28px}
+.stack{display:flex;height:12px;border-radius:3px;overflow:hidden;background:var(--panel);margin:10px 0 12px}
+.stack span{display:block}
+.legend{display:grid;grid-template-columns:1fr auto;gap:6px 12px;font-size:14px}
+.legend dd{margin:0;font-weight:600;text-align:right}
+.legend dt{display:flex;align-items:center;gap:8px;color:var(--ink-2)}
+.dot{width:9px;height:9px;border-radius:2px;display:inline-block}
+.waiting a{display:block;padding:12px 0;border-bottom:1px solid var(--rule);text-decoration:none;color:inherit}
+.waiting a:first-of-type{border-top:1px solid var(--rule)}
+.waiting a:hover .t{text-decoration:underline}
+.waiting .t{font-weight:600}
+
+/* tables */
+table{width:100%;border-collapse:collapse;font-size:14px}
+th{text-align:left;font-weight:600;color:var(--ink-3);font-size:13px;padding:8px 12px;border-bottom:1px solid var(--rule)}
+td{padding:11px 12px;border-bottom:1px solid var(--rule);vertical-align:top}
+tr.link{cursor:pointer}
+tr.link:hover td{background:var(--panel-2)}
+.num{text-align:right}
+.tablewrap{border:1px solid var(--rule);border-radius:var(--r-md);background:var(--white);overflow-x:auto}
+.filters{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 14px}
+.chip{border:1px solid var(--rule);background:var(--white);border-radius:999px;padding:5px 12px;font-size:13px;font-weight:600;cursor:pointer;color:var(--ink-2)}
+.chip[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+
+/* upgrade detail */
+.crumbs{font-size:13px;color:var(--ink-3);margin-bottom:10px}
+.crumbs a{color:var(--ink-3)}
+.detail-head{display:grid;grid-template-columns:1fr auto;gap:24px;align-items:end;padding-bottom:22px;border-bottom:1px solid var(--rule)}
+.detail-head .journey{font-size:34px}
+.facts{display:flex;gap:28px;flex-wrap:wrap;margin-top:14px}
+.fact{font-size:13px;color:var(--ink-3)}
+.fact b{display:block;font-size:17px;color:var(--ink);font-weight:700}
+.actions{display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end}
+.signals{display:grid;grid-template-columns:repeat(4,1fr);border:1px solid var(--rule);border-radius:var(--r-md);background:var(--white);margin:22px 0}
+.signal{padding:14px 18px;border-right:1px solid var(--rule)}
+.signal:last-child{border-right:0}
+.signal b{font-size:22px;display:block}
+.signal span{font-size:13px;color:var(--ink-2)}
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--rule);margin-bottom:20px;overflow-x:auto}
+.tabs button{border:0;background:none;padding:10px 12px;cursor:pointer;color:var(--ink-2);font-weight:600;border-bottom:2px solid transparent;margin-bottom:-1px;white-space:nowrap}
+.tabs button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--ink)}
+.file{border:1px solid var(--rule);border-radius:var(--r-md);background:var(--white);margin-bottom:14px;overflow:hidden}
+.file-head{display:flex;justify-content:space-between;gap:12px;padding:10px 14px;background:var(--panel-2);border-bottom:1px solid var(--rule);font-size:13.5px}
+.finding{display:grid;grid-template-columns:52px minmax(0,1fr) auto;gap:14px;padding:10px 14px;border-bottom:1px solid var(--rule);align-items:start}
+.finding:last-child{border-bottom:0}
+.ln{font-family:var(--mono);font-size:13px;color:var(--ink-3);text-align:right;padding-top:1px}
+.snippet{font-family:var(--mono);font-size:13px;white-space:pre-wrap;word-break:break-word}
+.snippet mark{background:var(--critical-bg);color:var(--critical);border-radius:2px;padding:0 2px}
+.because{font-size:13px;color:var(--ink-2);margin-top:4px}
+.srcs{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.src{font-size:12px;border:1px solid var(--rule);border-radius:var(--r-sm);padding:1px 7px;color:var(--ink-2);white-space:nowrap}
+.src.on{border-color:var(--ink-2);color:var(--ink)}
+.change{border-left:3px solid var(--rule);padding:4px 0 4px 16px;margin:0 0 20px}
+.change.breaking{border-left-color:var(--critical)}
+.change h3{display:flex;gap:10px;align-items:baseline;flex-wrap:wrap}
+blockquote{margin:8px 0;padding:8px 12px;background:var(--panel-2);border-radius:var(--r-sm);font-size:14px;color:var(--ink-2)}
+.diff{font-family:var(--mono);font-size:13px;border:1px solid var(--rule);border-radius:var(--r-md);overflow:auto;background:var(--white)}
+.diff div{padding:1px 14px;white-space:pre}
+.diff .add{background:var(--low-bg)} .diff .del{background:var(--critical-bg)} .diff .hunk{color:var(--ink-3);background:var(--panel-2)}
+.tests{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:18px}
+.testbox{border:1px solid var(--rule);border-radius:var(--r-md);padding:14px;background:var(--white)}
+.testbox b{font-size:20px}
+.trace{list-style:none;margin:0;padding:0;border-left:2px solid var(--rule)}
+.trace li{position:relative;padding:0 0 16px 20px}
+.trace li::before{content:"";position:absolute;left:-6px;top:6px;width:10px;height:10px;border-radius:50%;background:var(--low)}
+.trace li.wait::before{background:var(--high)}
+.trace time{font-size:12.5px;color:var(--ink-3)}
+ol.steps{padding-left:20px;margin:6px 0 20px} ol.steps li{margin-bottom:6px}
+.note{font-size:12.5px;color:var(--ink-3);margin-top:40px;border-top:1px solid var(--rule);padding-top:12px}
+dialog{border:1px solid var(--rule);border-radius:var(--r-md);padding:22px;max-width:460px;background:var(--white);color:var(--ink)}
+dialog::backdrop{background:rgba(20,27,35,.45)}
+textarea{width:100%;min-height:80px;font:inherit;border:1px solid var(--rule);border-radius:var(--r-sm);padding:8px;background:var(--bg);color:var(--ink)}
+.toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:var(--r-sm);font-weight:600;font-size:14px;display:none}
+
+@media (max-width:1100px){
+  .overview{grid-template-columns:minmax(0,1fr)}
+  .board-row{grid-template-columns:6px 1fr auto;row-gap:6px}
+  .board-row .why{grid-column:2/4}
+  .board-row .journey{grid-column:2/4;font-size:22px}
+  .board-row .state{grid-column:3;grid-row:1}
+}
+@media (max-width:760px){
+  .shell{grid-template-columns:1fr}
+  .rail{position:static;height:auto;display:flex;align-items:center;gap:12px;padding:10px 16px;overflow-x:auto}
+  .brand{margin:0}
+  .nav{flex-direction:row}
+  .rail-foot{display:none}
+  .page,.topbar{padding-left:16px;padding-right:16px}
+  h1{font-size:24px}
+  .detail-head{grid-template-columns:1fr}
+  .actions{justify-content:flex-start}
+  .signals{grid-template-columns:1fr 1fr}
+  .signal:nth-child(2){border-right:0}
+  .signal:nth-child(-n+2){border-bottom:1px solid var(--rule)}
+  .tests{grid-template-columns:1fr}
+  .finding{grid-template-columns:40px minmax(0,1fr)}
+  .finding .srcs{grid-column:2;justify-content:flex-start}
+}
+@media (prefers-reduced-motion:no-preference){
+  .board-row{transition:background .12s}
+}
+</style>
+</head>
+<body>
+<div class="shell">
+  <nav class="rail" aria-label="Main">
+    <div class="brand">
+      <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 18 L12 4 L21 18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"/><path d="M8 18h8" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>
+      Codebase Pilot
+    </div>
+    <div class="nav" id="nav">
+      <a href="#/overview" data-route="overview">Overview</a>
+      <a href="#/dependencies" data-route="dependencies">Dependencies</a>
+      <a href="#/upgrades" data-route="upgrades">Upgrades</a>
+      <a href="#/approvals" data-route="approvals">Approvals <span class="count" id="approvalCount">2</span></a>
+    </div>
+    <div class="rail-foot">Mockup with sample data</div>
+  </nav>
+  <main>
+    <div class="topbar">
+      <div class="scope">
+        <span class="select" aria-label="Repository">pilot-sandbox-shop
+          <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M3 4.5 6 7.5 9 4.5" fill="none" stroke="currentColor" stroke-width="1.6"/></svg></span>
+        <span>Scanned today at 10:42 from commit <code>4f2a9c1</code></span>
+      </div>
+      <button class="btn" id="scanBtn">Scan now</button>
+    </div>
+    <div class="page" id="page" tabindex="-1"></div>
+  </main>
+</div>
+
+<dialog id="approveDialog" aria-labelledby="approveTitle">
+  <h2 id="approveTitle">Approve and open a pull request?</h2>
+  <p class="small muted">Pilot opens a pull request on <b>pilot-sandbox-shop</b> with the Express upgrade, 6 code changes and the evidence. Your normal review and CI still apply.</p>
+  <label class="small" for="approveNote">Note for reviewers (optional)</label>
+  <textarea id="approveNote"></textarea>
+  <div class="actions" style="margin-top:14px">
+    <button class="btn" id="cancelApprove">Cancel</button>
+    <button class="btn btn-primary" id="confirmApprove">Approve and open PR</button>
+  </div>
+</dialog>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+const data = {
+  scan: { repo: "pilot-sandbox-shop", deps: 14, risk: { critical: 1, high: 1, medium: 2, low: 3, none: 7 } },
+  upgrades: [
+    { id: "express", pkg: "express", type: "runtime", from: "4.21.2", to: "5.1.0", kind: "major", risk: "critical",
+      why: "<b>6 lines in 4 files</b> use APIs removed in 5.0; 2 already warn in production", status: "Awaiting approval", st: "wait", owner: "team-shop", effort: 4.5 },
+    { id: "body-parser", pkg: "body-parser", type: "runtime", from: "1.20.3", to: "2.2.0", kind: "major", risk: "high",
+      why: "<b>2 lines</b> rely on the old <code>extended</code> default", status: "Fix ready, tests pass", st: "wait", owner: "team-shop", effort: 1.5 },
+    { id: "cookie", pkg: "cookie", type: "runtime", from: "0.6.0", to: "0.7.2", kind: "minor", risk: "medium",
+      why: "<b>Security fix</b> for cookie name validation; no code changes needed", status: "Analyzing", st: "run", owner: "team-shop", effort: 0.5 },
+    { id: "mocha", pkg: "mocha", type: "dev", from: "10.8.2", to: "11.7.5", kind: "major", risk: "medium",
+      why: "Requires <b>Node 18+</b>; CI image already on Node 20", status: "Report only", st: "", owner: "team-shop", effort: 0.5 },
+    { id: "uuid", pkg: "uuid", type: "runtime", from: "9.0.1", to: "9.0.1", kind: "none", risk: "low",
+      why: "Newer major 11.x exists; no breaking change touches this repo", status: "No action", st: "done", owner: "team-shop", effort: 0 }
+  ],
+  deps: [
+    ["express","runtime","4.21.2","4.21.2","5.1.0","major",0,"critical",6],
+    ["body-parser","runtime","1.20.3","1.20.3","2.2.0","major",0,"high",2],
+    ["cookie","runtime","0.6.0","0.6.0","0.7.2","minor",1,"medium",1],
+    ["mocha","dev","10.8.2","10.8.2","11.7.5","major",0,"medium",0],
+    ["supertest","dev","6.3.4","6.3.4","7.1.0","major",0,"low",5],
+    ["uuid","runtime","9.0.1","9.0.1","11.1.0","major",0,"low",2],
+    ["debug","runtime","4.4.0","4.4.1","4.4.1","patch",0,"low",3],
+    ["ms","runtime","2.1.3","2.1.3","2.1.3","none",0,"none",1]
+  ],
+  findings: [
+    { file: "routes/orders.js", rows: [
+      { ln: 12, code: "const id = <mark>req.param('id')</mark>;", sym: "req.param", src: ["Code search","Runtime warning","Failing test"], conf: "Certain",
+        because: "Removed in 5.0. Use req.params.id." },
+      { ln: 20, code: "return <mark>res.json(order, 201)</mark>;", sym: "res.json", src: ["Code search","Runtime warning","Failing test"], conf: "Certain",
+        because: "The res.json(obj, status) signature was removed. Use res.status(201).json(order)." } ] },
+    { file: "routes/invoices.js", rows: [
+      { ln: 9, code: "<mark>res.sendfile</mark>(pdfPath(req.params.id));", sym: "res.sendfile", src: ["Code search","Runtime warning","Failing test"], conf: "Certain",
+        because: "Removed in 5.0. Use res.sendFile with an absolute path." } ] },
+    { file: "routes/admin.js", rows: [
+      { ln: 7, code: "<mark>app.del</mark>('/admin/cache', clearCache);", sym: "app.del", src: ["Code search","Runtime warning"], conf: "Certain",
+        because: "Removed in 5.0. Use app.delete." },
+      { ln: 15, code: "<mark>res.send(204)</mark>;", sym: "res.send", src: ["Code search","Runtime warning","Failing test"], conf: "Certain",
+        because: "A number body is no longer treated as a status. Use res.sendStatus(204)." } ] },
+    { file: "routes/fallback.js", rows: [
+      { ln: 4, code: "app.get(<mark>'*'</mark>, notFound);", sym: "path syntax", src: ["Code search","Failing test"], conf: "High",
+        because: "Unnamed wildcards throw at startup in 5.0. Use '/*splat'." } ] }
+  ],
+  changes: [
+    { title: "req.param() removed", v: "5.0.0", breaking: true, quote: "Sample quote from the Express 5.0.0 release notes about removing req.param().", hits: 1 },
+    { title: "res.sendfile() removed", v: "5.0.0", breaking: true, quote: "Sample quote from the release notes about res.sendfile → res.sendFile.", hits: 1 },
+    { title: "app.del() removed", v: "5.0.0", breaking: true, quote: "Sample quote from the release notes about app.del → app.delete.", hits: 1 },
+    { title: "res.json(obj, status) signature removed", v: "5.0.0", breaking: true, quote: "Sample quote from the release notes about the res.json status argument.", hits: 1 },
+    { title: "Path route matching syntax changed", v: "5.0.0", breaking: true, quote: "Sample quote from the release notes about path-to-regexp v8 wildcards.", hits: 1 },
+    { title: "Node.js 18 or newer required", v: "5.0.0", breaking: true, quote: "Sample quote from the release notes about the minimum Node.js version.", hits: 0 }
+  ],
+  trace: [
+    ["10:42:03","Scan finished","216 files, 14 dependencies"],
+    ["10:42:19","Release notes read","6 breaking changes with quotes, 3 versions"],
+    ["10:42:31","Code searched","8 candidate lines in 5 files"],
+    ["10:43:02","Tests run on 4.21.2","Passed; 5 runtime deprecation warnings"],
+    ["10:43:40","Tests run on 5.1.0","5 failing tests point at the same lines"],
+    ["10:43:52","Production logs checked","2 warnings seen 1,284 times in 7 days"],
+    ["10:44:10","Plan written","Critical, about 4.5 hours"],
+    ["10:44:58","Fix tested","6 changes; 23 of 23 tests pass on 5.1.0"],
+    ["10:45:00","Waiting for approval","Assigned to team-shop", "wait"]
+  ]
+};
+
+const $ = (s, el = document) => el.querySelector(s);
+const page = $("#page");
+const arrow = '<svg width="22" height="14" viewBox="0 0 22 14" aria-hidden="true"><path d="M1 7h18M14 2l5 5-5 5" fill="none" stroke="currentColor" stroke-width="1.8"/></svg>';
+const riskLabel = r => ({critical:"Critical",high:"High",medium:"Medium",low:"Low",none:"Up to date"}[r]);
+const go = id => { location.hash = "#/upgrades/" + id; };
+
+function overview(){
+  const r = data.scan.risk, total = Object.values(r).reduce((a,b)=>a+b,0);
+  const seg = k => `<span style="width:${r[k]/total*100}%;background:var(--${k==="none"?"rule":k})"></span>`;
+  page.innerHTML = `
+    <h1>2 upgrades need a decision today. Express 5 would break 6 lines, and 2 of them already warn in production.</h1>
+    <p class="lede">Pilot checked ${data.scan.deps} dependencies against their registries, release notes and your code. Every finding below links to its evidence.</p>
+    <div class="overview">
+      <div>
+        <div class="board" role="list" aria-label="Upgrades by risk">
+          <div class="board-head"><h2 style="margin:0">Upgrades</h2><span class="small muted">Sorted by risk, then effort</span></div>
+          ${data.upgrades.map(u => `
+            <a class="board-row" role="listitem" href="#/upgrades/${u.id}">
+              <span class="bar ${u.risk}" aria-hidden="true"></span>
+              <span class="pkg">${u.pkg}<small>${u.type} dependency</small></span>
+              <span class="journey">${u.kind==="none" ? `<span>${u.from}</span>` : `<span class="from">${u.from}</span>${arrow}<span>${u.to}</span>`}<span class="kind">${u.kind==="none"?"current":u.kind}</span></span>
+              <span class="why">${u.why}</span>
+              <span class="state"><span class="risk ${u.risk}">${riskLabel(u.risk)}</span><br><span class="pill ${u.st}">${u.status}</span></span>
+            </a>`).join("")}
+        </div>
+        <h2 style="margin-top:32px">Most affected files</h2>
+        <div class="tablewrap"><table>
+          <thead><tr><th>File</th><th class="num">Lines</th><th>Packages</th><th>Strongest evidence</th></tr></thead>
+          <tbody>
+            <tr><td class="mono">routes/orders.js</td><td class="num">2</td><td>express</td><td>Failing test</td></tr>
+            <tr><td class="mono">routes/admin.js</td><td class="num">2</td><td>express</td><td>Failing test</td></tr>
+            <tr><td class="mono">app.js</td><td class="num">2</td><td>body-parser</td><td>Runtime warning</td></tr>
+            <tr><td class="mono">routes/invoices.js</td><td class="num">1</td><td>express</td><td>Production logs</td></tr>
+          </tbody></table></div>
+      </div>
+      <aside class="side">
+        <section class="waiting">
+          <h2>Waiting for you</h2>
+          <a href="#/upgrades/express"><span class="t">Express 4.21.2 to 5.1.0</span><br><span class="small muted">Fix tested · 23 of 23 tests pass · 6 changes</span></a>
+          <a href="#/upgrades/body-parser"><span class="t">body-parser 1.20.3 to 2.2.0</span><br><span class="small muted">Fix tested · 2 changes</span></a>
+        </section>
+        <section>
+          <h2>Risk across ${total} dependencies</h2>
+          <div class="stack" role="img" aria-label="${r.critical} critical, ${r.high} high, ${r.medium} medium, ${r.low} low, ${r.none} up to date">${["critical","high","medium","low","none"].map(seg).join("")}</div>
+          <dl class="legend">
+            ${["critical","high","medium","low","none"].map(k=>`<dt><span class="dot" style="background:var(--${k==="none"?"rule":k})"></span>${riskLabel(k)}</dt><dd>${r[k]}</dd>`).join("")}
+          </dl>
+        </section>
+        <section>
+          <h2>Security</h2>
+          <p class="small" style="margin:0"><span class="risk medium">1 advisory</span> in <b>cookie 0.6.0</b>, fixed in 0.7.0. Upgrading needs no code changes.</p>
+        </section>
+      </aside>
+    </div>
+    <p class="note">Mockup with sample data. Quotes and numbers are placeholders; the real dashboard shows the release-note quotes and counts that Pilot extracts.</p>`;
+}
+
+function dependencies(){
+  const filters = ["All","Needs action","Major","Security","Dev"];
+  page.innerHTML = `
+    <h1>Dependencies</h1>
+    <p class="lede">Every package this repository declares, with what it is on now and what is available.</p>
+    <div class="filters" role="group" aria-label="Filter">${filters.map((f,i)=>`<button class="chip" aria-pressed="${i===0}">${f}</button>`).join("")}</div>
+    <div class="tablewrap"><table>
+      <thead><tr><th>Risk</th><th>Package</th><th>Type</th><th>Current</th><th>Latest in range</th><th>Latest</th><th>Update</th><th class="num">Advisories</th><th class="num">Used in</th></tr></thead>
+      <tbody>${data.deps.map(d=>`
+        <tr class="link" tabindex="0" data-id="${d[0]}">
+          <td><span class="risk ${d[7]}">${riskLabel(d[7])}</span></td><td><b>${d[0]}</b></td><td>${d[1]}</td>
+          <td>${d[2]}</td><td>${d[3]}</td><td>${d[4]}</td><td>${d[5]==="none"?"—":d[5]}</td>
+          <td class="num">${d[6]||"—"}</td><td class="num">${d[8]} files</td></tr>`).join("")}
+      </tbody></table></div>`;
+  page.querySelectorAll(".chip").forEach(c=>c.onclick=()=>{page.querySelectorAll(".chip").forEach(x=>x.setAttribute("aria-pressed","false"));c.setAttribute("aria-pressed","true");});
+  page.querySelectorAll("tr.link").forEach(tr=>{
+    const open=()=>{ if(data.upgrades.some(u=>u.id===tr.dataset.id)) go(tr.dataset.id); };
+    tr.onclick=open; tr.onkeydown=e=>{ if(e.key==="Enter") open(); };
+  });
+}
+
+function upgrades(){
+  page.innerHTML = `<h1>Upgrades</h1><p class="lede">One row per dependency upgrade Pilot is analysing or has finished.</p>
+    <div class="tablewrap"><table><thead><tr><th>Risk</th><th>Upgrade</th><th>Status</th><th class="num">Effort</th><th>Owner</th></tr></thead><tbody>
+    ${data.upgrades.map(u=>`<tr class="link" tabindex="0" data-id="${u.id}"><td><span class="risk ${u.risk}">${riskLabel(u.risk)}</span></td>
+      <td><b>${u.pkg}</b> ${u.from} to ${u.to}</td><td><span class="pill ${u.st}">${u.status}</span></td><td class="num">${u.effort ? u.effort+" h" : "—"}</td><td>${u.owner}</td></tr>`).join("")}
+    </tbody></table></div>`;
+  page.querySelectorAll("tr.link").forEach(tr=>{ tr.onclick=()=>go(tr.dataset.id); tr.onkeydown=e=>{ if(e.key==="Enter") go(tr.dataset.id); }; });
+}
+
+function approvals(){
+  const waiting = data.upgrades.filter(u=>u.st==="wait");
+  page.innerHTML = `<h1>Approvals</h1><p class="lede">Upgrades whose fix passed its tests and needs a person to approve before Pilot opens a pull request.</p>
+    <div class="tablewrap"><table><thead><tr><th>Upgrade</th><th>Risk</th><th>Tests</th><th>Waiting since</th><th></th></tr></thead><tbody>
+    ${waiting.map(u=>`<tr><td><b>${u.pkg}</b> ${u.from} to ${u.to}</td><td><span class="risk ${u.risk}">${riskLabel(u.risk)}</span></td><td>All passing</td><td>Today, 10:45</td>
+      <td class="num"><a href="#/upgrades/${u.id}">Review</a></td></tr>`).join("")}
+    </tbody></table></div>`;
+}
+
+function detail(id){
+  const u = data.upgrades.find(x=>x.id===id) || data.upgrades[0];
+  const isExpress = u.id === "express";
+  page.innerHTML = `
+    <div class="crumbs"><a href="#/upgrades">Upgrades</a> / ${u.pkg}</div>
+    <div class="detail-head">
+      <div>
+        <div class="journey"><span class="pkg" style="font-size:34px">${u.pkg}</span><span class="from">${u.from}</span>${arrow}<span>${u.to}</span><span class="kind">${u.kind}</span></div>
+        <div class="facts">
+          <div class="fact">Risk<b class="risk ${u.risk}" style="font-size:17px">${riskLabel(u.risk)}</b></div>
+          <div class="fact">Effort if done by hand<b>about ${u.effort} h</b></div>
+          <div class="fact">Status<b><span class="pill ${u.st}" style="font-size:14px">${u.status}</span></b></div>
+          <div class="fact">Owner<b>${u.owner}</b></div>
+        </div>
+      </div>
+      <div class="actions">
+        <button class="btn" id="rejectBtn">Reject</button>
+        <button class="btn btn-primary" id="approveBtn" ${u.st!=="wait"?"disabled":""}>Approve and open PR</button>
+      </div>
+    </div>
+    <div class="signals" aria-label="Evidence summary">
+      <div class="signal"><b>8</b><span>lines found by code search</span></div>
+      <div class="signal"><b>5</b><span>runtime deprecation warnings</span></div>
+      <div class="signal"><b>5</b><span>tests fail on ${u.to} without the fix</span></div>
+      <div class="signal"><b>1,284</b><span>matching production log lines, 7 days</span></div>
+    </div>
+    <div class="tabs" role="tablist">
+      ${["Affected code","What changed","Production evidence","Plan","Fix and tests","Activity"].map((t,i)=>`<button role="tab" aria-selected="${i===0}" data-tab="${i}">${t}</button>`).join("")}
+    </div>
+    <div id="tabpanel" role="tabpanel"></div>`;
+  const panels = [
+    () => (isExpress ? data.findings : data.findings.slice(0,1)).map(f=>`
+      <div class="file"><div class="file-head"><span class="mono">${f.file}</span><span class="muted">${f.rows.length} ${f.rows.length===1?"line":"lines"}</span></div>
+      ${f.rows.map(r=>`<div class="finding"><span class="ln">${r.ln}</span>
+        <div><div class="snippet">${r.code}</div><div class="because">${r.because}</div></div>
+        <div class="srcs">${["Code search","Runtime warning","Failing test"].map(s=>`<span class="src ${r.src.includes(s)?"on":""}">${r.src.includes(s)?"✓ ":""}${s}</span>`).join("")}</div></div>`).join("")}
+      </div>`).join("") + `<p class="small muted">2 lines from code search were checked and marked not affected: <span class="mono">lib/notify.js</span> uses its own <code>param()</code> helper. <a href="#">Show them</a></p>`,
+    () => data.changes.map(c=>`<div class="change ${c.breaking?"breaking":""}"><h3>${c.title}<span class="small muted">in ${c.v}</span>${c.hits?`<span class="small">affects ${c.hits} line here</span>`:`<span class="small muted">nothing here uses it</span>`}</h3>
+      <blockquote>${c.quote}</blockquote><a class="small" href="#">Open the release notes</a></div>`).join(""),
+    () => `<p>Two of the deprecated calls are running in production right now, from the last 7 days of <b>shop-api</b> logs.</p>
+      <div class="tablewrap"><table><thead><tr><th>Log message</th><th>Route</th><th class="num">Seen</th><th>Last seen</th><th>Matches</th></tr></thead><tbody>
+      <tr><td class="mono">express deprecated req.param(name)…</td><td class="mono">/orders/:id</td><td class="num">1,102</td><td>Today 10:31</td><td class="mono">routes/orders.js:12</td></tr>
+      <tr><td class="mono">express deprecated res.sendfile…</td><td class="mono">/invoices/:id/pdf</td><td class="num">182</td><td>Today 09:58</td><td class="mono">routes/invoices.js:9</td></tr>
+      </tbody></table></div>`,
+    () => `<p><b>Why critical:</b> the upgrade fails 5 tests without changes, and two of the affected routes serve production traffic every day.</p>
+      <h3>Steps</h3><ol class="steps"><li>Upgrade express to 5.1.0.</li><li>Replace removed APIs in 4 route files (6 lines).</li><li>Rename the catch-all route to <code>/*splat</code>.</li><li>Run the full test suite and a smoke test of /orders and /invoices.</li></ol>
+      <h3>How to check it worked</h3><ol class="steps"><li>All tests pass on 5.1.0.</li><li>No "express deprecated" lines in the logs for 24 hours after release.</li></ol>`,
+    () => `<div class="diff" aria-label="Proposed changes">
+      <div class="hunk">routes/orders.js</div>
+      <div class="del">-  const id = req.param('id');</div><div class="add">+  const id = req.params.id;</div>
+      <div class="del">-  return res.json(order, 201);</div><div class="add">+  return res.status(201).json(order);</div>
+      <div class="hunk">routes/admin.js</div>
+      <div class="del">-app.del('/admin/cache', clearCache);</div><div class="add">+app.delete('/admin/cache', clearCache);</div>
+      <div class="hunk">package.json</div>
+      <div class="del">-    "express": "4.21.2",</div><div class="add">+    "express": "5.1.0",</div></div>
+      <div class="tests">
+        <div class="testbox"><span class="small muted">On ${u.to} without the fix</span><br><b style="color:var(--critical)">18 of 23 pass</b><div class="small muted">5 failures, all in the files above</div></div>
+        <div class="testbox"><span class="small muted">On ${u.to} with the fix</span><br><b style="color:var(--low)">23 of 23 pass</b><div class="small muted">Attempt 1 of 3 · 41 s</div></div>
+      </div>`,
+    () => `<ol class="trace">${data.trace.map(t=>`<li class="${t[3]||""}"><time>${t[0]}</time><div><b>${t[1]}</b></div><div class="small muted">${t[2]}</div></li>`).join("")}</ol>`
+  ];
+  const tabs = page.querySelectorAll('[role="tab"]');
+  const show = i => { tabs.forEach((t,j)=>t.setAttribute("aria-selected", String(i===j))); $("#tabpanel").innerHTML = panels[i](); };
+  tabs.forEach((t,i)=>t.onclick=()=>show(i));
+  show(0);
+  const dlg = $("#approveDialog");
+  $("#approveBtn").onclick = () => dlg.showModal();
+  $("#rejectBtn").onclick = () => toast("Rejected. Pilot will report this upgrade without opening a pull request.");
+  $("#cancelApprove").onclick = () => dlg.close();
+  $("#confirmApprove").onclick = () => { dlg.close(); u.status = "Pull request opened"; u.st = "done"; toast("Approved. Pull request #42 opened."); detail(u.id); updateCount(); };
+}
+
+function toast(msg){ const t=$("#toast"); t.textContent=msg; t.style.display="block"; clearTimeout(toast.h); toast.h=setTimeout(()=>t.style.display="none",3200); }
+function updateCount(){ const n=data.upgrades.filter(u=>u.st==="wait").length; const c=$("#approvalCount"); c.textContent=n; c.style.display=n?"inline":"none"; }
+
+function route(){
+  const parts = (location.hash || "#/overview").slice(2).split("/");
+  const name = parts[0] || "overview";
+  document.querySelectorAll("#nav a").forEach(a=>a.toggleAttribute("aria-current", a.dataset.route===name) || a.removeAttribute("aria-current"));
+  document.querySelectorAll("#nav a").forEach(a=>{ if(a.dataset.route===name) a.setAttribute("aria-current","page"); });
+  if (name==="upgrades" && parts[1]) detail(parts[1]);
+  else ({overview, dependencies, upgrades, approvals}[name] || overview)();
+  page.focus({preventScroll:true}); window.scrollTo(0,0);
+}
+$("#scanBtn").onclick = () => toast("Scan started. Results update as each step finishes.");
+window.addEventListener("hashchange", route);
+updateCount(); route();
+</script>
+</body>
+</html>

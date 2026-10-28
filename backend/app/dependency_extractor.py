@@ -10,17 +10,35 @@ except ImportError:
 from app.database import GraphDatabase
 
 # --- PYTHON ---
+# PEP 508 requirement: name, optional [extras], version specifiers, optional "; environment marker".
+PEP508_PATTERN = re.compile(
+    r"^\s*([A-Za-z0-9][A-Za-z0-9._-]*)\s*(\[[^\]]*\])?\s*(\(?[^;@]*?\)?)\s*(?:;\s*(.*))?\s*$"
+)
+
+def parse_pep508(line: str):
+    """Parse one requirement such as 'requests[socks]>=2.31,<3 ; python_version>="3.9"'.
+    Returns {name, constraint, marker} or None for things that are not registry packages
+    (pip options like -r/-e/--index-url, URLs, local paths, 'name @ url' direct references)."""
+    line = line.split(" #", 1)[0].strip()          # drop inline comments
+    if not line or line.startswith(("#", "-", ".", "/", "git+", "http:", "https:", "file:")):
+        return None
+    if re.search(r"^[A-Za-z0-9._-]+\s*(\[[^\]]*\])?\s*@", line):   # 'pkg @ https://...'
+        return None
+    match = PEP508_PATTERN.match(line)
+    if not match:
+        return None
+    name, _extras, spec, marker = match.groups()
+    spec = (spec or "").strip().strip("()").replace(" ", "")
+    return {"name": name, "constraint": spec, "marker": (marker or "").strip() or None}
+
 def parse_requirements_txt(file_path: Path) -> list:
     deps = []
     try:
         with file_path.open("r", encoding="utf-8") as f:
-            for line in f:
-                line = line.strip()
-                if not line or line.startswith("#"):
-                    continue
-                match = re.match(r"^([a-zA-Z0-9_\-]+)(.*)", line)
-                if match:
-                    deps.append({"name": match.group(1), "constraint": match.group(2).strip(), "ecosystem": "PyPI"})
+            for raw in f:
+                parsed = parse_pep508(raw)
+                if parsed:
+                    deps.append({**parsed, "ecosystem": "PyPI", "dependency_type": "runtime"})
     except Exception:
         pass
     return deps
@@ -32,11 +50,16 @@ def parse_pyproject_toml(file_path: Path) -> list:
     try:
         with file_path.open("rb") as f:
             data = tomllib.load(f)
-            project_deps = data.get("project", {}).get("dependencies", [])
-            for dep in project_deps:
-                match = re.match(r"^([a-zA-Z0-9_\-]+)(.*)", dep)
-                if match:
-                    deps.append({"name": match.group(1), "constraint": match.group(2).strip(), "ecosystem": "PyPI"})
+        project = data.get("project", {})
+        for dep in project.get("dependencies", []):
+            parsed = parse_pep508(dep)
+            if parsed:
+                deps.append({**parsed, "ecosystem": "PyPI", "dependency_type": "runtime"})
+        for _group, group_deps in project.get("optional-dependencies", {}).items():
+            for dep in group_deps:
+                parsed = parse_pep508(dep)
+                if parsed:
+                    deps.append({**parsed, "ecosystem": "PyPI", "dependency_type": "optional"})
     except Exception:
         pass
     return deps
@@ -47,9 +70,17 @@ def parse_package_json(file_path: Path) -> list:
     try:
         with file_path.open("r", encoding="utf-8") as f:
             data = json.load(f)
-            for section in ["dependencies", "devDependencies", "peerDependencies"]:
+            # Keep the section: runtime vs dev decides how urgent an update is.
+            sections = {
+                "dependencies": "runtime",
+                "devDependencies": "dev",
+                "peerDependencies": "peer",
+                "optionalDependencies": "optional",
+            }
+            for section, dependency_type in sections.items():
                 for name, version in data.get(section, {}).items():
-                    deps.append({"name": name, "constraint": version, "ecosystem": "npm"})
+                    deps.append({"name": name, "constraint": version, "ecosystem": "npm",
+                                 "dependency_type": dependency_type})
     except Exception:
         pass
     return deps
@@ -168,7 +199,11 @@ def extract_dependencies(db: GraphDatabase, scan_id: str, repo_root: str):
                 target_id=dep_id,
                 edge_type="DECLARES",
                 scan_id=scan_id,
-                properties={"declared_constraint": dep["constraint"]}
+                properties={
+                    "declared_constraint": dep["constraint"],
+                    "dependency_type": dep.get("dependency_type", "unknown"),
+                    **({"marker": dep["marker"]} if dep.get("marker") else {}),
+                }
             )
             total_deps += 1
             

@@ -1,5 +1,6 @@
 import os
 import json
+import posixpath
 from app.database import GraphDatabase
 
 def resolve_imports(db: GraphDatabase, scan_id: str):
@@ -23,6 +24,7 @@ def resolve_imports(db: GraphDatabase, scan_id: str):
     # 3. Get all module imports WITH their source file context
     cursor.execute("""
         SELECT m.id AS mod_id, m.name AS mod_name, json_extract(m.properties, '$.language') AS lang,
+               json_extract(m.properties, '$.resolved_path') AS resolved_path,
                f.id AS file_id, json_extract(f.properties, '$.path') AS source_path
         FROM nodes m
         JOIN edges i ON m.id = i.target_id AND i.type = 'IMPORTS' AND i.scan_id = m.scan_id
@@ -49,7 +51,17 @@ def resolve_imports(db: GraphDatabase, scan_id: str):
         # --- Internal File Resolution ---
         target_file_id = None
         
-        if lang == "javascript" and mod_name.startswith((".", "/")):
+        if lang == "javascript" and imp["resolved_path"] is not None:
+            # Relative import already resolved against the importing file's folder by the analyzer.
+            base = imp["resolved_path"]
+            candidates = [base + ext for ext in [".js", ".jsx", ".ts", ".tsx", ".mjs", ".cjs", ""]]
+            candidates += [posixpath.join(base, name) for name in ["index.js", "index.ts"]]
+            for test_path in candidates:
+                if test_path in file_map:
+                    target_file_id = file_map[test_path]
+                    break
+
+        elif lang == "javascript" and mod_name.startswith((".", "/")):
             # Resolve relative JS path based on the file making the import
             base_dir = os.path.dirname(source_path)
             resolved_base = os.path.normpath(os.path.join(base_dir, mod_name)).replace("\\", "/")

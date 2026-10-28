@@ -11,3 +11,15 @@ build/
 *.db
 *.sqlite
 *.sqlite3
+
+# Local config and runtime state
+.env
+*.db-wal
+*.db-shm
+workspace/
+checkpoints.db
+reports/
+
+# Frontend
+frontend/node_modules/
+frontend/dist/

@@ -109,19 +109,21 @@ class ProbeOutcome:
     install_tail: str = ""
 
 
-def run_baseline(worktree: str | Path, repo: str | None) -> ProbeOutcome:
+def run_baseline(worktree: str | Path, repo: str | None, test_args: list[str] | None = None) -> ProbeOutcome:
     """Install and run the tests on the current version; the output carries the depd warnings."""
     install = workspace.npm_ci(worktree, repo)
     if not install.passed:
         return ProbeOutcome(to_probe(install), install.output, False, install.output_tail)
-    result = workspace.npm_test(worktree, repo)
+    result = workspace.run_tests(worktree, repo, test_args)
     return ProbeOutcome(to_probe(result), result.output)
 
 
-def run_upgrade_probe(worktree: str | Path, repo: str | None, package: str, target: str) -> ProbeOutcome:
+def run_upgrade_probe(
+    worktree: str | Path, repo: str | None, package: str, target: str, test_args: list[str] | None = None
+) -> ProbeOutcome:
     """Bump only the package (no code changes) and run the tests: what breaks without a fix."""
     install = workspace.npm_install_exact(worktree, repo, package, target)
     if not install.passed:
         return ProbeOutcome(to_probe(install), install.output, False, install.output_tail)
-    result = workspace.npm_test(worktree, repo)
+    result = workspace.run_tests(worktree, repo, test_args)
     return ProbeOutcome(to_probe(result), result.output)

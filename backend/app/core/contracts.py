@@ -85,6 +85,17 @@ class UpgradeState(TypedDict, total=False):
     decided_by: str | None
     links: list[str]
     route: str  # 'full' | 'report_only' | 'needs_engineer'
+    # Added with the orchestrator (B1): small values only; big data lives in tables.
+    repo: str | None  # repository identity: 'org/repo' or a local path
+    clone: str  # path of the kept clone of the scanned commit
+    config: dict  # RepoPilotConfig.model_dump()
+    exec_allowed: bool  # may the repository's code be run (EXEC_ALLOWED_REPOS)
+    failure_tail: str | None  # test output of the last failed attempt, fed to the next one
+    severity: str
+    findings_count: int
+    telemetry_count: int
+    patch: dict  # latest PatchResult.model_dump()
+    pr: dict  # what act published
 
 
 __all__ = [

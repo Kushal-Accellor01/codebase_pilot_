@@ -153,6 +153,6 @@ async def make_patch(
     )
 
 
-def validate(root: Path, repo: str | None) -> ProbeResult:
-    """Run the repository's tests on the patched worktree."""
-    return to_probe(workspace.npm_test(root, repo))
+def validate(root: Path, repo: str | None, test_args: list[str] | None = None) -> ProbeResult:
+    """Run the repository's tests (its configured test command) on the patched worktree."""
+    return to_probe(workspace.run_tests(root, repo, test_args))

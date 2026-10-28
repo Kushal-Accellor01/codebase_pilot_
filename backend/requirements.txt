@@ -10,3 +10,8 @@ node-semver==0.9.1
 PyYAML==6.0.3
 # Settings from environment / backend/.env
 pydantic-settings==2.15.0
+# Orchestration: one LangGraph thread per upgrade run, checkpointed in SQLite
+langgraph==1.2.11
+langgraph-checkpoint-sqlite==3.1.2
+# Server-sent events for the run trace
+sse-starlette==3.6.0

@@ -59,7 +59,8 @@ def make_mirror(dest: Path) -> Path:
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--dest", default=str(Path(get_settings().codebase_pilot_workspace) / "origin" / "pilot-sandbox-shop"))
+    default = Path(get_settings().codebase_pilot_workspace) / "origin" / "pilot-sandbox-shop"
+    parser.add_argument("--dest", default=str(default))
     args = parser.parse_args(argv)
     print(make_mirror(Path(args.dest)))
     return 0

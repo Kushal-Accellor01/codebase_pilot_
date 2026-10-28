@@ -57,6 +57,7 @@ async def analyse_impact(
     run_id: str | None = None,
     llm: LLM | None = None,
     run_probes: bool = True,
+    test_args: list[str] | None = None,
 ) -> ImpactResult:
     """`root` is the run's worktree. Probes need `repo` to be in EXEC_ALLOWED_REPOS; without it the
     analysis falls back to static signals (scope + patterns) and says so in `notes`."""
@@ -84,7 +85,7 @@ async def analyse_impact(
     baseline_output = ""
     if run_probes:
         try:
-            base = probes.run_baseline(root, repo)
+            base = probes.run_baseline(root, repo, test_args)
             baseline, baseline_output = base.probe, base.output
             if base.install_ok:
                 deprecations = probes.parse_deprecations(base.output, str(root))
@@ -94,7 +95,7 @@ async def analyse_impact(
                   passed=base.probe.passed, tests_passed=base.probe.tests_passed)
 
             if event.target_version and event.package:
-                up = probes.run_upgrade_probe(root, repo, event.package, event.target_version)
+                up = probes.run_upgrade_probe(root, repo, event.package, event.target_version, test_args)
                 upgrade = up.probe
                 if up.install_ok:
                     frames = probes.parse_failure_frames(up.output, str(root))

@@ -164,6 +164,33 @@ def test_second_pass_changes_nothing(env):
 
 
 @respx.mock
+def test_rescan_while_paused_keeps_the_run_and_approval_still_opens_the_pr(env):
+    """H1 + H2: a second scan neither breaks the paused run's worktree nor creates a second express run."""
+    golden.mock_github()
+    llm = ScriptedLLM()
+    go(env, llm, scan_job(env))
+    conn = core_db.connect(env["db"])
+    run_id = express_run(conn)["id"]
+    first_clone = run_store.scan_repo(conn, run_store.get_run(conn, run_id)["scan_id"])["clone_path"]
+    calls = llm.calls
+
+    go(env, llm, scan_job(env))
+    assert conn.execute("SELECT count(*) FROM scans").fetchone()[0] == 2
+    assert [r["id"] for r in run_store.list_runs(conn) if r["package"] == "express"] == [run_id]
+    assert llm.calls == calls  # no second analysis, impact or fix
+    assert Path(first_clone).is_dir()  # the paused run's clone survives the re-scan
+    assert run_store.get_run(conn, run_id)["status"] == "awaiting_approval"
+
+    go(env, llm, decide_job(run_id))
+    assert run_store.get_run(conn, run_id)["status"] == "pr_opened"
+    assert run_store.load_pull_request(conn, run_id)["branch"] == "pilot/express-5.3.0"
+
+    go(env, llm, scan_job(env))  # the run is final now: its old clone is pruned, the newest stays
+    clones = sorted((env["tmp"] / "ws" / "clones").glob("*/*"))
+    assert len(clones) == 1 and str(clones[0].resolve()) != str(Path(first_clone).resolve())
+
+
+@respx.mock
 def test_rejection_ends_without_a_pull_request(env):
     golden.mock_github()
     llm = ScriptedLLM()

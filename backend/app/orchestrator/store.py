@@ -38,6 +38,43 @@ def create_run(
     return run_id
 
 
+FINAL_STATUSES = ("rejected", "pr_opened", "needs_engineer", "report_only", "failed", "resolved")
+
+
+def clone_paths_in_use(conn: sqlite3.Connection) -> list[str]:
+    """Clones that unfinished runs started on (their worktrees point into them)."""
+    marks = ",".join("?" for _ in FINAL_STATUSES)
+    return [
+        r["clone_path"]
+        for r in conn.execute(
+            f"""SELECT DISTINCT m.clone_path FROM upgrade_runs r JOIN scan_meta m ON m.scan_id = r.scan_id
+                WHERE r.status NOT IN ({marks}) AND m.clone_path IS NOT NULL""",  # noqa: S608
+            FINAL_STATUSES,
+        )
+    ]
+
+
+OPEN_STATUSES = (
+    "queued", "analyzing", "fixing", "validating", "awaiting_approval", "approved", "pr_opened", "needs_engineer",
+    "report_only",
+)
+
+
+def find_open_run(
+    conn: sqlite3.Connection, *, repo_url: str | None, ecosystem: str, package: str, to_version: str | None
+) -> sqlite3.Row | None:
+    """The newest run for the same repo, package and target that is still in play (not rejected, failed or resolved).
+
+    A re-scan finds the same update again; reusing the run keeps one decision per upgrade."""
+    marks = ",".join("?" for _ in OPEN_STATUSES)
+    return conn.execute(
+        f"""SELECT r.* FROM upgrade_runs r LEFT JOIN scan_meta m ON m.scan_id = r.scan_id
+            WHERE r.ecosystem = ? AND r.package = ? AND r.to_version IS ? AND r.status IN ({marks})
+              AND m.repo_url IS ? ORDER BY r.created_at DESC, r.rowid DESC LIMIT 1""",  # noqa: S608
+        (ecosystem, package, to_version, *OPEN_STATUSES, repo_url),
+    ).fetchone()
+
+
 def get_run(conn: sqlite3.Connection, run_id: str) -> sqlite3.Row | None:
     return conn.execute("SELECT * FROM upgrade_runs WHERE id = ?", (run_id,)).fetchone()
 

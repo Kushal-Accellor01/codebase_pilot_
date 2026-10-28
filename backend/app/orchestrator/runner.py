@@ -43,11 +43,17 @@ def enqueue_runs_for_scan(conn: sqlite3.Connection, scan_id: str, *, only: list[
     """
     run_ids: list[str] = []
     wanted = set(only or [])
+    repo_url = run_store.scan_repo(conn, scan_id)["repo_url"]
     for row in updates_store.list_dependency_updates(conn, scan_id):
         if not wants_event(row) or (wanted and row["name"] not in wanted):
             continue
         if not row["current_version"] or not row["recommended_target"]:
             continue
+        open_run = run_store.find_open_run(
+            conn, repo_url=repo_url, ecosystem=row["ecosystem"], package=row["name"], to_version=row["recommended_target"]
+        )
+        if open_run is not None and open_run["scan_id"] != scan_id:
+            continue  # an earlier scan already has this upgrade in play: no second run, no repeated LLM calls
         run_id = run_store.create_run(
             conn, scan_id=scan_id, dependency_update_id=row["id"], ecosystem=row["ecosystem"], package=row["name"],
             from_version=row["current_version"], to_version=row["recommended_target"], risk_level=row["risk_level"],

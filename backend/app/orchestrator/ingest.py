@@ -6,14 +6,18 @@ used as they are; nothing here edits them.
 """
 import logging
 import os
+import re
 import shutil
+import sqlite3
 import stat
 import subprocess
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
 
 from app.core import db as core_db
 from app.core.config import get_settings
+from app.orchestrator import store as run_store
 from app.database import GraphDatabase
 from app.dependency_extractor import extract_dependencies
 from app.js_analyzer import analyze_js_code
@@ -45,14 +49,41 @@ def repo_name(repo_url: str) -> str:
     return repo_url.rstrip("/\\").replace("\\", "/").split("/")[-1].removesuffix(".git") or "repo"
 
 
+def clone_key(repo_url: str) -> str:
+    """`<owner>__<repo>` so org-a/api and org-b/api never share a folder."""
+    parts = [p for p in re.split(r"[/\\:]+", repo_url.rstrip("/\\")) if p]
+    owner = parts[-2] if len(parts) >= 2 else "local"
+    key = f"{owner}__{repo_name(repo_url)}"
+    return re.sub(r"[^A-Za-z0-9._-]", "_", key)
+
+
+def prune_clones(conn: sqlite3.Connection, workspace: str | Path) -> list[str]:
+    """Delete clones that no unfinished run needs. The newest clone of each repo always stays: the next run uses it."""
+    root = Path(workspace) / "clones"
+    if not root.is_dir():
+        return []
+    in_use = {str(Path(p).resolve()) for p in run_store.clone_paths_in_use(conn)}
+    removed: list[str] = []
+    for repo_dir in (d for d in root.iterdir() if d.is_dir()):
+        clones = sorted(d for d in repo_dir.iterdir() if d.is_dir())  # names are UTC stamps: oldest first
+        for clone in clones[:-1]:
+            if str(clone.resolve()) not in in_use:
+                _remove_tree(clone)
+                removed.append(str(clone))
+    return removed
+
+
 def ingest(repo_url: str, db_path: str | None = None, workspace: str | Path | None = None) -> str:
-    """Clone `repo_url` into the workspace (replacing an older clone), scan it, and return the scan id."""
+    """Clone `repo_url` into its own folder, scan it, and return the scan id.
+
+    Every scan gets a fresh clone (the code stays identical to the scanned commit) in `clones/<owner>__<repo>/<stamp>`.
+    Older clones stay while a run that started on them is unfinished: its worktree depends on them.
+    """
     settings = get_settings()
     db_path = db_path or settings.codebase_pilot_db
     workspace = Path(workspace or settings.codebase_pilot_workspace)
-    clone = (workspace / repo_name(repo_url)).resolve()
-    if clone.exists():
-        _remove_tree(clone)  # a fresh clone keeps the code identical to the scanned commit
+    stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
+    clone = (workspace / "clones" / clone_key(repo_url) / stamp).resolve()
     clone.parent.mkdir(parents=True, exist_ok=True)
 
     result = _git("clone", "--depth", "1", repo_url, str(clone))
@@ -81,6 +112,10 @@ def ingest(repo_url: str, db_path: str | None = None, workspace: str | Path | No
                 "INSERT OR REPLACE INTO scan_meta (scan_id, repo_url, branch, clone_path) VALUES (?, ?, ?, ?)",
                 (scan_id, repo_url.rstrip("/"), branch, str(clone)),
             )
+        try:
+            prune_clones(conn, workspace)
+        except OSError:
+            logger.warning("could not prune old clones", exc_info=True)
     finally:
         conn.close()
     logger.info("ingested %s as scan %s at %s", repo_url, scan_id, commit_sha[:7])

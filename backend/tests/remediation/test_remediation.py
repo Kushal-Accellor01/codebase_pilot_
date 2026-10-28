@@ -16,6 +16,8 @@ from app.updates.models import ChangeRef
 from tests.conftest import make_sandbox_repo
 from tests.updates.conftest import make_db
 
+pytestmark = pytest.mark.node
+
 SCOPE = ["app.js", "routes/orders.js", "routes/invoices.js", "routes/admin.js", "routes/i18n.js", "routes/fallback.js"]
 
 

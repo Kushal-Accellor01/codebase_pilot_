@@ -16,6 +16,10 @@ select = ["E", "F", "I", "W"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+markers = [
+    "e2e: full offline golden path",
+    "node: needs node/npm on PATH (skipped when missing)",
+]
 
 [tool.ruff.lint.per-file-ignores]
 "tests/**" = ["E501"]

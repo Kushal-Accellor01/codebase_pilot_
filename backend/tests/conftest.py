@@ -28,3 +28,15 @@ def make_sandbox_repo(dest: Path) -> Path:
 def sandbox_origin(tmp_path_factory) -> Path:
     """A local git repository with the sandbox app, usable as a clone source."""
     return make_sandbox_repo(tmp_path_factory.mktemp("origin") / "pilot-sandbox-shop")
+
+
+def pytest_collection_modifyitems(config, items):
+    """Tests marked `node` run node/npm; skip them where it is not installed."""
+    import shutil
+
+    if shutil.which("node") and shutil.which("npm"):
+        return
+    skip = pytest.mark.skip(reason="node/npm not found on PATH")
+    for item in items:
+        if "node" in item.keywords:
+            item.add_marker(skip)

@@ -122,6 +122,10 @@ def install_fake_runner(monkeypatch, calls: list[str] | None = None) -> None:
         manifest = wt / "package.json"
         manifest.write_text(manifest.read_text(encoding="utf-8").replace('"express": "4.21.2"', f'"express": "{version}"'),
                             encoding="utf-8")
+        lock = wt / "package-lock.json"  # what `npm install` does to the lockfile
+        if lock.exists():
+            pattern = r'("node_modules/express": \{\s*"version": ")4\.21\.2"'
+            lock.write_text(re.sub(pattern, rf'\g<1>{version}"', lock.read_text(encoding="utf-8")), encoding="utf-8")
         return result(["npm", "install"], 0, "ok")
 
     def run_tests(worktree, repo, args=None):

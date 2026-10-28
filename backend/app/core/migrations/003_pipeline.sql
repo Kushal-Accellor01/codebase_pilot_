@@ -35,7 +35,7 @@ CREATE TABLE IF NOT EXISTS upgrade_runs (
     to_version           TEXT,
     status               TEXT NOT NULL DEFAULT 'queued',
         -- 'queued' | 'analyzing' | 'fixing' | 'validating' | 'awaiting_approval' | 'approved'
-        -- | 'rejected' | 'pr_opened' | 'needs_engineer' | 'report_only' | 'failed'
+        -- | 'rejected' | 'pr_opened' | 'needs_engineer' | 'report_only' | 'failed' | 'resolved'
     current_node         TEXT,
     risk_level           TEXT,
     error                TEXT,

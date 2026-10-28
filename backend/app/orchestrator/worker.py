@@ -16,7 +16,7 @@ from app.core import db as core_db
 from app.core import jobs
 from app.core.config import Settings, get_settings
 from app.core.llm import LLM
-from app.orchestrator import runner
+from app.orchestrator import push_tracker, runner
 from app.orchestrator.ingest import ingest
 from app.orchestrator.nodes import Publisher
 from app.updates.github import GitHubClient
@@ -58,6 +58,7 @@ async def dispatch(job: jobs.Job, db_path: str, settings: Settings, services: Se
                 db_path, scan_id, only=payload.get("only"), registry=services.registry, http=services.http,
                 github=services.github, llm=services.llm, **services.update_options,
             )
+            push_tracker.close_resolved_runs(conn, scan_id)
             runner.enqueue_runs_for_scan(conn, scan_id, only=payload.get("only"))
         elif job.kind == "upgrade_run":
             ctx = runner.make_context(conn, services.http, settings, llm=services.llm, publisher=services.publisher)

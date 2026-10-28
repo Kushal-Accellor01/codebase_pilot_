@@ -7,7 +7,7 @@ from app.core.contracts import Finding, PatchResult, Plan, ProbeResult, Telemetr
 
 RUN_STATUSES = (
     "queued", "analyzing", "fixing", "validating", "awaiting_approval", "approved", "rejected", "pr_opened",
-    "needs_engineer", "report_only", "failed",
+    "needs_engineer", "report_only", "failed", "resolved",
 )
 
 
@@ -242,3 +242,15 @@ def save_pull_request(
 
 def load_pull_request(conn: sqlite3.Connection, run_id: str) -> sqlite3.Row | None:
     return conn.execute("SELECT * FROM pull_requests WHERE upgrade_run_id = ?", (run_id,)).fetchone()
+
+
+def runs_with_status(conn: sqlite3.Connection, statuses: tuple[str, ...]) -> list[sqlite3.Row]:
+    marks = ",".join("?" for _ in statuses)
+    return conn.execute(
+        f"SELECT * FROM upgrade_runs WHERE status IN ({marks}) ORDER BY created_at", statuses  # noqa: S608
+    ).fetchall()
+
+
+def mark_pull_request_state(conn: sqlite3.Connection, run_id: str, state: str) -> None:
+    with conn:
+        conn.execute("UPDATE pull_requests SET state = ? WHERE upgrade_run_id = ?", (state, run_id))

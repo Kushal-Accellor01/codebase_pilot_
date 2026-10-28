@@ -92,7 +92,8 @@ async def analyse_impact(
             else:
                 notes.append("baseline install failed; no runtime deprecation evidence")
             trace("baseline_probe", f"{len(deprecations)} runtime deprecation warnings",
-                  passed=base.probe.passed, tests_passed=base.probe.tests_passed)
+                  passed=base.probe.passed, tests_passed=base.probe.tests_passed,
+                  tests_total=base.probe.tests_total)
 
             if event.target_version and event.package:
                 up = probes.run_upgrade_probe(root, repo, event.package, event.target_version, test_args)

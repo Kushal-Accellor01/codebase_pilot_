@@ -601,3 +601,9 @@ def get_update_row(conn: sqlite3.Connection, update_id: int) -> sqlite3.Row | No
 
 def get_analysis_row(conn: sqlite3.Connection, analysis_id: int) -> sqlite3.Row | None:
     return conn.execute("SELECT * FROM update_analyses WHERE id = ?", (analysis_id,)).fetchone()
+
+
+def delete_package_source(conn: sqlite3.Connection, ecosystem: str, name: str) -> None:
+    """Forget a resolved source so the next run walks the chain again (used after a manual override)."""
+    with conn:
+        conn.execute("DELETE FROM package_sources WHERE ecosystem = ? AND name = ?", (ecosystem, name))

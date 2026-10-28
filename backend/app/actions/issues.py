@@ -83,7 +83,8 @@ def render_dashboard(items: list[Item], repo: str, scan_date: str | None) -> str
         link = f"[pull request]({i.pr_url})" if i.pr_url else "-"
         affected = f"{i.lines} lines in {len(i.files)} files" if i.lines else "-"
         lines.append(
-            f"| {i.risk} | {i.package} | {move} | {i.reachability.replace('_', ' ')} | {i.status} | {affected} | {link} |"
+            f"| {i.risk} | {i.package} | {move} | {i.reachability.replace('_', ' ')} | {i.status} "
+            f"| {affected} | {link} |"
         )
     return "\n".join(lines) + "\n"
 

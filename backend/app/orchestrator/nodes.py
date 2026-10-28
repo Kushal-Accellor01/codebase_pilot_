@@ -157,7 +157,16 @@ async def telemetry(ctx: RunContext, state: UpgradeState) -> dict:
     directory = Path(logs) if logs else Path(state.get("clone", "")) / "logs"
     findings = run_store.load_findings(ctx.conn, run_id, include_rejected=False)
     evidence = []
-    if directory.is_dir() and any(directory.glob("*.jsonl")):
+    if ctx.settings.azure_log_analytics_workspace_id:
+        from app.telemetry.azure_monitor import AzureMonitorLogSource
+
+        service = _config(state).service
+        if service:
+            evidence = collect_evidence(
+                AzureMonitorLogSource.from_settings(ctx.settings, service), findings, service=service,
+                source_name="azure_monitor",
+            )
+    elif directory.is_dir() and any(directory.glob("*.jsonl")):
         evidence = collect_evidence(SeededLogSource(directory), findings)
     run_store.save_telemetry(ctx.conn, run_id, evidence)
     total = sum(e.count for e in evidence)

@@ -33,6 +33,9 @@ class Settings(BaseSettings):
     bot_pr_mode: Literal["off", "comment_only", "comment_and_commit"] = "comment_only"
     bot_authors: str = "dependabot[bot],renovate[bot]"
     azure_log_analytics_workspace_id: str | None = None
+    azure_log_table: str = "ContainerAppConsoleLogs_CL"
+    azure_log_message_column: str = "Log_s"
+    azure_log_app_column: str = "ContainerAppName_s"
     log_format: str = ""
     reports_dir: str = "reports"
     checkpoint_db: str = "checkpoints.db"

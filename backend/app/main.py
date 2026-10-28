@@ -10,6 +10,11 @@ from app.python_analyzer import analyze_python_code
 from app.js_analyzer import analyze_js_code
 from app.resolver import resolve_imports
 
+# Scan summary prints emoji; the default Windows console encoding (cp1252) cannot encode them.
+import sys
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+
 def clone_github_repo(repo_url: str, target_dir: str):
     print(f"Cloning {repo_url} into {target_dir}...")
     result = subprocess.run(

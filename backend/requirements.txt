@@ -1,3 +1,8 @@
 fastapi>=0.100.0
 uvicorn>=0.23.0
 pydantic>=2.0.0
+# Step 2 (dependency updates): async HTTP client and retry/backoff
+httpx>=0.28
+tenacity>=9.0
+# npm range semantics (^, ~, ||, x-ranges) in Python
+node-semver>=0.9

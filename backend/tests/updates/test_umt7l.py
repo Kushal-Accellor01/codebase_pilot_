@@ -48,7 +48,8 @@ FIXTURE_REGISTRY = {
 
 def run(db_path, registry=None, **kw):
     return pipeline.run_dependency_updates(
-        str(db_path), registry=registry or FakeRegistry(FIXTURE_REGISTRY), security=False, **kw
+        str(db_path), registry=registry or FakeRegistry(FIXTURE_REGISTRY),
+        security=False, notes=False, write_report=False, **kw
     )
 
 
@@ -205,7 +206,7 @@ def test_cli_run(patched_db, capsys, monkeypatch):
     from app.updates import cli
 
     monkeypatch.setattr(pipeline, "NpmRegistry", lambda http: FakeRegistry(FIXTURE_REGISTRY))
-    assert cli.main(["run", "--db", str(patched_db), "--no-llm", "--skip-security"]) == 0
+    assert cli.main(["run", "--db", str(patched_db), "--no-llm", "--skip-security", "--skip-notes", "--no-report"]) == 0
     out = capsys.readouterr().out
     assert "succeeded" in out and "supertest" in out and "Top 2 by priority" in out
 

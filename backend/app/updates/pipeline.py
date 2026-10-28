@@ -1,29 +1,50 @@
-"""Step 2 pipeline (deterministic part): inventory -> registry -> versions -> security -> priority -> risk -> upsert.
+"""Step 2 pipeline (S2 section 5.1-5.12), one run per scan:
 
-Source repositories, release notes and LLM analysis are added by later tickets. Until then a package that
-needs attention is stored with status 'pending' and a provisional risk level.
+  inventory -> registry -> versions -> OSV -> priority -> [source -> notes -> LLM analysis -> evidence] -> risk
+  -> persist -> events/report
+
+Every stage is optional so the deterministic core can run offline and tests can exercise one stage at a time.
+One package failing never stops the run; non-fatal problems become warnings and mark the run 'partial'.
 """
 import asyncio
 import logging
 import time
 import uuid
 from collections import Counter
+from dataclasses import dataclass, field
+from pathlib import Path
 
+from app.core.llm import LLM, LLMError, LLMNotConfigured
 from app.updates import store
+from app.updates.analysis import analyse_update
+from app.updates.github import GitHubClient, GitHubRateLimited
 from app.updates.http import HttpClient
 from app.updates.models import Dependency, RunStats, UpdateRow, UpdateVerdict
+from app.updates.notes import fetch_notes
 from app.updates.preflight import run_preflight
-from app.updates.registry.base import RegistryAdapter
+from app.updates.registry.base import PackageInfo, RegistryAdapter
 from app.updates.registry.batch import BatchResult, fetch_many
 from app.updates.registry.npm import NpmRegistry
 from app.updates.risk import RiskFacts, needs_attention, priority, recommended_target, risk_level
 from app.updates.security import PackageVuln, check_security, min_safe_version
-from app.updates.versions import parse_scan_time, resolve_versions, satisfies_range
+from app.updates.sources import get_source, load_overrides
+from app.updates.versions import compare_versions, parse_scan_time, resolve_versions, satisfies_range
 
 logger = logging.getLogger(__name__)
 
 SUPPORTED_ECOSYSTEMS = {"npm"}
 SEVERITY_ORDER = ["unknown", "low", "medium", "high", "critical"]
+
+
+# --- pure evaluation -----------------------------------------------------------------------------------------
+
+
+@dataclass
+class Evaluation:
+    row: UpdateRow
+    facts: RiskFacts | None = None
+    verdict: UpdateVerdict | None = None
+    info: PackageInfo | None = None
 
 
 def _base_row(scan_id: str, dep: Dependency) -> UpdateRow:
@@ -40,36 +61,36 @@ def _base_row(scan_id: str, dep: Dependency) -> UpdateRow:
 
 
 def _verdict(dep: Dependency, batch: BatchResult, scan_time) -> UpdateVerdict | None:
-    """Version facts, or None when the dependency can't be resolved (see evaluate for the status)."""
     info = batch.packages.get(dep.name)
     if info is None or info.status != "ok":
         return None
     return resolve_versions(dep.declared_constraint, info, scan_time)
 
 
+def rescore(row: UpdateRow, facts: RiskFacts) -> None:
+    row.priority_score = priority(facts)
+    row.risk_level = risk_level(facts)
+
+
 def evaluate(
-    scan_id: str,
-    dep: Dependency,
-    batch: BatchResult,
-    scan_time,
-    vulns: list[PackageVuln] | None = None,
-) -> UpdateRow:
-    """Turn one dependency plus registry (and optional OSV) data into a row. Pure: no I/O."""
+    scan_id: str, dep: Dependency, batch: BatchResult, scan_time, vulns: list[PackageVuln] | None = None
+) -> Evaluation:
+    """Dependency + registry (+ OSV) data -> a row. Pure: no I/O."""
     row = _base_row(scan_id, dep)
 
     if dep.ecosystem not in SUPPORTED_ECOSYSTEMS:
         row.status = "unsupported_ecosystem"
-        return row
+        return Evaluation(row)
     if dep.name in batch.errors:
         row.status, row.error = "error", batch.errors[dep.name]
-        return row
+        return Evaluation(row)
     info = batch.packages.get(dep.name)
     if info is None:  # not fetched (should not happen); never silently drop a dependency
         row.status, row.error = "error", "registry data missing"
-        return row
+        return Evaluation(row)
     if info.status == "not_found":
         row.status = "not_in_registry"
-        return row
+        return Evaluation(row)
 
     verdict = resolve_versions(dep.declared_constraint, info, scan_time)
     if verdict.error:
@@ -77,7 +98,7 @@ def evaluate(
         row.error = verdict.error
         row.current_version_basis = verdict.current_version_basis
         row.latest_version = verdict.latest_version
-        return row
+        return Evaluation(row)
 
     vulns = vulns or []
     facts = RiskFacts.from_verdict(verdict, dep.dependency_type, dep.importer_count)
@@ -101,21 +122,107 @@ def evaluate(
     row.recommended_target = recommended_target(verdict, safe, safe_in_range)
     if safe and not safe_in_range:
         row.requires_manifest_change = True  # the security fix is outside the declared range
-    row.priority_score = priority(facts)
-    row.risk_level = risk_level(facts)
+    rescore(row, facts)
     row.status = "pending" if needs_attention(facts) else "up_to_date"
-    return row
+    return Evaluation(row, facts, verdict, info)
 
 
-def _stats(rows: list[UpdateRow], undeclared: int, duration: float, warnings: list[str]) -> RunStats:
+# --- enrichment: source, notes, LLM -------------------------------------------------------------------------------
+
+
+@dataclass
+class Context:
+    conn: object
+    http: HttpClient
+    gh: GitHubClient | None
+    llm: LLM | None
+    overrides: dict
+    warnings: list[str] = field(default_factory=list)
+    github_blocked: bool = False
+    llm_blocked: bool = False
+    analysis_cache_hits: int = 0
+
+    def warn_once(self, message: str) -> None:
+        if message not in self.warnings:
+            self.warnings.append(message)
+
+
+async def enrich(ctx: Context, ev: Evaluation) -> int | None:
+    """Source -> notes -> analysis for one package that has an update to look at.
+
+    Mutates ev.row / ev.facts and returns the analysis id when one was stored. Only deterministic results
+    survive any failure here.
+    """
+    row, facts, info, verdict = ev.row, ev.facts, ev.info, ev.verdict
+    if row.status != "pending" or not (facts and info and verdict and ctx.gh and row.current_version):
+        return None
+    current, target = row.current_version, row.recommended_target
+    if not target or compare_versions(target, current) <= 0 or ctx.github_blocked:
+        return None
+
+    try:
+        source = await get_source(ctx.gh, ctx.http, ctx.conn, info, target, overrides=ctx.overrides)
+        facts.archived = source.archived
+        if source.status != "resolved":
+            row.status = "source_unknown"
+            rescore(row, facts)
+            return None
+        notes = await fetch_notes(ctx.gh, ctx.conn, source, info, current, target)
+    except GitHubRateLimited as exc:
+        ctx.github_blocked = True
+        ctx.warn_once(f"{exc}; remaining packages left 'pending'")
+        return None
+    except Exception as exc:
+        logger.exception("source/notes failed for %s", row.name, extra={"package": row.name})
+        row.status, row.error = "error", f"notes lookup failed: {type(exc).__name__}: {exc}"
+        return None
+
+    if not notes.available:
+        row.status = "notes_unavailable"
+        facts.notes_unavailable = True
+        rescore(row, facts)
+        return None
+    if ctx.llm is None or ctx.llm_blocked:
+        rescore(row, facts)
+        return None
+
+    try:
+        result = await analyse_update(
+            ctx.llm, ctx.conn, ecosystem=row.ecosystem, name=row.name, current=current, target=target,
+            update_type=verdict.update_type, engines_current=verdict.engines_current,
+            engines_target=verdict.engines_target, deprecation_message=verdict.deprecation_message, notes=notes,
+        )
+    except LLMNotConfigured as exc:
+        ctx.llm_blocked = True
+        ctx.warn_once(f"LLM analysis skipped: {exc}")
+        rescore(row, facts)
+        return None
+    except LLMError as exc:  # content filter, bad output, rejected credentials
+        row.status, row.error = "error", f"analysis_failed: {exc}"
+        return None
+
+    if result.from_cache:
+        ctx.analysis_cache_hits += 1
+    facts.has_breaking = any(c.breaking for c in result.changes)
+    row.status = "analyzed"
+    rescore(row, facts)
+    return result.analysis_id
+
+
+# --- run --------------------------------------------------------------------------------------------------------------
+
+
+def _stats(rows: list[UpdateRow], undeclared: int, duration: float, ctx: Context) -> RunStats:
     stats = RunStats(deps_total=len(rows), undeclared_imports=undeclared, duration_s=round(duration, 2))
-    stats.warnings = warnings
+    stats.warnings = ctx.warnings
     stats.statuses = dict(Counter(r.status for r in rows))
     stats.up_to_date = stats.statuses.get("up_to_date", 0)
     stats.errors = stats.statuses.get("error", 0)
     stats.notes_unavailable = stats.statuses.get("notes_unavailable", 0)
     stats.source_unknown = stats.statuses.get("source_unknown", 0)
     stats.analysed = stats.statuses.get("analyzed", 0)
+    stats.llm_calls = ctx.llm.calls if ctx.llm else 0
+    stats.cache_hits = ctx.analysis_cache_hits + (ctx.llm.cache_hits if ctx.llm else 0)
     for r in rows:
         if r.update_type in stats.updates and r.status not in ("error", "up_to_date"):
             stats.updates[r.update_type] += 1
@@ -132,12 +239,18 @@ async def run_dependency_updates_async(
     refresh: bool = False,
     registry: RegistryAdapter | None = None,
     http: HttpClient | None = None,
+    github: GitHubClient | None = None,
+    llm: LLM | None = None,
     security: bool = True,
+    notes: bool = True,
+    analysis: bool = True,
+    write_report: bool = True,
+    reports_dir: str | Path | None = None,
 ) -> tuple[str, RunStats]:
     """Run the step for one scan. Returns (run_id, stats).
 
-    One package failing never stops the run: it becomes a row with status 'error' and the run is
-    marked 'partial'. Re-running updates the same rows.
+    security / notes / analysis switch the OSV, source+notes and LLM stages. Without `notes` there is no
+    GitHub traffic; without `analysis` notes are fetched but not interpreted.
     """
     started = time.perf_counter()
     conn = store.connect(db_path)
@@ -154,14 +267,21 @@ async def run_dependency_updates_async(
             wanted = set(only)
             deps = [d for d in deps if d.name in wanted]
         store.start_pipeline_run(conn, run_id, scan_id)
+        ctx = Context(
+            conn=conn, http=http,
+            gh=(github or GitHubClient(http)) if notes else None,
+            llm=(llm or LLM(conn, http)) if (notes and analysis) else None,
+            overrides=load_overrides() if notes else {},
+        )
         try:
-            warnings: list[str] = []
-            rows = await _process(
-                conn, http, scan_id, scan_time, deps, refresh, registry or NpmRegistry(http), security, warnings
-            )
-            stats = _stats(rows, store.count_undeclared_imports(conn, scan_id), time.perf_counter() - started, warnings)
-            status = "partial" if stats.errors or warnings else "succeeded"
+            rows = await _process(conn, ctx, scan_id, scan_time, deps, refresh, registry or NpmRegistry(http), security)
+            stats = _stats(rows, store.count_undeclared_imports(conn, scan_id), time.perf_counter() - started, ctx)
+            status = "partial" if stats.errors or ctx.warnings else "succeeded"
             store.finish_pipeline_run(conn, run_id, status, stats.model_dump())
+            if write_report:
+                from app.updates.report import write_reports
+
+                write_reports(conn, scan_id, reports_dir)
         except Exception as exc:
             store.finish_pipeline_run(conn, run_id, "failed", None, f"{type(exc).__name__}: {exc}")
             raise
@@ -172,7 +292,7 @@ async def run_dependency_updates_async(
             await http.aclose()
 
 
-async def _process(conn, http, scan_id, scan_time, deps, refresh, registry, security, warnings) -> list[UpdateRow]:
+async def _process(conn, ctx, scan_id, scan_time, deps, refresh, registry, security) -> list[UpdateRow]:
     npm_names = [d.name for d in deps if d.ecosystem == "npm"]
     batch = BatchResult()
     if npm_names:
@@ -188,19 +308,22 @@ async def _process(conn, http, scan_id, scan_time, deps, refresh, registry, secu
                     targets.append((dep.name, verdict.current_version))
         if targets:
             try:
-                vulns_by_target = await check_security(http, conn, targets)
+                vulns_by_target = await check_security(ctx.http, conn, targets)
             except Exception as exc:  # OSV down must not stop the run, but must not look clean either
                 logger.exception("OSV check failed")
-                warnings.append(f"security check failed: {type(exc).__name__}: {exc}")
+                ctx.warnings.append(f"security check failed: {type(exc).__name__}: {exc}")
 
     rows: list[UpdateRow] = []
     for dep in deps:
         vulns: list[PackageVuln] = []
+        analysis_id: int | None = None
         try:
             verdict = _verdict(dep, batch, scan_time) if dep.ecosystem == "npm" else None
             if verdict and verdict.current_version:
                 vulns = vulns_by_target.get((dep.name, verdict.current_version), [])
-            row = evaluate(scan_id, dep, batch, scan_time, vulns)
+            ev = evaluate(scan_id, dep, batch, scan_time, vulns)
+            analysis_id = await enrich(ctx, ev)
+            row = ev.row
         except Exception as exc:  # one package never stops the run
             logger.exception("evaluation failed for %s", dep.name, extra={"package": dep.name})
             row = _base_row(scan_id, dep)
@@ -208,6 +331,8 @@ async def _process(conn, http, scan_id, scan_time, deps, refresh, registry, secu
         try:
             update_id = store.upsert_dependency_update(conn, row)
             store.replace_update_vulns(conn, update_id, [(v.id, v.fixed_in) for v in vulns])
+            if analysis_id is not None:
+                store.set_analysis(conn, update_id, analysis_id)
         except Exception as exc:
             logger.exception("saving failed for %s", dep.name, extra={"package": dep.name})
             row.status, row.error = "error", f"could not save: {exc}"

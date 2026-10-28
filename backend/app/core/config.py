@@ -34,6 +34,7 @@ class Settings(BaseSettings):
     bot_authors: str = "dependabot[bot],renovate[bot]"
     azure_log_analytics_workspace_id: str | None = None
     log_format: str = ""
+    reports_dir: str = "reports"
 
     @field_validator("*", mode="before")
     @classmethod

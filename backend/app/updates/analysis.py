@@ -97,10 +97,12 @@ def _messages(facts: dict, notes_text: str, rejected: list[str] | None = None) -
 
 
 def dedupe(changes: list[ChangeRef]) -> list[ChangeRef]:
+    """Merge chunk results by (kind, symbols). Changes that name no symbol are told apart by their quote,
+    otherwise every symbol-less change of one kind would collapse into one."""
     seen: set[tuple] = set()
     out = []
     for c in changes:
-        key = (c.kind, tuple(sorted(c.api_symbols)), c.version if not c.api_symbols else "")
+        key = (c.kind, tuple(sorted(c.api_symbols)), "" if c.api_symbols else " ".join(c.evidence_quote.split()))
         if key not in seen:
             seen.add(key)
             out.append(c)

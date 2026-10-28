@@ -577,3 +577,27 @@ def load_changes(conn: sqlite3.Connection, analysis_id: int) -> list[sqlite3.Row
 def set_analysis(conn: sqlite3.Connection, update_id: int, analysis_id: int | None) -> None:
     with conn:
         conn.execute("UPDATE dependency_updates SET analysis_id = ? WHERE id = ?", (analysis_id, update_id))
+
+
+def get_scan_info(conn: sqlite3.Connection, scan_id: str) -> dict:
+    """Display facts for reports. repo_url / branch exist only on patched ingestion."""
+    row = conn.execute("SELECT * FROM scans WHERE id = ?", (scan_id,)).fetchone()
+    if row is None:
+        raise StoreError(f"Scan not found: {scan_id}")
+    data = dict(row)
+    return {
+        "id": data["id"],
+        "commit_sha": data.get("commit_sha"),
+        "scanned_at": data.get("scanned_at"),
+        "repo_url": data.get("repo_url"),
+        "branch": data.get("branch"),
+        "repository_path": data.get("repository_path"),
+    }
+
+
+def get_update_row(conn: sqlite3.Connection, update_id: int) -> sqlite3.Row | None:
+    return conn.execute("SELECT * FROM dependency_updates WHERE id = ?", (update_id,)).fetchone()
+
+
+def get_analysis_row(conn: sqlite3.Connection, analysis_id: int) -> sqlite3.Row | None:
+    return conn.execute("SELECT * FROM update_analyses WHERE id = ?", (analysis_id,)).fetchone()

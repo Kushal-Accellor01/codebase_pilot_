@@ -125,12 +125,11 @@ def _cmd_run(args: argparse.Namespace) -> int:
 
     from app.updates.pipeline import run_dependency_updates
 
-    if not args.no_llm:
-        print("WARN: LLM analysis is not built yet; running the deterministic steps only (same as --no-llm).",
-              file=sys.stderr)
     only = [n for n in args.only.split(",") if n] if args.only else None
     run_id, stats = run_dependency_updates(
-        args.db, args.scan, only=only, refresh=args.refresh, security=not args.skip_security
+        args.db, args.scan, only=only, refresh=args.refresh, security=not args.skip_security,
+        notes=not args.skip_notes, analysis=not args.no_llm, write_report=not args.no_report,
+        reports_dir=args.reports_dir,
     )
     conn = store.connect(args.db)
     try:
@@ -148,6 +147,18 @@ def _cmd_run(args: argparse.Namespace) -> int:
             print(f"{r['priority_score'] or 0:>6}  {r['risk_level'] or '-':<8} {r['name']:<24} {move:<22} "
                   f"{r['update_type'] or '-':<7} {r['status']}")
     return 1 if run["status"] == "failed" else 0
+
+
+def _cmd_report(args: argparse.Namespace) -> int:
+    from app.updates.report import render_json, render_markdown
+
+    conn = store.connect(args.db)
+    try:
+        scan_id = resolve_scan(conn, args.scan)
+        print(render_markdown(conn, scan_id) if args.format == "md" else render_json(conn, scan_id))
+    finally:
+        conn.close()
+    return 0
 
 
 def _cmd_versions(args: argparse.Namespace) -> int:
@@ -171,6 +182,7 @@ def build_parser() -> argparse.ArgumentParser:
         ("inventory", _cmd_inventory, "print the dependency inventory"),
         ("versions", _cmd_versions, "resolve current / latest versions for the scan's npm dependencies"),
         ("run", _cmd_run, "run the dependency-updates pipeline for a scan"),
+        ("report", _cmd_report, "print the report for a scan"),
         ("registry", _cmd_registry, "fetch npm registry data for the scan's dependencies into the cache"),
     ):
         p = sub.add_parser(name, help=help_)
@@ -182,8 +194,13 @@ def build_parser() -> argparse.ArgumentParser:
             p.add_argument("--only", help="comma-separated package names")
             p.add_argument("--refresh", action="store_true", help="ignore the cache")
         if name == "run":
-            p.add_argument("--no-llm", action="store_true", help="skip LLM analysis (the only mode for now)")
+            p.add_argument("--no-llm", action="store_true", help="fetch notes but skip LLM analysis")
             p.add_argument("--skip-security", action="store_true", help="do not query OSV (offline runs)")
+            p.add_argument("--skip-notes", action="store_true", help="no GitHub: skip source and release notes")
+            p.add_argument("--no-report", action="store_true", help="do not write reports/*.json and *.md")
+            p.add_argument("--reports-dir", default=None, help="where to write reports (default: reports/)")
+        if name == "report":
+            p.add_argument("--format", choices=["md", "json"], default="md")
         p.set_defaults(func=fn)
     return parser
 

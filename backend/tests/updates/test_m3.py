@@ -270,7 +270,9 @@ def pipeline_registry():
 
 async def run_pipeline(db_path):
     async with HttpClient(wait_scale=0) as http:
-        return await pipeline.run_dependency_updates_async(str(db_path), registry=pipeline_registry(), http=http)
+        return await pipeline.run_dependency_updates_async(
+            str(db_path), registry=pipeline_registry(), http=http, notes=False, write_report=False
+        )
 
 
 @respx.mock

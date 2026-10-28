@@ -8,13 +8,13 @@
  "modified": "2026-03-13T22:11:31.390433Z",
  "published": "2020-04-03T21:48:32Z",
  "database_specific": {
+  "github_reviewed_at": "2020-04-03T21:42:08Z",
+  "nvd_published_at": "2020-03-11T23:15:00Z",
   "cwe_ids": [
    "CWE-1321"
   ],
   "severity": "MODERATE",
-  "github_reviewed": true,
-  "github_reviewed_at": "2020-04-03T21:42:08Z",
-  "nvd_published_at": "2020-03-11T23:15:00Z"
+  "github_reviewed": true
  },
  "references": [
   {

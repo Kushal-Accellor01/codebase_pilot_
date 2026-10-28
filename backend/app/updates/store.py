@@ -3,13 +3,14 @@
 Reads the ingestion tables (scans, nodes, edges) and never writes to them.
 Works with and without ingestion-fixes.patch.
 """
+import hashlib
 import json
 import sqlite3
 from datetime import datetime, timezone
 from pathlib import Path
 
 from app.updates.config import MIGRATIONS_DIR
-from app.updates.models import Dependency, ImportingFile, SourceRepo, UpdateRow, VulnRecord
+from app.updates.models import Dependency, ImportingFile, ReleaseNote, SourceRepo, UpdateRow, VulnRecord
 from app.updates.registry.base import PackageInfo, VersionInfo
 
 LOCKFILE_NAMES = (
@@ -489,4 +490,44 @@ def remember_changelog_path(conn: sqlite3.Connection, ecosystem: str, name: str,
         conn.execute(
             "UPDATE package_sources SET changelog_path = ? WHERE ecosystem = ? AND name = ?",
             (path, ecosystem, name),
+        )
+
+
+_NOTE_SOURCE_RANK = {"github_release": 0, "changelog_file": 1, "compare_commits": 2}
+
+
+def load_release_notes(
+    conn: sqlite3.Connection, ecosystem: str, name: str, versions: list[str]
+) -> dict[str, ReleaseNote]:
+    """Cached notes per version; when several sources exist the most trustworthy one wins."""
+    if not versions:
+        return {}
+    marks = ",".join("?" for _ in versions)
+    rows = conn.execute(
+        f"SELECT * FROM release_notes WHERE ecosystem = ? AND name = ? AND version IN ({marks})",  # noqa: S608
+        (ecosystem, name, *versions),
+    ).fetchall()
+    best: dict[str, ReleaseNote] = {}
+    for r in sorted(rows, key=lambda r: _NOTE_SOURCE_RANK.get(r["source"], 9), reverse=True):
+        best[r["version"]] = ReleaseNote(
+            version=r["version"], source=r["source"], url=r["url"],
+            published_at=r["published_at"], body_md=r["body_md"],
+        )
+    return best
+
+
+def save_release_notes(conn: sqlite3.Connection, ecosystem: str, name: str, notes: list[ReleaseNote]) -> None:
+    """Published notes never change, so they are cached forever (the key is version + source)."""
+    with conn:
+        conn.executemany(
+            """
+            INSERT OR REPLACE INTO release_notes
+                (ecosystem, name, version, source, url, published_at, body_md, content_sha256)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            [
+                (ecosystem, name, n.version, n.source, n.url, n.published_at, n.body_md,
+                 hashlib.sha256(n.body_md.encode("utf-8")).hexdigest())
+                for n in notes
+            ],
         )

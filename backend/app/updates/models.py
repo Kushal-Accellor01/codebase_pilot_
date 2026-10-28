@@ -130,3 +130,23 @@ class SourceRepo(BaseModel):
     @property
     def slug(self) -> str:
         return f"github.com/{self.owner}/{self.repo}"
+
+
+class ReleaseNote(BaseModel):
+    """Release notes of one version, from a GitHub release, a changelog file, or a commit list."""
+
+    version: str
+    source: str  # github_release | changelog_file | compare_commits
+    url: str
+    published_at: str | None = None
+    body_md: str
+
+
+class NotesResult(BaseModel):
+    versions: list[str]  # every stable version in (current, target], oldest first
+    notes: dict[str, ReleaseNote]  # version -> note, only versions that have notes
+    coverage: float = 0.0  # versions with notes / versions in range
+
+    @property
+    def available(self) -> bool:
+        return bool(self.notes)

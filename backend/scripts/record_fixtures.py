@@ -56,6 +56,19 @@ def record_sources(headers: dict[str, str]) -> None:
         (out / "github_package_json_morgan.json").write_text(pkg.text, encoding="utf-8")
         print("sources: morgan")
 
+        notes = FIXTURES / "notes"
+        notes.mkdir(parents=True, exist_ok=True)
+        history = client.get(
+            "https://api.github.com/repos/expressjs/express/contents/History.md",
+            headers={"Accept": "application/vnd.github.raw"},
+        )
+        history.raise_for_status()
+        (notes / "express_History.md").write_text(history.text, encoding="utf-8")
+        releases = client.get("https://api.github.com/repos/expressjs/express/releases", params={"per_page": 30})
+        releases.raise_for_status()
+        (notes / "express_releases.json").write_text(json.dumps(releases.json(), indent=1), encoding="utf-8")
+        print("notes: express History.md and releases")
+
 
 def record_osv(headers: dict[str, str]) -> None:
     out = FIXTURES / "osv"

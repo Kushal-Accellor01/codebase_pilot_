@@ -5,7 +5,6 @@ Chain, first verified source wins:
 """
 import json
 import logging
-import os
 import re
 import sqlite3
 from datetime import datetime, timedelta, timezone
@@ -14,6 +13,7 @@ from urllib.parse import quote
 
 import yaml
 
+from app.core.config import get_settings
 from app.updates import store
 from app.updates.github import GitHubClient
 from app.updates.http import HttpClient
@@ -30,7 +30,7 @@ DEFAULT_OVERRIDES_PATH = Path(__file__).resolve().parents[2] / "config" / "packa
 
 
 def overrides_path() -> Path:
-    return Path(os.environ.get("PACKAGE_SOURCES_PATH") or DEFAULT_OVERRIDES_PATH)
+    return Path(get_settings().package_sources_path or DEFAULT_OVERRIDES_PATH)
 
 
 # --- parsing ------------------------------------------------------------------------------------

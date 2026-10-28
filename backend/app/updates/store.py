@@ -7,9 +7,8 @@ import hashlib
 import json
 import sqlite3
 from datetime import datetime, timezone
-from pathlib import Path
 
-from app.updates.config import MIGRATIONS_DIR
+from app.core import db as core_db
 from app.updates.models import Dependency, ImportingFile, ReleaseNote, SourceRepo, UpdateRow, VulnRecord
 from app.updates.registry.base import PackageInfo, VersionInfo
 
@@ -22,41 +21,18 @@ LOCKFILE_NAMES = (
     "poetry.lock",
 )
 
-INGESTION_TABLES = ("scans", "nodes", "edges")
-
-
-class StoreError(RuntimeError):
-    pass
-
-
-def connect(db_path: str, *, must_exist: bool = True) -> sqlite3.Connection:
-    if must_exist and not Path(db_path).is_file():
-        raise StoreError(f"Database not found: {db_path}")
-    conn = sqlite3.connect(db_path, timeout=5)
-    conn.row_factory = sqlite3.Row
-    conn.execute("PRAGMA foreign_keys = ON")
-    conn.execute("PRAGMA journal_mode = WAL")
-    conn.execute("PRAGMA busy_timeout = 5000")
-    return conn
+StoreError = core_db.DatabaseError
+connect = core_db.connect
+_table_names = core_db.table_names
 
 
 def posix(path: str) -> str:
     return path.replace("\\", "/")
 
 
-def _table_names(conn: sqlite3.Connection) -> set[str]:
-    return {r["name"] for r in conn.execute("SELECT name FROM sqlite_master WHERE type = 'table'")}
-
-
 def migrate(conn: sqlite3.Connection) -> None:
-    """Apply 002_dependency_updates.sql. Idempotent (IF NOT EXISTS everywhere)."""
-    missing = [t for t in INGESTION_TABLES if t not in _table_names(conn)]
-    if missing:
-        raise StoreError(
-            f"Ingestion tables missing: {', '.join(missing)}. Run a scan first (python -m app.main <url>)."
-        )
-    sql = (MIGRATIONS_DIR / "002_dependency_updates.sql").read_text(encoding="utf-8")
-    conn.executescript(sql)
+    """Apply all migrations (002 and 003) through the shared runner. Idempotent."""
+    core_db.migrate(conn)
 
 
 def migration_applied(conn: sqlite3.Connection) -> bool:

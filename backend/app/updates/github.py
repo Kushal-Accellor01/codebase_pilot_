@@ -4,12 +4,12 @@ Authenticated with GITHUB_TOKEN (Bearer). The token is only ever sent to api.git
 """
 import asyncio
 import logging
-import os
 import time
 from collections.abc import Awaitable, Callable
 
 import httpx
 
+from app.core.config import get_settings
 from app.updates.http import HttpClient
 
 logger = logging.getLogger(__name__)
@@ -41,7 +41,7 @@ class GitHubClient:
         clock: Callable[[], float] = time.time,
     ):
         self._http = http
-        self._token = token if token is not None else os.environ.get("GITHUB_TOKEN") or None
+        self._token = token if token is not None else get_settings().github_token or None
         self._base = base_url.rstrip("/")
         self._max_wait = max_wait_s
         self._sleep = sleeper

@@ -150,3 +150,54 @@ class NotesResult(BaseModel):
     @property
     def available(self) -> bool:
         return bool(self.notes)
+
+
+# --- Output contract to the impact-analysis step (S2 section 9) --------------------------------------------
+
+
+class VulnRef(BaseModel):
+    id: str
+    severity: str
+    summary: str | None = None
+    fixed_in: str | None = None
+    url: str | None = None
+
+
+class ChangeRef(BaseModel):
+    kind: str
+    breaking: bool
+    api_symbols: list[str]
+    description: str
+    migration_hint: str | None = None
+    version: str
+    evidence_url: str
+    evidence_quote: str
+
+
+class DependencyChangeEvent(BaseModel):
+    event_id: str  # f"{scan_id}:{ecosystem}:{name}:{current}->{target}"
+    scan_id: str
+    ecosystem: str
+    package: str
+    dependency_type: str
+    manifest_path: str  # POSIX, e.g. "package.json"
+    declared_constraint: str | None = None
+    current_version: str | None = None
+    current_version_basis: str
+    target_version: str | None = None  # recommended_target
+    latest_version: str | None = None
+    update_type: str
+    requires_manifest_change: bool
+    runtime_requirement_change: bool
+    is_deprecated: bool
+    deprecation_message: str | None = None
+    vulnerabilities: list[VulnRef] = Field(default_factory=list)
+    changes: list[ChangeRef] = Field(default_factory=list)  # only evidence-validated changes
+    summary: str | None = None
+    notes_coverage: float | None = None
+    source_repo: str | None = None  # "github.com/owner/repo"
+    importer_count: int
+    importing_files: list[ImportingFile] = Field(default_factory=list)
+    priority_score: float
+    risk_level: str
+    status: str

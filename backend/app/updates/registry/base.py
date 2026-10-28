@@ -29,6 +29,10 @@ class PackageInfo:
     deprecation_message: str | None = None
 
 
+class RegistryAuthError(RuntimeError):
+    """The registry answered 401/403. Not retried; the message never contains the token."""
+
+
 class RegistryAdapter(Protocol):
     ecosystem: str
 

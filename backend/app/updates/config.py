@@ -20,3 +20,8 @@ def default_db_path() -> str:
 def npm_registry_url() -> str:
     """Point at Artifactory / Azure Artifacts in production (same registry API)."""
     return os.environ.get("NPM_REGISTRY_URL", "https://registry.npmjs.org").rstrip("/")
+
+
+def npm_registry_token() -> str | None:
+    """Bearer token for a private registry. Only ever sent to the NPM_REGISTRY_URL host."""
+    return os.environ.get("NPM_REGISTRY_TOKEN") or None

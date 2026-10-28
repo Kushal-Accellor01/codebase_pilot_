@@ -246,3 +246,60 @@ def test_not_found_is_cached(conn):
     assert run(get_package(adapter, conn, "ghost")).status == "not_found"
     assert run(get_package(adapter, conn, "ghost")).status == "not_found"
     assert len(adapter.calls) == 1
+
+
+# --- private registry auth (IMP-4) ----------------------------------------------------------
+
+PRIVATE = "https://npm.example.com/feed"
+
+
+async def fetch_private(name: str, token: str | None):
+    async with HttpClient(wait_scale=0) as http:
+        return await NpmRegistry(http, PRIVATE, token=token).fetch_package(name)
+
+
+@respx.mock
+def test_token_sent_to_registry_host():
+    route = respx.get(f"{PRIVATE}/morgan").respond(200, json=fixture("morgan"))
+    run(fetch_private("morgan", "s3cret"))
+    assert route.calls[0].request.headers["authorization"] == "Bearer s3cret"
+
+
+@respx.mock
+def test_no_authorization_header_without_token(monkeypatch):
+    monkeypatch.delenv("NPM_REGISTRY_TOKEN", raising=False)
+    route = respx.get(f"{PRIVATE}/morgan").respond(200, json=fixture("morgan"))
+    run(fetch_private("morgan", None))
+    assert "authorization" not in route.calls[0].request.headers
+
+
+@respx.mock
+def test_token_read_from_environment(monkeypatch):
+    monkeypatch.setenv("NPM_REGISTRY_TOKEN", "from-env")
+    route = respx.get(f"{PRIVATE}/morgan").respond(200, json=fixture("morgan"))
+    run(fetch_private("morgan", None))
+    assert route.calls[0].request.headers["authorization"] == "Bearer from-env"
+
+
+@respx.mock
+def test_token_not_forwarded_to_other_host_on_redirect():
+    respx.get(f"{PRIVATE}/morgan").respond(302, headers={"location": "https://cdn.example.org/morgan"})
+    other = respx.get("https://cdn.example.org/morgan").respond(200, json=fixture("morgan"))
+    run(fetch_private("morgan", "s3cret"))
+    assert "authorization" not in other.calls[0].request.headers
+
+
+@pytest.mark.parametrize("status", [401, 403])
+@respx.mock
+def test_auth_failure_recorded_without_retry_or_token(status, conn, caplog):
+    from app.updates.registry.base import RegistryAuthError
+
+    route = respx.get(f"{PRIVATE}/morgan").respond(status)
+    with caplog.at_level("DEBUG"), pytest.raises(RegistryAuthError) as err:
+        run(fetch_private("morgan", "s3cret"))
+    assert route.call_count == 1
+    assert str(err.value) == f"registry rejected credentials (HTTP {status})"
+    assert "s3cret" not in caplog.text and "s3cret" not in str(err.value)
+    store.save_registry_failure(conn, "npm", "morgan", str(err.value))
+    row = conn.execute("SELECT status, error FROM registry_packages WHERE name='morgan'").fetchone()
+    assert (row["status"], row["error"]) == ("error", f"registry rejected credentials (HTTP {status})")

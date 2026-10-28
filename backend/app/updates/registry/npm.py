@@ -1,9 +1,9 @@
 from typing import Any
 from urllib.parse import quote
 
-from app.updates.config import npm_registry_url
+from app.updates.config import npm_registry_token, npm_registry_url
 from app.updates.http import HttpClient
-from app.updates.registry.base import PackageInfo, VersionInfo
+from app.updates.registry.base import PackageInfo, RegistryAuthError, VersionInfo
 
 # 'created' and 'modified' live next to the version keys in the registry's `time` map.
 _TIME_META_KEYS = {"created", "modified"}
@@ -59,15 +59,21 @@ def parse_package(name: str, doc: dict[str, Any], etag: str | None = None) -> Pa
 class NpmRegistry:
     ecosystem = "npm"
 
-    def __init__(self, http: HttpClient, base_url: str | None = None):
+    def __init__(self, http: HttpClient, base_url: str | None = None, token: str | None = None):
         self._http = http
         self._base_url = base_url or npm_registry_url()
+        # Every request this adapter makes goes to _base_url, so the token never reaches another host.
+        self._token = token if token is not None else npm_registry_token()
 
     async def fetch_package(self, name: str, *, etag: str | None = None) -> PackageInfo:
         headers = {"Accept": "application/json"}
         if etag:
             headers["If-None-Match"] = etag
+        if self._token:
+            headers["Authorization"] = f"Bearer {self._token}"
         resp = await self._http.get("npm", package_url(self._base_url, name), headers=headers)
+        if resp.status_code in (401, 403):
+            raise RegistryAuthError(f"registry rejected credentials (HTTP {resp.status_code})")
         if resp.status_code == 404:
             return PackageInfo(ecosystem="npm", name=name, status="not_found")
         if resp.status_code == 304:

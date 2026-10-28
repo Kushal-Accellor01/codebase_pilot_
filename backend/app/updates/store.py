@@ -9,7 +9,7 @@ import sqlite3
 from datetime import datetime, timezone
 
 from app.core import db as core_db
-from app.updates.models import Dependency, ImportingFile, ReleaseNote, SourceRepo, UpdateRow, VulnRecord
+from app.updates.models import ChangeRef, Dependency, ImportingFile, ReleaseNote, SourceRepo, UpdateRow, VulnRecord
 from app.updates.registry.base import PackageInfo, VersionInfo
 
 LOCKFILE_NAMES = (
@@ -507,3 +507,73 @@ def save_release_notes(conn: sqlite3.Connection, ecosystem: str, name: str, note
                 for n in notes
             ],
         )
+
+
+def find_analysis(
+    conn: sqlite3.Connection, ecosystem: str, name: str, from_version: str, to_version: str,
+    prompt_version: str, input_sha256: str,
+) -> sqlite3.Row | None:
+    return conn.execute(
+        """SELECT * FROM update_analyses
+           WHERE ecosystem = ? AND name = ? AND from_version = ? AND to_version = ?
+             AND prompt_version = ? AND input_sha256 = ?""",
+        (ecosystem, name, from_version, to_version, prompt_version, input_sha256),
+    ).fetchone()
+
+
+def save_analysis(
+    conn: sqlite3.Connection, *, ecosystem: str, name: str, from_version: str, to_version: str,
+    prompt_version: str, model: str, input_sha256: str, summary: str | None, notes_coverage: float,
+    notes_quality: str, changes: list[ChangeRef], dropped: list[dict],
+) -> int:
+    """Insert the analysis and its validated changes in one transaction; returns the analysis id."""
+    analysis_json = {
+        "summary": summary, "notes_quality": notes_quality, "changes": [c.model_dump() for c in changes],
+    }
+    with conn:
+        conn.execute(
+            """INSERT INTO update_analyses
+                   (ecosystem, name, from_version, to_version, prompt_version, model, input_sha256, summary,
+                    has_breaking, notes_coverage, analysis_json, dropped_json)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+               ON CONFLICT(ecosystem, name, from_version, to_version, prompt_version, input_sha256)
+               DO UPDATE SET summary = excluded.summary, has_breaking = excluded.has_breaking,
+                   notes_coverage = excluded.notes_coverage, analysis_json = excluded.analysis_json,
+                   dropped_json = excluded.dropped_json, model = excluded.model,
+                   created_at = strftime('%Y-%m-%dT%H:%M:%SZ','now')""",
+            (
+                ecosystem, name, from_version, to_version, prompt_version, model, input_sha256, summary,
+                int(any(c.breaking for c in changes)), notes_coverage, json.dumps(analysis_json),
+                json.dumps(dropped),
+            ),
+        )
+        analysis_id = conn.execute(
+            """SELECT id FROM update_analyses
+               WHERE ecosystem = ? AND name = ? AND from_version = ? AND to_version = ?
+                 AND prompt_version = ? AND input_sha256 = ?""",
+            (ecosystem, name, from_version, to_version, prompt_version, input_sha256),
+        ).fetchone()["id"]
+        conn.execute("DELETE FROM update_changes WHERE analysis_id = ?", (analysis_id,))
+        conn.executemany(
+            """INSERT INTO update_changes
+                   (analysis_id, kind, breaking, api_symbols, description, migration_hint, version,
+                    evidence_url, evidence_quote)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            [
+                (analysis_id, c.kind, int(c.breaking), json.dumps(c.api_symbols), c.description,
+                 c.migration_hint, c.version, c.evidence_url, c.evidence_quote)
+                for c in changes
+            ],
+        )
+    return analysis_id
+
+
+def load_changes(conn: sqlite3.Connection, analysis_id: int) -> list[sqlite3.Row]:
+    return conn.execute(
+        "SELECT * FROM update_changes WHERE analysis_id = ? ORDER BY breaking DESC, version, id", (analysis_id,)
+    ).fetchall()
+
+
+def set_analysis(conn: sqlite3.Connection, update_id: int, analysis_id: int | None) -> None:
+    with conn:
+        conn.execute("UPDATE dependency_updates SET analysis_id = ? WHERE id = ?", (analysis_id, update_id))

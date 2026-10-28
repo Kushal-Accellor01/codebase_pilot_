@@ -1,3 +1,5 @@
+from typing import Literal
+
 from pydantic import BaseModel, Field
 
 
@@ -201,3 +203,31 @@ class DependencyChangeEvent(BaseModel):
     priority_score: float
     risk_level: str
     status: str
+
+
+# --- LLM output schema (S2 7.3) ----------------------------------------------------------------------------
+
+ChangeKind = Literal[
+    "removed", "renamed", "signature_changed", "behavior_changed", "deprecated",
+    "security", "runtime_requirement", "new_feature", "bug_fix", "other",
+]
+
+
+class ChangeItem(BaseModel):
+    kind: ChangeKind
+    breaking: bool
+    api_symbols: list[str] = Field(default_factory=list)
+    description: str = Field(max_length=400)
+    migration_hint: str | None = Field(default=None, max_length=400)
+    version: str
+    evidence_quote: str = Field(max_length=300)
+
+
+class UpdateAnalysisOut(BaseModel):
+    summary: str = Field(max_length=800)
+    changes: list[ChangeItem]
+    notes_quality: Literal["detailed", "sparse", "none"]
+
+
+class SummaryOut(BaseModel):
+    summary: str = Field(max_length=800)

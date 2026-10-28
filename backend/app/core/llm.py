@@ -128,6 +128,12 @@ class LLM:
             return choice["message"]["content"] or ""
         raise LLMError("Azure OpenAI request failed")  # pragma: no cover
 
+    def model_label(self, tier: Tier = "strong") -> str:
+        """Recorded with every analysis for audit."""
+        s = self._settings
+        deployment = s.azure_openai_deployment_strong if tier == "strong" else s.azure_openai_deployment_fast
+        return f"{tier}:{deployment or tier}"
+
     # -- public ----------------------------------------------------------------------------------------
 
     async def chat(

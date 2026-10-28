@@ -1,0 +1,14 @@
+# Verified against pilot-sandbox-shop on Express 4.21.2 (each row below prints a depd warning,
+# except the catch-all route, which only breaks on Express 5).
+package: express
+from: 4.21.2
+expected_findings:
+  - {file: routes/orders.js,   symbol: req.param,         line: 8}
+  - {file: routes/orders.js,   symbol: res.json,          line: 18}
+  - {file: routes/invoices.js, symbol: res.sendfile,      line: 11}
+  - {file: routes/admin.js,    symbol: app.del,           line: 9}
+  - {file: routes/admin.js,    symbol: res.send,          line: 5}
+  - {file: routes/i18n.js,     symbol: req.acceptsLanguage, line: 3}
+  - {file: routes/fallback.js, symbol: path-syntax,       line: 2}
+negatives:
+  - lib/notify.js

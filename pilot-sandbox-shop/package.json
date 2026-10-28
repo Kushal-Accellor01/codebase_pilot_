@@ -1,0 +1,21 @@
+{
+  "name": "pilot-sandbox-shop",
+  "version": "1.0.0",
+  "description": "Small Express 4 shop API used as the Codebase Pilot demo target",
+  "main": "app.js",
+  "private": true,
+  "scripts": {
+    "start": "node server.js",
+    "test": "mocha"
+  },
+  "dependencies": {
+    "express": "4.21.2"
+  },
+  "devDependencies": {
+    "mocha": "10.8.2",
+    "supertest": "6.3.4"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

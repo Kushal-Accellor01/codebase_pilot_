@@ -1,0 +1,2 @@
+mode: assisted
+test_command: "npm test"

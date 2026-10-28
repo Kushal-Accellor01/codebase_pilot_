@@ -55,7 +55,7 @@ def _cmd_inventory(args: argparse.Namespace) -> int:
 
 async def _fetch_registry(args: argparse.Namespace) -> int:
     from app.updates.http import HttpClient
-    from app.updates.registry.cache import get_package
+    from app.updates.registry.batch import fetch_many
     from app.updates.registry.npm import NpmRegistry
 
     conn = store.connect(args.db)
@@ -66,16 +66,14 @@ async def _fetch_registry(args: argparse.Namespace) -> int:
             wanted = set(args.only.split(","))
             names = [n for n in names if n in wanted]
         async with HttpClient() as http:
-            adapter = NpmRegistry(http)
-            for name in names:
-                try:
-                    info = await get_package(adapter, conn, name, refresh=args.refresh)
-                except Exception as exc:  # one package never stops the run
-                    store.save_registry_failure(conn, "npm", name, str(exc))
-                    print(f"{name:<28} ERROR {exc}")
-                    continue
-                flag = " DEPRECATED" if info.is_deprecated else ""
-                print(f"{name:<28} {info.status:<10} latest={info.latest_version} versions={len(info.versions)}{flag}")
+            batch = await fetch_many(NpmRegistry(http), conn, names, refresh=args.refresh)
+        for name in names:
+            if name in batch.errors:
+                print(f"{name:<28} ERROR {batch.errors[name]}")
+                continue
+            info = batch.packages[name]
+            flag = " DEPRECATED" if info.is_deprecated else ""
+            print(f"{name:<28} {info.status:<10} latest={info.latest_version} versions={len(info.versions)}{flag}")
     finally:
         conn.close()
     return 0
@@ -83,7 +81,7 @@ async def _fetch_registry(args: argparse.Namespace) -> int:
 
 async def _show_versions(args: argparse.Namespace) -> int:
     from app.updates.http import HttpClient
-    from app.updates.registry.cache import get_package
+    from app.updates.registry.batch import fetch_many
     from app.updates.registry.npm import NpmRegistry
     from app.updates.versions import parse_scan_time, resolve_versions
 
@@ -92,30 +90,30 @@ async def _show_versions(args: argparse.Namespace) -> int:
         scan_id = resolve_scan(conn, args.scan)
         scan_time = parse_scan_time(store.scan_scanned_at(conn, scan_id))
         deps = [d for d in store.load_inventory(conn, scan_id) if d.ecosystem == "npm"]
+        async with HttpClient() as http:
+            batch = await fetch_many(NpmRegistry(http), conn, [d.name for d in deps])
         header = ("package", "declared", "current", "basis", "in-range", "latest")
         print("".join(f"{h:<{w}}" for h, w in zip(header, (24, 14, 10, 24, 10, 10))) + "update  behind")
-        async with HttpClient() as http:
-            adapter = NpmRegistry(http)
-            for d in deps:
-                try:
-                    info = await get_package(adapter, conn, d.name)
-                    if info.status != "ok":
-                        print(f"{d.name:<24}{d.declared_constraint or '-':<14}{info.status}")
-                        continue
-                    v = resolve_versions(d.declared_constraint, info, scan_time)
-                except Exception as exc:  # one package never stops the run
-                    print(f"{d.name:<24}ERROR {exc}")
-                    continue
-                if v.error:
-                    print(f"{d.name:<24}{d.declared_constraint or '-':<14}ERROR {v.error}")
-                    continue
-                flags = (" MANIFEST" if v.requires_manifest_change else "") + (
-                    " NODE" if v.runtime_requirement_change else "") + (" DEPRECATED" if v.is_deprecated else "")
-                print(
-                    f"{d.name:<24}{d.declared_constraint or '-':<14}{v.current_version:<10}"
-                    f"{v.current_version_basis:<24}{v.latest_in_range or '-':<10}{v.latest_version or '-':<10}"
-                    f"{v.update_type:<8}{v.versions_behind}{flags}"
-                )
+        for d in deps:
+            declared = d.declared_constraint or "-"
+            if d.name in batch.errors:
+                print(f"{d.name:<24}{declared:<14}ERROR {batch.errors[d.name]}")
+                continue
+            info = batch.packages[d.name]
+            if info.status != "ok":
+                print(f"{d.name:<24}{declared:<14}{info.status}")
+                continue
+            v = resolve_versions(d.declared_constraint, info, scan_time)
+            if v.error:
+                print(f"{d.name:<24}{declared:<14}ERROR {v.error}")
+                continue
+            flags = (" MANIFEST" if v.requires_manifest_change else "") + (
+                " NODE" if v.runtime_requirement_change else "") + (" DEPRECATED" if v.is_deprecated else "")
+            print(
+                f"{d.name:<24}{declared:<14}{v.current_version:<10}"
+                f"{v.current_version_basis:<24}{v.latest_in_range or '-':<10}{v.latest_version or '-':<10}"
+                f"{v.update_type:<8}{v.versions_behind}{flags}"
+            )
     finally:
         conn.close()
     return 0

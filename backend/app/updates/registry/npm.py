@@ -1,9 +1,14 @@
 from typing import Any
 from urllib.parse import quote
 
+import httpx
+
 from app.updates.config import npm_registry_token, npm_registry_url
 from app.updates.http import HttpClient
 from app.updates.registry.base import PackageInfo, RegistryAuthError, VersionInfo
+
+# Full documents of popular packages (eslint, mocha) are several MB: allow a long read.
+_NPM_TIMEOUT = httpx.Timeout(60.0, connect=10.0)
 
 # 'created' and 'modified' live next to the version keys in the registry's `time` map.
 _TIME_META_KEYS = {"created", "modified"}
@@ -71,7 +76,8 @@ class NpmRegistry:
             headers["If-None-Match"] = etag
         if self._token:
             headers["Authorization"] = f"Bearer {self._token}"
-        resp = await self._http.get("npm", package_url(self._base_url, name), headers=headers)
+        url = package_url(self._base_url, name)
+        resp = await self._http.get("npm", url, headers=headers, timeout=_NPM_TIMEOUT)
         if resp.status_code in (401, 403):
             raise RegistryAuthError(f"registry rejected credentials (HTTP {resp.status_code})")
         if resp.status_code == 404:

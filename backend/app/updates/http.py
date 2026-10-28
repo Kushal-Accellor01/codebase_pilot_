@@ -4,6 +4,7 @@ Proxy settings (HTTPS_PROXY) and a custom CA bundle (SSL_CERT_FILE) are honoured
 through the environment. Headers are never logged.
 """
 import asyncio
+from functools import lru_cache
 
 import httpx
 from tenacity import (
@@ -18,6 +19,12 @@ from app.updates.config import HOST_CONCURRENCY, USER_AGENT
 
 MAX_ATTEMPTS = 3
 MAX_RETRY_AFTER_S = 60.0
+
+
+@lru_cache(maxsize=1)
+def _ssl_context():
+    """Built once per process: loading the CA bundle costs ~1.5 s. Honours SSL_CERT_FILE."""
+    return httpx.create_ssl_context()
 
 
 class HttpError(RuntimeError):
@@ -51,6 +58,7 @@ class HttpClient:
         """wait_scale multiplies every backoff delay; tests pass 0."""
         self._client = client or httpx.AsyncClient(
             timeout=httpx.Timeout(30.0, connect=10.0),
+            verify=_ssl_context(),
             headers={"User-Agent": USER_AGENT},
             follow_redirects=True,
         )

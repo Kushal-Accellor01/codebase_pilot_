@@ -1,5 +1,15 @@
+[project]
+name = "codebase-pilot"
+version = "0.1.0"
+requires-python = ">=3.11"
+
 [tool.ruff]
 line-length = 120
+# Step 1 ingestion modules are owned by the ingestion team (see CLAUDE.md ground rule 3).
+extend-exclude = [
+    "app/main.py", "app/database.py", "app/scanner.py", "app/dependency_extractor.py",
+    "app/python_analyzer.py", "app/js_analyzer.py", "app/resolver.py", "app/init.py",
+]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "W"]

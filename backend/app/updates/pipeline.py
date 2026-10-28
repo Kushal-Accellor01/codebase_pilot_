@@ -19,6 +19,7 @@ from app.updates import store
 from app.updates.analysis import analyse_update
 from app.updates.github import GitHubClient, GitHubRateLimited
 from app.updates.http import HttpClient
+from app.updates.lockfile import load_lockfile_versions
 from app.updates.models import Dependency, RunStats, UpdateRow, UpdateVerdict
 from app.updates.notes import fetch_notes
 from app.updates.preflight import run_preflight
@@ -60,11 +61,16 @@ def _base_row(scan_id: str, dep: Dependency) -> UpdateRow:
     )
 
 
-def _verdict(dep: Dependency, batch: BatchResult, scan_time) -> UpdateVerdict | None:
+def locked_version(dep: Dependency, lockfile: dict[str, str] | None) -> str | None:
+    """The lockfile only describes the root manifest."""
+    return (lockfile or {}).get(dep.name) if dep.manifest_path in ("package.json", "") else None
+
+
+def _verdict(dep: Dependency, batch: BatchResult, scan_time, lockfile: dict[str, str] | None = None):
     info = batch.packages.get(dep.name)
     if info is None or info.status != "ok":
         return None
-    return resolve_versions(dep.declared_constraint, info, scan_time)
+    return resolve_versions(dep.declared_constraint, info, scan_time, lockfile_version=locked_version(dep, lockfile))
 
 
 def rescore(row: UpdateRow, facts: RiskFacts) -> None:
@@ -73,7 +79,8 @@ def rescore(row: UpdateRow, facts: RiskFacts) -> None:
 
 
 def evaluate(
-    scan_id: str, dep: Dependency, batch: BatchResult, scan_time, vulns: list[PackageVuln] | None = None
+    scan_id: str, dep: Dependency, batch: BatchResult, scan_time, vulns: list[PackageVuln] | None = None,
+    lockfile: dict[str, str] | None = None,
 ) -> Evaluation:
     """Dependency + registry (+ OSV) data -> a row. Pure: no I/O."""
     row = _base_row(scan_id, dep)
@@ -92,7 +99,9 @@ def evaluate(
         row.status = "not_in_registry"
         return Evaluation(row)
 
-    verdict = resolve_versions(dep.declared_constraint, info, scan_time)
+    verdict = resolve_versions(
+        dep.declared_constraint, info, scan_time, lockfile_version=locked_version(dep, lockfile)
+    )
     if verdict.error:
         row.status = "invalid_declaration" if verdict.error_kind == "invalid_declaration" else "error"
         row.error = verdict.error
@@ -209,6 +218,19 @@ async def enrich(ctx: Context, ev: Evaluation) -> int | None:
     return result.analysis_id
 
 
+def _clone_path(conn, scan_id: str) -> str | None:
+    """Where the scanned code lives (scan_meta, else scans.repository_path); None if it is gone."""
+    from pathlib import Path
+
+    from app.orchestrator.store import scan_repo
+
+    try:
+        path = scan_repo(conn, scan_id)["clone_path"]
+    except KeyError:
+        return None
+    return path if path and Path(path).is_dir() else None
+
+
 # --- run --------------------------------------------------------------------------------------------------------------
 
 
@@ -274,7 +296,10 @@ async def run_dependency_updates_async(
             overrides=load_overrides() if notes else {},
         )
         try:
-            rows = await _process(conn, ctx, scan_id, scan_time, deps, refresh, registry or NpmRegistry(http), security)
+            lockfile = load_lockfile_versions(_clone_path(conn, scan_id))
+            rows = await _process(
+                conn, ctx, scan_id, scan_time, deps, refresh, registry or NpmRegistry(http), security, lockfile
+            )
             stats = _stats(rows, store.count_undeclared_imports(conn, scan_id), time.perf_counter() - started, ctx)
             status = "partial" if stats.errors or ctx.warnings else "succeeded"
             store.finish_pipeline_run(conn, run_id, status, stats.model_dump())
@@ -292,7 +317,9 @@ async def run_dependency_updates_async(
             await http.aclose()
 
 
-async def _process(conn, ctx, scan_id, scan_time, deps, refresh, registry, security) -> list[UpdateRow]:
+async def _process(
+    conn, ctx, scan_id, scan_time, deps, refresh, registry, security, lockfile=None
+) -> list[UpdateRow]:
     npm_names = [d.name for d in deps if d.ecosystem == "npm"]
     batch = BatchResult()
     if npm_names:
@@ -303,7 +330,7 @@ async def _process(conn, ctx, scan_id, scan_time, deps, refresh, registry, secur
         targets = []
         for dep in deps:
             if dep.ecosystem == "npm" and dep.name not in batch.errors:
-                verdict = _verdict(dep, batch, scan_time)
+                verdict = _verdict(dep, batch, scan_time, lockfile)
                 if verdict and verdict.current_version:
                     targets.append((dep.name, verdict.current_version))
         if targets:
@@ -318,10 +345,10 @@ async def _process(conn, ctx, scan_id, scan_time, deps, refresh, registry, secur
         vulns: list[PackageVuln] = []
         analysis_id: int | None = None
         try:
-            verdict = _verdict(dep, batch, scan_time) if dep.ecosystem == "npm" else None
+            verdict = _verdict(dep, batch, scan_time, lockfile) if dep.ecosystem == "npm" else None
             if verdict and verdict.current_version:
                 vulns = vulns_by_target.get((dep.name, verdict.current_version), [])
-            ev = evaluate(scan_id, dep, batch, scan_time, vulns)
+            ev = evaluate(scan_id, dep, batch, scan_time, vulns, lockfile)
             analysis_id = await enrich(ctx, ev)
             row = ev.row
         except Exception as exc:  # one package never stops the run

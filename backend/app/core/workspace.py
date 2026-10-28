@@ -25,6 +25,7 @@ INSTALL_TIMEOUT_S = 120
 TEST_TIMEOUT_S = 180
 GIT_TIMEOUT_S = 60
 OUTPUT_TAIL_LINES = 200
+MAX_OUTPUT_CHARS = 2_000_000
 
 # Environment variables a child process may see. Anything else (tokens, API keys) is dropped.
 _ENV_ALLOW = (
@@ -51,6 +52,7 @@ class CommandResult:
     duration_ms: int
     output_tail: str
     timed_out: bool = False
+    output: str = ""  # everything the command printed (capped), for parsers; use output_tail for display
 
     @property
     def passed(self) -> bool:
@@ -65,8 +67,15 @@ def repo_slug(repo_url: str | None) -> str | None:
     return f"{m.group(1)}/{m.group(2)}" if m else None
 
 
+def repo_identity(repo_url: str | None) -> str | None:
+    """'org/repo' for GitHub URLs; the normalised path itself for local repositories (tests, demos)."""
+    if not repo_url:
+        return None
+    return repo_slug(repo_url) or repo_url.replace("\\", "/").rstrip("/")
+
+
 def assert_exec_allowed(repo: str | None) -> None:
-    allowed = get_settings().exec_allowed
+    allowed = {a.replace("\\", "/").rstrip("/") for a in get_settings().exec_allowed}
     if not repo or repo not in allowed:
         raise ExecNotAllowed(f"{repo or 'unknown repository'} is not in EXEC_ALLOWED_REPOS; static analysis only")
 
@@ -136,6 +145,7 @@ def run(
         duration_ms=int((time.perf_counter() - started) * 1000),
         output_tail=redact(tail(output or "")),
         timed_out=timed_out,
+        output=redact((output or "")[:MAX_OUTPUT_CHARS]),
     )
 
 

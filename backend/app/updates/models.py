@@ -166,6 +166,7 @@ class VulnRef(BaseModel):
 
 
 class ChangeRef(BaseModel):
+    id: int | None = None  # update_changes.id, so findings can point at the change they come from
     kind: str
     breaking: bool
     api_symbols: list[str]

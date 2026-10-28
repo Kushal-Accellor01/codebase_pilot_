@@ -1,5 +1,13 @@
 PRAGMA foreign_keys = ON;
 
+-- Where a scan came from. Ingestion without ingestion-fixes.patch does not record repo_url.
+CREATE TABLE IF NOT EXISTS scan_meta (
+    scan_id    TEXT PRIMARY KEY REFERENCES scans(id),
+    repo_url   TEXT,
+    branch     TEXT,
+    clone_path TEXT
+);
+
 CREATE TABLE IF NOT EXISTS jobs (
     id           TEXT PRIMARY KEY,
     kind         TEXT NOT NULL,                 -- 'scan' | 'dependency_updates' | 'upgrade_run' | 'resume_upgrade'

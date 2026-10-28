@@ -27,7 +27,7 @@ def build_event(
             summary, coverage = analysis["summary"], analysis["notes_coverage"]
             changes = [
                 ChangeRef(
-                    kind=c["kind"], breaking=bool(c["breaking"]), api_symbols=json.loads(c["api_symbols"]),
+                    id=c["id"], kind=c["kind"], breaking=bool(c["breaking"]), api_symbols=json.loads(c["api_symbols"]),
                     description=c["description"], migration_hint=c["migration_hint"], version=c["version"],
                     evidence_url=c["evidence_url"], evidence_quote=c["evidence_quote"],
                 )

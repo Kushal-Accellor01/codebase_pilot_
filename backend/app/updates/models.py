@@ -110,3 +110,23 @@ class VulnRecord(BaseModel):
     modified_at: str | None = None
     url: str
     raw: dict
+
+
+class SourceRepo(BaseModel):
+    """Where a package's code and release notes live (a verified GitHub repository, or 'unknown')."""
+
+    owner: str
+    repo: str
+    directory: str | None = None
+    default_branch: str | None = None
+    archived: bool = False
+    changelog_path: str | None = None
+    tag_format: str | None = None
+    method: str = "registry"  # override | registry | deps_dev | homepage | manual
+    confidence: str = "high"  # high | medium | low
+    verified: bool = False
+    status: str = "resolved"  # resolved | unknown
+
+    @property
+    def slug(self) -> str:
+        return f"github.com/{self.owner}/{self.repo}"

@@ -1,0 +1,8 @@
+# Team-maintained source overrides, one entry per package:
+#
+# npm/some-package:
+#   owner: some-org
+#   repo: some-repo
+#   directory: packages/some-package   # monorepos only
+#   changelog_path: CHANGELOG.md       # optional
+{}

@@ -28,7 +28,33 @@ def main() -> int:
             path.write_text(json.dumps(resp.json(), indent=1), encoding="utf-8")
             print(f"{name}: {len(resp.content)} bytes -> {path.name}")
     record_osv(headers)
+    record_sources(headers)
     return 0
+
+
+def record_sources(headers: dict[str, str]) -> None:
+    """deps.dev and GitHub responses for morgan (set GITHUB_TOKEN to avoid the 60/hour anonymous limit)."""
+    import os
+
+    out = FIXTURES / "sources"
+    out.mkdir(parents=True, exist_ok=True)
+    gh_headers = dict(headers)
+    if os.environ.get("GITHUB_TOKEN"):
+        gh_headers["Authorization"] = f"Bearer {os.environ['GITHUB_TOKEN']}"
+    with httpx.Client(headers=gh_headers, timeout=30, follow_redirects=True) as client:
+        deps = client.get("https://api.deps.dev/v3/systems/npm/packages/morgan/versions/1.12.1")
+        deps.raise_for_status()
+        (out / "depsdev_morgan.json").write_text(json.dumps(deps.json(), indent=1), encoding="utf-8")
+        repo = client.get("https://api.github.com/repos/expressjs/morgan")
+        repo.raise_for_status()
+        (out / "github_repo_morgan.json").write_text(json.dumps(repo.json(), indent=1), encoding="utf-8")
+        pkg = client.get(
+            "https://api.github.com/repos/expressjs/morgan/contents/package.json",
+            headers={"Accept": "application/vnd.github.raw"},
+        )
+        pkg.raise_for_status()
+        (out / "github_package_json_morgan.json").write_text(pkg.text, encoding="utf-8")
+        print("sources: morgan")
 
 
 def record_osv(headers: dict[str, str]) -> None:

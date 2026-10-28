@@ -1,0 +1,80 @@
+{
+ "versionKey": {
+  "system": "NPM",
+  "name": "morgan",
+  "version": "1.12.1"
+ },
+ "publishedAt": "2026-09-11T08:57:42Z",
+ "isDefault": true,
+ "isDeprecated": false,
+ "deprecatedReason": "",
+ "licenses": [
+  "MIT"
+ ],
+ "advisoryKeys": [],
+ "links": [
+  {
+   "label": "HOMEPAGE",
+   "url": "https://github.com/expressjs/morgan#readme"
+  },
+  {
+   "label": "ISSUE_TRACKER",
+   "url": "https://github.com/expressjs/morgan/issues"
+  },
+  {
+   "label": "ATTESTATION",
+   "url": "https://registry.npmjs.org/-/npm/v1/attestations/morgan@1.12.1"
+  },
+  {
+   "label": "ORIGIN",
+   "url": "https://registry.npmjs.org/morgan/1.12.1"
+  },
+  {
+   "label": "SOURCE_REPO",
+   "url": "git+https://github.com/expressjs/morgan.git"
+  }
+ ],
+ "slsaProvenances": [
+  {
+   "sourceRepository": "https://github.com/expressjs/morgan",
+   "commit": "b1272e70812dbc504321eeb5a43d14b0822c150d",
+   "url": "https://registry.npmjs.org/-/npm/v1/attestations/morgan@1.12.1",
+   "verified": true
+  }
+ ],
+ "attestations": [
+  {
+   "type": "https://slsa.dev/provenance/v1",
+   "url": "https://registry.npmjs.org/-/npm/v1/attestations/morgan@1.12.1",
+   "verified": true,
+   "sourceRepository": "https://github.com/expressjs/morgan",
+   "commit": "b1272e70812dbc504321eeb5a43d14b0822c150d"
+  }
+ ],
+ "registries": [
+  "https://registry.npmjs.org/"
+ ],
+ "relatedProjects": [
+  {
+   "projectKey": {
+    "id": "github.com/expressjs/morgan"
+   },
+   "relationProvenance": "UNVERIFIED_METADATA",
+   "relationType": "ISSUE_TRACKER"
+  },
+  {
+   "projectKey": {
+    "id": "github.com/expressjs/morgan"
+   },
+   "relationProvenance": "UNVERIFIED_METADATA",
+   "relationType": "SOURCE_REPO"
+  },
+  {
+   "projectKey": {
+    "id": "github.com/expressjs/morgan"
+   },
+   "relationProvenance": "SLSA_ATTESTATION",
+   "relationType": "SOURCE_REPO"
+  }
+ ]
+}

@@ -9,7 +9,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from app.updates.config import MIGRATIONS_DIR
-from app.updates.models import Dependency, ImportingFile, UpdateRow, VulnRecord
+from app.updates.models import Dependency, ImportingFile, SourceRepo, UpdateRow, VulnRecord
 from app.updates.registry.base import PackageInfo, VersionInfo
 
 LOCKFILE_NAMES = (
@@ -433,3 +433,60 @@ def list_update_vulns(conn: sqlite3.Connection, update_id: int) -> list[sqlite3.
            WHERE l.update_id = ? ORDER BY v.id""",
         (update_id,),
     ).fetchall()
+
+
+def load_package_source(
+    conn: sqlite3.Connection, ecosystem: str, name: str
+) -> tuple[SourceRepo, datetime] | None:
+    row = conn.execute(
+        "SELECT * FROM package_sources WHERE ecosystem = ? AND name = ?", (ecosystem, name)
+    ).fetchone()
+    if row is None:
+        return None
+    source = SourceRepo(
+        owner=row["owner"] or "",
+        repo=row["repo"] or "",
+        directory=row["directory"],
+        default_branch=row["default_branch"],
+        archived=bool(row["archived"]),
+        changelog_path=row["changelog_path"],
+        tag_format=row["tag_format"],
+        method=row["method"],
+        confidence=row["confidence"],
+        verified=bool(row["verified"]),
+        status=row["status"],
+    )
+    resolved_at = datetime.strptime(row["resolved_at"], "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
+    return source, resolved_at
+
+
+def save_package_source(conn: sqlite3.Connection, ecosystem: str, name: str, source: SourceRepo) -> None:
+    with conn:
+        conn.execute(
+            """
+            INSERT INTO package_sources
+                (ecosystem, name, host, owner, repo, directory, default_branch, archived, tag_format,
+                 changelog_path, method, confidence, verified, status, resolved_at)
+            VALUES (?, ?, 'github', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%SZ','now'))
+            ON CONFLICT(ecosystem, name) DO UPDATE SET
+                host = excluded.host, owner = excluded.owner, repo = excluded.repo,
+                directory = excluded.directory, default_branch = excluded.default_branch,
+                archived = excluded.archived, tag_format = excluded.tag_format,
+                changelog_path = excluded.changelog_path, method = excluded.method,
+                confidence = excluded.confidence, verified = excluded.verified, status = excluded.status,
+                resolved_at = excluded.resolved_at
+            """,
+            (
+                ecosystem, name, source.owner, source.repo, source.directory, source.default_branch,
+                int(source.archived), source.tag_format, source.changelog_path, source.method,
+                source.confidence, int(source.verified), source.status,
+            ),
+        )
+
+
+def remember_changelog_path(conn: sqlite3.Connection, ecosystem: str, name: str, path: str) -> None:
+    with conn:
+        conn.execute(
+            "UPDATE package_sources SET changelog_path = ? WHERE ecosystem = ? AND name = ?",
+            (path, ecosystem, name),
+        )

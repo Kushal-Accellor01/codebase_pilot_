@@ -42,6 +42,13 @@ class Settings(BaseSettings):
     pilot_git_author: str = "Codebase Pilot <pilot@localhost>"
     pilot_embedded_worker: bool = False
     pilot_demo_user: str = "demo"
+    # Optional shared secret: when set, every write endpoint (scan, decision, feedback, ...) needs
+    # `Authorization: Bearer <token>`. The approver is then the `X-Pilot-User` header, not free text.
+    pilot_api_token: str | None = None
+    # GitHub push webhook (HMAC SHA-256 of the body, header X-Hub-Signature-256); empty = webhook disabled
+    github_webhook_secret: str | None = None
+    # Re-scan every repository Pilot already knows, this often (0 = never); runs in the embedded worker
+    pilot_rescan_minutes: int = 0
 
     @field_validator("*", mode="before")
     @classmethod

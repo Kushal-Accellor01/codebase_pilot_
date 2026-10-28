@@ -75,6 +75,17 @@ def find_open_run(
     ).fetchone()
 
 
+def known_repos(conn: sqlite3.Connection) -> list[str]:
+    """Repository URLs that have been scanned, oldest first (what a scheduled re-scan walks)."""
+    return [
+        r["repo_url"]
+        for r in conn.execute(
+            "SELECT repo_url, min(rowid) AS first FROM scan_meta WHERE repo_url IS NOT NULL GROUP BY repo_url "
+            "ORDER BY first"
+        )
+    ]
+
+
 def get_run(conn: sqlite3.Connection, run_id: str) -> sqlite3.Row | None:
     return conn.execute("SELECT * FROM upgrade_runs WHERE id = ?", (run_id,)).fetchone()
 

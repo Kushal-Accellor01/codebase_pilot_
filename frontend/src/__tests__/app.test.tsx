@@ -251,3 +251,16 @@ describe("Blast radius layout", () => {
     expect(edges.length).toBe(fixtures.graph.edges.length);
   });
 });
+
+describe("Scan a repository", () => {
+  it("sends the URL typed in the header, and rescans the last repository when it is empty", async () => {
+    const start = vi.spyOn(api, "startScan").mockResolvedValue({ job_id: "j1" });
+    const user = userEvent.setup();
+    renderAt("/");
+    const field = await screen.findByLabelText("Repository to scan");
+    await user.type(field, "https://github.com/acme/shop");
+    await user.click(screen.getByRole("button", { name: "Scan this repository" }));
+    expect(start).toHaveBeenCalledWith("https://github.com/acme/shop");
+    expect(await screen.findByRole("button", { name: "Scan now" })).toBeEnabled();
+  });
+});

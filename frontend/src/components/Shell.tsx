@@ -57,14 +57,17 @@ function TopBar() {
   const scan = scans?.find((s) => s.has_nodes);
   const toast = useToast();
   const client = useQueryClient();
+  const [target, setTarget] = useState("");
   const start = useMutation({
-    mutationFn: () => api.startScan(scan!.repo_url!),
+    mutationFn: (repoUrl: string) => api.startScan(repoUrl),
     onSuccess: () => {
+      setTarget("");
       toast("Scan started. Results update as each step finishes.");
       void client.invalidateQueries();
     },
     onError: (error: Error) => toast(`Could not start the scan: ${error.message}`),
   });
+  const repoToScan = target.trim() || scan?.repo_url || "";
   return (
     <div className="topbar">
       <div className="scope">
@@ -76,9 +79,23 @@ function TopBar() {
           </span>
         ) : null}
       </div>
-      <button className="btn" onClick={() => start.mutate()} disabled={!scan?.repo_url || start.isPending}>
-        Scan now
-      </button>
+      <form
+        className="scanform"
+        onSubmit={(event) => {
+          event.preventDefault();
+          if (repoToScan) start.mutate(repoToScan);
+        }}
+      >
+        <input
+          aria-label="Repository to scan"
+          placeholder={scan?.repo_url ? "Another repository URL (empty: scan again)" : "https://github.com/owner/repo"}
+          value={target}
+          onChange={(event) => setTarget(event.target.value)}
+        />
+        <button className="btn" type="submit" disabled={!repoToScan || start.isPending}>
+          {target.trim() ? "Scan this repository" : "Scan now"}
+        </button>
+      </form>
     </div>
   );
 }

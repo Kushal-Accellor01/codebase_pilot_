@@ -4,6 +4,7 @@ pipeline <repo_url_or_path> [--only express]   ingest -> updates -> upgrade runs
 approve|reject <run_id> --by NAME [--comment]  decide a run that awaits approval
 worker [--until-idle]                          process queued jobs
 runs                                           list upgrade runs
+rescan [--run]                                 queue a scan of every known repository (for cron / Task Scheduler)
 bot-prs [--scan ID]                            comment on open Dependabot / Renovate PRs (needs GITHUB_TOKEN)
 issues [--scan ID]                             publish the dashboard and team issues (local files without a token)
 reset-demo                                     clear run data, checkpoints, worktrees and local PR branches
@@ -18,7 +19,7 @@ from app.core import db as core_db
 from app.core import jobs
 from app.core.config import get_settings
 from app.core.logging import configure_logging
-from app.orchestrator import demo
+from app.orchestrator import demo, schedule
 from app.orchestrator import store as run_store
 from app.orchestrator.worker import Services, run_worker
 from app.updates import store as updates_store
@@ -147,6 +148,21 @@ def _cmd_issues(args: argparse.Namespace) -> int:
     return asyncio.run(main())
 
 
+def _cmd_rescan(args: argparse.Namespace) -> int:
+    db = _db(args)
+    _ensure_db(db)
+    conn = core_db.connect(db)
+    try:
+        queued = schedule.enqueue_rescans(conn, get_settings())
+    finally:
+        conn.close()
+    print(f"{len(queued)} scans queued (repositories outside EXEC_ALLOWED_REPOS are skipped)")
+    if args.run and queued:
+        asyncio.run(run_worker(db, until_idle=True, services=Services()))
+        _print_runs(db)
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="app.orchestrator.cli")
     parser.add_argument("--db", default=None)
@@ -169,6 +185,9 @@ def build_parser() -> argparse.ArgumentParser:
         p = sub.add_parser(name)
         p.add_argument("--scan")
         p.set_defaults(func=func)
+    p = sub.add_parser("rescan")
+    p.add_argument("--run", action="store_true", help="also process the queue until it is empty")
+    p.set_defaults(func=_cmd_rescan)
     sub.add_parser("runs").set_defaults(func=_cmd_runs)
     sub.add_parser("reset-demo").set_defaults(func=_cmd_reset)
     return parser

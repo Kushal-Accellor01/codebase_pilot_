@@ -7,8 +7,11 @@ PILOT_EMBEDDED_WORKER=1 runs the job worker inside this process (the demo setup)
 """
 
 import asyncio
+import hashlib
+import hmac
 import json
 import logging
+import secrets
 from collections.abc import AsyncIterator, Iterator
 from contextlib import asynccontextmanager
 
@@ -22,6 +25,7 @@ from app.core import events, jobs, workspace
 from app.core.config import Settings, get_settings
 from app.core.logging import configure_logging
 from app.database import GraphDatabase
+from app.orchestrator import schedule
 from app.orchestrator.worker import Services, run_worker
 from app.updates import sources
 from app.updates import store as updates_store
@@ -37,7 +41,7 @@ def create_app(
 ) -> FastAPI:
     settings = settings or get_settings()
     db = db_path or settings.codebase_pilot_db
-    state: dict = {"stop": None, "task": None}
+    state: dict = {"stop": None, "task": None, "rescan": None}
 
     @asynccontextmanager
     async def lifespan(_app: FastAPI):
@@ -53,7 +57,13 @@ def create_app(
             state["task"] = asyncio.create_task(
                 run_worker(db, services=services, settings=settings, stop=state["stop"], poll_s=0.5)
             )
+        if settings.pilot_embedded_worker and settings.pilot_rescan_minutes > 0:
+            state["stop"] = state["stop"] or asyncio.Event()
+            state["rescan"] = asyncio.create_task(schedule.rescan_loop(db, settings, state["stop"]))
         yield
+        if state["rescan"]:
+            state["stop"].set()
+            await asyncio.wait_for(state["rescan"], timeout=30)
         if state["task"]:
             state["stop"].set()
             await asyncio.wait_for(state["task"], timeout=30)
@@ -124,8 +134,19 @@ def create_app(
 
     # --- writes ----------------------------------------------------------------------------------------------
 
+    def writer(authorization: str | None = Header(default=None), x_pilot_user: str | None = Header(default=None)):
+        """Who is writing. Without PILOT_API_TOKEN the API is open (localhost demo) and the caller's name is trusted;
+        with it, the bearer token is required and the approver is the X-Pilot-User header."""
+        if not settings.pilot_api_token:
+            return None
+        supplied = (authorization or "").removeprefix("Bearer ").strip()
+        if not secrets.compare_digest(supplied.encode(), settings.pilot_api_token.encode()):
+            raise HTTPException(401, "a valid Authorization: Bearer token is required",
+                                headers={"WWW-Authenticate": "Bearer"})
+        return (x_pilot_user or "").strip()[:80] or None
+
     @app.post("/api/scans", response_model=schemas.JobAccepted, status_code=202)
-    def start_scan(body: schemas.ScanRequest, conn=Depends(get_conn)):
+    def start_scan(body: schemas.ScanRequest, conn=Depends(get_conn), _who=Depends(writer)):
         # The API clones whatever it is given, so it only accepts repositories Pilot is configured to work on.
         allowed = {a.replace("\\", "/").rstrip("/") for a in settings.exec_allowed}
         if workspace.repo_identity(body.repo_url) not in allowed:
@@ -133,7 +154,7 @@ def create_app(
         return {"job_id": jobs.enqueue(conn, "scan", {"repo_url": body.repo_url, "only": body.only})}
 
     @app.post("/api/upgrades/{run_id}/decision", response_model=schemas.DecisionAccepted, status_code=202)
-    def decide(run_id: str, body: schemas.DecisionRequest, conn=Depends(get_conn)):
+    def decide(run_id: str, body: schemas.DecisionRequest, conn=Depends(get_conn), who=Depends(writer)):
         try:
             status = queries.run_status(conn, run_id)
         except queries.NotFound as exc:
@@ -145,13 +166,14 @@ def create_app(
         jobs.enqueue(
             conn,
             "resume_upgrade",
-            {"run_id": run_id, "decision": body.decision, "decided_by": body.decided_by, "comment": body.comment},
+            {"run_id": run_id, "decision": body.decision, "decided_by": who or body.decided_by,
+             "comment": body.comment},
             dedupe_key=f"resume_upgrade:{run_id}:{body.decision}",
         )
         return {"status": "queued"}
 
     @app.post("/api/feedback", response_model=schemas.FeedbackSaved, status_code=201)
-    def feedback(body: schemas.FeedbackRequest, conn=Depends(get_conn)):
+    def feedback(body: schemas.FeedbackRequest, conn=Depends(get_conn), who=Depends(writer)):
         try:
             return {
                 "id": queries.save_feedback(
@@ -159,7 +181,7 @@ def create_app(
                     target_kind=body.target_kind,
                     target_id=body.target_id,
                     verdict=body.verdict,
-                    user_name=body.user_name or settings.pilot_demo_user,
+                    user_name=who or body.user_name or settings.pilot_demo_user,
                     comment=body.comment,
                 )
             }
@@ -167,12 +189,52 @@ def create_app(
             raise not_found(exc) from exc
 
     @app.post("/api/sources/override", status_code=201)
-    def source_override(body: schemas.SourceOverride, conn=Depends(get_conn)):
+    def source_override(body: schemas.SourceOverride, conn=Depends(get_conn), _who=Depends(writer)):
         sources.save_override(
             sources.overrides_path(), body.ecosystem, body.name, body.owner, body.repo, body.directory
         )
         updates_store.delete_package_source(conn, body.ecosystem, body.name)
         return {"saved": f"{body.ecosystem}/{body.name}", "next": "re-run the dependency update step to use it"}
+
+    @app.post("/api/webhooks/github", status_code=202)
+    async def github_webhook(
+        request: Request,
+        x_github_event: str | None = Header(default=None),
+        x_hub_signature_256: str | None = Header(default=None),
+    ):
+        """A push to the default branch of an allowed repository queues a scan (Step 8). Signed with
+        GITHUB_WEBHOOK_SECRET; without a secret the endpoint does not exist."""
+        secret = settings.github_webhook_secret
+        if not secret:
+            raise HTTPException(404, "webhook is not enabled")
+        raw = await request.body()
+        expected = "sha256=" + hmac.new(secret.encode(), raw, hashlib.sha256).hexdigest()
+        if not x_hub_signature_256 or not hmac.compare_digest(expected, x_hub_signature_256):
+            raise HTTPException(401, "bad signature")
+        if x_github_event == "ping":
+            return {"status": "pong"}
+        if x_github_event != "push":
+            return {"status": "ignored", "reason": f"event {x_github_event}"}
+        try:
+            payload = json.loads(raw)
+            repo = payload["repository"]
+            slug = repo["full_name"]
+            branch = payload["ref"]
+        except (ValueError, KeyError, TypeError) as exc:
+            raise HTTPException(400, "not a push payload") from exc
+        if branch != f"refs/heads/{repo.get('default_branch', 'main')}":
+            return {"status": "ignored", "reason": f"push to {branch}, not the default branch"}
+        if slug not in {a.replace("\\", "/").rstrip("/") for a in settings.exec_allowed}:
+            return {"status": "ignored", "reason": f"{slug} is not in EXEC_ALLOWED_REPOS"}
+        conn = core_db.connect(db)
+        try:
+            job = jobs.enqueue(
+                conn, "scan", {"repo_url": repo.get("clone_url") or f"https://github.com/{slug}", "only": None},
+                dedupe_key=f"scan:{slug}:{payload.get('after', '')}",
+            )
+        finally:
+            conn.close()
+        return {"status": "queued", "job_id": job}
 
     # --- server-sent events ----------------------------------------------------------------------------------
 

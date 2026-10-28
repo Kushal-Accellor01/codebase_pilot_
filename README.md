@@ -29,6 +29,9 @@ appears (a `pilot/express-5.3.0` branch in the sandbox mirror and a Markdown bod
 
 ## Run it for real
 
+Full guide, with every setting, where to give a repository, and what is proven: [docs/LIVE.md](docs/LIVE.md).
+Check the machine first: `python scripts/dev.py live-check --repo https://github.com/OWNER/REPO`.
+
 1. `backend/.env` from `backend/.env.example`: `GITHUB_TOKEN`, `AZURE_OPENAI_*`. Check the model: `python -m app.core.llm --smoke`.
 2. `python scripts/dev.py seed-demo` scans the sandbox and stops at the approval pause.
 3. `python scripts/dev.py api` and `python scripts/dev.py web`; `PILOT_EMBEDDED_WORKER=1` runs the worker inside the API.

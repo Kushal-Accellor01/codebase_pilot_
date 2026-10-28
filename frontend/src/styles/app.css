@@ -181,3 +181,5 @@ label { display: block; margin: 12px 0 4px; }
 @media (prefers-reduced-motion: no-preference) {
   .board-row { transition: background 0.12s; }
 }
+.scanform { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.scanform input { min-width: 280px; padding: 7px 10px; border: 1px solid var(--rule); border-radius: 6px; background: var(--paper, transparent); color: inherit; font: inherit; }

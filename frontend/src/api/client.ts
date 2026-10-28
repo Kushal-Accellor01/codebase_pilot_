@@ -15,11 +15,37 @@ export class ApiError extends Error {
   }
 }
 
-async function request<T>(path: string, init?: RequestInit): Promise<T> {
+function stored(key: string): string | null {
+  try {
+    return localStorage.getItem(key);
+  } catch {
+    return null; // storage can be blocked; the page works without it
+  }
+}
+
+/** Who is calling: the token when the server asks for one (PILOT_API_TOKEN) and the name shown as approver. */
+function authHeaders(): Record<string, string> {
+  const token = stored("pilotToken") ?? (import.meta.env.VITE_PILOT_API_TOKEN as string | undefined);
+  const user = stored("pilotUser");
+  return { ...(token ? { Authorization: `Bearer ${token}` } : {}), ...(user ? { "X-Pilot-User": user } : {}) };
+}
+
+async function request<T>(path: string, init?: RequestInit, retried = false): Promise<T> {
   const response = await fetch(`/api${path}`, {
     ...init,
-    headers: { "Content-Type": "application/json", ...(init?.headers ?? {}) },
+    headers: { "Content-Type": "application/json", ...authHeaders(), ...(init?.headers ?? {}) },
   });
+  if (response.status === 401 && !retried && init?.method && init.method !== "GET") {
+    const token = window.prompt("This server needs an API token (PILOT_API_TOKEN) for changes. Enter it:");
+    if (token) {
+      try {
+        localStorage.setItem("pilotToken", token.trim());
+      } catch {
+        /* keep going; the retry below still sends it once */
+      }
+      return request<T>(path, { ...init, headers: { ...(init.headers ?? {}), Authorization: `Bearer ${token.trim()}` } }, true);
+    }
+  }
   if (!response.ok) {
     let detail = response.statusText;
     try {
@@ -56,10 +82,10 @@ export const api = {
     fixtureMode()
       ? delay({ status: "queued" })
       : request(`/upgrades/${runId}/decision`, { method: "POST", body: JSON.stringify(body) }),
-  startScan: (repoUrl: string): Promise<{ job_id: string }> =>
+  startScan: (repoUrl: string, only?: string[]): Promise<{ job_id: string }> =>
     fixtureMode()
       ? delay({ job_id: "fixture" })
-      : request("/scans", { method: "POST", body: JSON.stringify({ repo_url: repoUrl }) }),
+      : request("/scans", { method: "POST", body: JSON.stringify({ repo_url: repoUrl, only: only?.length ? only : null }) }),
   feedback: (body: {
     target_kind: "impact_finding" | "update_change";
     target_id: number;

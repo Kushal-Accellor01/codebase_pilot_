@@ -235,9 +235,12 @@ async def validate(ctx: RunContext, state: UpgradeState) -> dict:
     if probe.passed:
         update["route"] = "full"
         message = f"tests pass on attempt {attempts} ({probe.tests_passed}/{probe.tests_total})"
-    elif attempts >= MAX_ATTEMPTS:
+    elif attempts >= MAX_ATTEMPTS or (ctx.llm is None and not patch.edits):
+        # Without a model, and without a codemod that changed anything, another attempt would repeat this one.
         update["route"] = "needs_engineer"
-        message = f"tests still fail after {attempts} attempts; an engineer has to take over"
+        no_model = ctx.llm is None and not patch.edits
+        why = "no model is configured to write the fix" if no_model else f"after {attempts} attempts"
+        message = f"tests still fail ({why}); an engineer has to take over"
     else:
         return {**update, "_summary": f"tests fail on attempt {attempts}; trying again"}
     run_store.set_run_status(ctx.conn, run_id, "awaiting_approval", node="validate")

@@ -2,12 +2,14 @@
 
 Rules, enforced in code:
   * the file is in the package scope or is a test file; the real path stays inside the worktree;
+  * the file matches the repository's `allowed_paths` globs (default: everything);
   * package.json and lockfiles are never edited (the manifest bump owns them);
   * `find` occurs exactly once in the current file content;
   * at most 30 edits and 200 changed lines per attempt;
   * after applying, `node --check` on each changed .js file; a syntax error reverts that file's edits.
 """
 import logging
+import re
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -26,6 +28,34 @@ SYNTAX_CHECKED = {".js", ".mjs", ".cjs"}
 class ApplyResult:
     applied: list[Edit] = field(default_factory=list)
     rejected: list[dict] = field(default_factory=list)
+
+
+def _glob_regex(pattern: str) -> re.Pattern:
+    """`**` crosses folders, `*` and `?` stay inside one; a trailing `/` means everything below."""
+    pattern = pattern.replace("\\", "/").removeprefix("./")
+    if pattern.endswith("/"):
+        pattern += "**"
+    out, i = "", 0
+    while i < len(pattern):
+        if pattern.startswith("**/", i):
+            out, i = out + "(?:.*/)?", i + 3
+        elif pattern.startswith("**", i):
+            out, i = out + ".*", i + 2
+        elif pattern[i] == "*":
+            out, i = out + "[^/]*", i + 1
+        elif pattern[i] == "?":
+            out, i = out + "[^/]", i + 1
+        else:
+            out, i = out + re.escape(pattern[i]), i + 1
+    return re.compile(out + r"\Z")
+
+
+def path_allowed(rel: str, allowed_paths: list[str] | None) -> bool:
+    """Does `rel` match one of the globs? None (no restriction configured) allows everything."""
+    if allowed_paths is None:
+        return True
+    rel = rel.replace("\\", "/")
+    return any(_glob_regex(p).match(rel) for p in allowed_paths)
 
 
 def is_test_file(path: str) -> bool:
@@ -62,7 +92,10 @@ def node_check(path: Path) -> str | None:
     return None if result.passed else result.output_tail[:400]
 
 
-def apply_edits(root: Path, edits: list[Edit], scope_files: list[str], *, syntax_check: bool = True) -> ApplyResult:
+def apply_edits(
+    root: Path, edits: list[Edit], scope_files: list[str], *, syntax_check: bool = True,
+    allowed_paths: list[str] | None = None,
+) -> ApplyResult:
     root = Path(root)
     result = ApplyResult()
     scope = {f.replace("\\", "/") for f in scope_files}
@@ -80,6 +113,9 @@ def apply_edits(root: Path, edits: list[Edit], scope_files: list[str], *, syntax
             continue
         if target.name in PROTECTED_NAMES:
             _reject(result, edit, "manifests and lockfiles are changed by the version bump, not by edits")
+            continue
+        if not path_allowed(rel, allowed_paths):
+            _reject(result, edit, "file is outside the allowed_paths of .codebase-pilot.yml")
             continue
         if rel not in scope and not is_test_file(rel):
             _reject(result, edit, "file is not in the package scope")

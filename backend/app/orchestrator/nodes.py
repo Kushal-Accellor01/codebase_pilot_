@@ -213,7 +213,7 @@ async def fix(ctx: RunContext, state: UpgradeState) -> dict:
     findings = run_store.load_findings(ctx.conn, run_id, include_rejected=False)
     patch = await fix_module.make_patch(
         ctx.llm, event, worktree, state.get("repo"), findings, state.get("scope_files", []),
-        attempt=attempts, failure_tail=state.get("failure_tail"),
+        attempt=attempts, failure_tail=state.get("failure_tail"), allowed_paths=_config(state).allowed_paths,
     )
     run_store.save_patch(ctx.conn, run_id, patch)
     return {"attempts": attempts, "patch": patch.model_dump(),
@@ -260,7 +260,7 @@ async def finish(ctx: RunContext, state: UpgradeState) -> dict:
         run_store.set_run_status(ctx.conn, run_id, "report_only", node="finish")
     elif state.get("decision") == "rejected":
         run_store.set_run_status(ctx.conn, run_id, "rejected", node="finish")
-    elif run["status"] not in ("pr_opened", "needs_engineer", "failed", "resolved"):
+    elif run["status"] not in ("pr_opened", "needs_engineer", "issue_opened", "failed", "resolved"):
         run_store.set_run_status(ctx.conn, run_id, run["status"], node="finish")
     clone, worktree = state.get("clone"), state.get("worktree")
     if clone and worktree and run_store.get_run(ctx.conn, run_id)["status"] != "awaiting_approval":

@@ -5,7 +5,7 @@ import { API_MODE, api } from "./client";
 import type { DecisionRequest, RunEvent } from "./models";
 
 const live = API_MODE === "live";
-export const TERMINAL = ["pr_opened", "rejected", "report_only", "needs_engineer", "failed", "resolved"];
+export const TERMINAL = ["pr_opened", "rejected", "report_only", "needs_engineer", "issue_opened", "failed", "resolved"];
 
 export const useOverview = () =>
   useQuery({ queryKey: ["overview"], queryFn: () => api.overview(), refetchInterval: live ? 5000 : false });

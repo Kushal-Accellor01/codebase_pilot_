@@ -34,7 +34,7 @@ def decide(decision="approved", config=None, findings=None, latest=True):
         (dict(config=RepoPilotConfig(enabled=False)), "none"),
         (dict(config=RepoPilotConfig(mode="shadow")), "none"),
         (dict(config=RepoPilotConfig(mode="advisory")), "issue"),
-        (dict(config=RepoPilotConfig(mode="enforce")), "pull_request"),
+        (dict(config=RepoPilotConfig(mode="assisted", min_confidence=0.0)), "pull_request"),
         (dict(latest=False), "issue"),  # tests are red: hand over to an engineer
         (dict(latest=None), "issue"),  # no patch at all
         (dict(findings=[finding(0.4)]), "issue"),  # below the confidence floor

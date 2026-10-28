@@ -237,3 +237,42 @@ def test_no_codemod_is_registered_until_verified():
 
 def test_sandbox_repo_fixture_is_a_clean_git_repo(repo):
     assert workspace.diff(repo) == "" and shutil.which("node")
+
+
+# --- H7: allowed_paths ------------------------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("path", "allowed", "ok"),
+    [
+        ("routes/orders.js", None, True),
+        ("routes/orders.js", ["**"], True),
+        ("routes/orders.js", ["routes/**"], True),
+        ("routes/orders.js", ["routes/"], True),
+        ("routes/orders.js", ["routes/*.js"], True),
+        ("routes/orders.js", ["lib/**"], False),
+        ("routes/sub/deep.js", ["routes/*.js"], False),  # `*` stays inside one folder
+        ("routes/sub/deep.js", ["routes/**/*.js"], True),
+        ("app.js", ["**/*.js"], True),  # `**/` also matches no folder at all
+        ("app.js", ["lib/**", "app.js"], True),
+        (".github/ci.yml", [".github/**"], True),
+        ("routes/orders.js", [], False),  # an empty list allows nothing
+    ],
+)
+def test_path_allowed_table(path, allowed, ok):
+    from app.remediation.edits import path_allowed
+
+    assert path_allowed(path, allowed) is ok
+
+
+def test_edits_outside_allowed_paths_are_rejected_and_not_written(repo):
+    before = (repo / "routes" / "orders.js").read_text(encoding="utf-8")
+    result = apply_edits(
+        repo,
+        [edit("routes/orders.js", "req.param('id')", "req.params.id"), edit("routes/admin.js", "app.del(", "app.delete(")],
+        SCOPE,
+        allowed_paths=["routes/admin.js"],
+    )
+    assert [e.file for e in result.applied] == ["routes/admin.js"]
+    assert "allowed_paths" in result.rejected[0]["reason"] and result.rejected[0]["file"] == "routes/orders.js"
+    assert (repo / "routes" / "orders.js").read_text(encoding="utf-8") == before

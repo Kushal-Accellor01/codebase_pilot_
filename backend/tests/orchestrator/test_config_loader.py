@@ -64,3 +64,14 @@ def test_severity_gate():
     config = RepoPilotConfig(min_severity="high")
     assert config.severity_allows("critical") and config.severity_allows("high")
     assert not config.severity_allows("medium") and RepoPilotConfig().severity_allows("low")
+
+
+def test_enforce_is_not_a_mode_but_the_rest_of_the_file_still_applies(tmp_path):
+    config, warnings = load_repo_config(write(tmp_path, "mode: enforce\nmin_severity: high\n"))
+    assert config.mode == "assisted" and config.min_severity == "high"
+    assert len(warnings) == 1 and "enforce" in warnings[0]
+
+
+def test_allowed_paths_and_owners_are_read_from_the_nested_layout(tmp_path):
+    config, _ = load_repo_config(write(tmp_path, "owners: '@acme/platform'\nfixes:\n  allowed_paths: ['routes/**']\n"))
+    assert config.allowed_paths == ["routes/**"] and config.owners == "@acme/platform"

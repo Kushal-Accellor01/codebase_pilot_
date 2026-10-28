@@ -7,7 +7,7 @@ from app.core.contracts import Finding, PatchResult, Plan, ProbeResult, Telemetr
 
 RUN_STATUSES = (
     "queued", "analyzing", "fixing", "validating", "awaiting_approval", "approved", "rejected", "pr_opened",
-    "needs_engineer", "report_only", "failed", "resolved",
+    "needs_engineer", "issue_opened", "report_only", "failed", "resolved",
 )
 
 
@@ -38,7 +38,7 @@ def create_run(
     return run_id
 
 
-FINAL_STATUSES = ("rejected", "pr_opened", "needs_engineer", "report_only", "failed", "resolved")
+FINAL_STATUSES = ("rejected", "pr_opened", "needs_engineer", "issue_opened", "report_only", "failed", "resolved")
 
 
 def clone_paths_in_use(conn: sqlite3.Connection) -> list[str]:
@@ -56,7 +56,7 @@ def clone_paths_in_use(conn: sqlite3.Connection) -> list[str]:
 
 OPEN_STATUSES = (
     "queued", "analyzing", "fixing", "validating", "awaiting_approval", "approved", "pr_opened", "needs_engineer",
-    "report_only",
+    "issue_opened", "report_only",
 )
 
 

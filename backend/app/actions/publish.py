@@ -80,6 +80,15 @@ def local_origin(repo_url: str | None, clone: str | None) -> str:
     raise RuntimeError("no local repository to push the branch to (no token for GitHub, and the clone is gone)")
 
 
+def final_status(kind: str, latest: PatchResult | None) -> str:
+    """A pull request is `pr_opened`. An issue means an engineer has to take over only when the fix did not pass;
+    an advisory-mode or low-confidence issue on a green fix is just `issue_opened`."""
+    if kind == "pull_request":
+        return "pr_opened"
+    green = bool(latest and latest.validation and latest.validation.passed)
+    return "issue_opened" if green else "needs_engineer"
+
+
 def last_failure(patches: list[dict]) -> str | None:
     """Output tail of the newest patch's failed validation, if any."""
     if not patches:
@@ -122,6 +131,8 @@ async def publish(ctx, state) -> dict:
     source = run_store.scan_repo(conn, run["scan_id"])
     repo = state.get("repo")
     owners = owners_by_file(sorted({f.file_path for f in findings}), load_codeowners(state.get("clone")))
+    if config.owners:  # files without a CODEOWNERS rule fall back to the owner named in .codebase-pilot.yml
+        owners = {path: found or [config.owners] for path, found in owners.items()}
     branch = gh_writes.branch_name(event.package, event.target_version or "latest")
     use_github = bool(get_settings().github_token) and _is_github_slug(repo) and ctx.http is not None
     data = render.BodyData(
@@ -160,5 +171,5 @@ async def publish(ctx, state) -> dict:
                       branch=branch if kind == "pull_request" else None, state="local")
 
     run_store.save_pull_request(conn, run_id, **record)
-    run_store.set_run_status(conn, run_id, "pr_opened" if kind == "pull_request" else "needs_engineer", node="act")
+    run_store.set_run_status(conn, run_id, final_status(kind, latest), node="act")
     return {"pr": record, "summary": f"{kind.replace('_', ' ')} {record['url']}"}

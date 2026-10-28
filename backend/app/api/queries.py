@@ -10,7 +10,7 @@ from app.updates import store as updates_store
 from app.updates.events import RISK_ORDER, build_event, wants_event
 
 RISKS = ("critical", "high", "medium", "low", "none")
-TERMINAL = {"pr_opened", "rejected", "report_only", "needs_engineer", "failed", "resolved"}
+TERMINAL = {"pr_opened", "rejected", "report_only", "needs_engineer", "issue_opened", "failed", "resolved"}
 
 # run status -> (label, pill class used by the dashboard)
 RUN_LABELS = {
@@ -23,6 +23,7 @@ RUN_LABELS = {
     "rejected": ("Rejected", ""),
     "pr_opened": ("Pull request opened", "done"),
     "needs_engineer": ("Needs an engineer", "fail"),
+    "issue_opened": ("Issue opened", "done"),
     "report_only": ("Report only", ""),
     "failed": ("Failed", "fail"),
     "resolved": ("Resolved", "done"),

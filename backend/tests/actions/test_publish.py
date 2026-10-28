@@ -252,3 +252,15 @@ def test_fallback_never_pushes_to_a_remote_url(worktree, tmp_path):
         publish.local_origin(url, str(tmp_path / "gone"))
     with pytest.raises(RuntimeError, match="no local repository"):
         publish.local_origin(url, None)
+
+
+def test_only_a_failed_fix_needs_an_engineer():
+    """B-9: an advisory or low-confidence issue on a green fix does not claim an engineer is needed."""
+    from app.core.contracts import PatchResult
+
+    green = PatchResult(attempt=1, method="llm_edits", edits=[], diff="", manifest_change=None, validation=probe(True))
+    red = PatchResult(attempt=3, method="llm_edits", edits=[], diff="", manifest_change=None, validation=probe(False))
+    assert publish.final_status("pull_request", green) == "pr_opened"
+    assert publish.final_status("issue", green) == "issue_opened"
+    assert publish.final_status("issue", red) == "needs_engineer"
+    assert publish.final_status("issue", None) == "needs_engineer"

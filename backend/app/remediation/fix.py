@@ -77,7 +77,7 @@ def _prompt(event: DependencyChangeEvent, root: Path, findings: list[Finding], f
 
 async def propose_and_apply(
     llm: LLM, event: DependencyChangeEvent, root: Path, findings: list[Finding], scope_files: list[str],
-    failure_tail: str | None = None,
+    failure_tail: str | None = None, allowed_paths: list[str] | None = None,
 ) -> ApplyResult:
     todo = remaining_findings(root, findings)
     if not todo:
@@ -94,7 +94,7 @@ async def propose_and_apply(
         result = ApplyResult()
         result.rejected.append({"file": "", "find": "", "replace": "", "reason": f"model error: {exc}"})
         return result
-    return apply_edits(root, out.edits, scope_files)
+    return apply_edits(root, out.edits, scope_files, allowed_paths=allowed_paths)
 
 
 def bump_manifest(root: Path, repo: str | None, package: str, target: str) -> tuple[bool, str]:
@@ -121,6 +121,7 @@ async def make_patch(
     attempt: int,
     failure_tail: str | None = None,
     bump: bool = True,
+    allowed_paths: list[str] | None = None,
 ) -> PatchResult:
     method = "llm_edits"
     applied: list[Edit] = []
@@ -135,7 +136,7 @@ async def make_patch(
             rejected.append({"file": "", "find": "", "replace": "", "reason": reason})
 
     if llm is not None:
-        result = await propose_and_apply(llm, event, root, findings, scope_files, failure_tail)
+        result = await propose_and_apply(llm, event, root, findings, scope_files, failure_tail, allowed_paths)
         applied += result.applied
         rejected += result.rejected
         if codemod and result.applied:

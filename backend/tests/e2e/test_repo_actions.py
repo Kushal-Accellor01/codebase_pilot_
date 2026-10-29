@@ -84,6 +84,13 @@ def test_scan_queues_repo_actions_only_with_a_token(env, monkeypatch):
     monkeypatch.setenv("EXEC_ALLOWED_REPOS", SLUG)
     with_github_writes(monkeypatch)
     env.work(("dependency_updates", {"scan_id": scan_id(env), "only": ["express"]}))
+    # a token alone is not consent to post on GitHub after every scan (ground rule 8)
+    assert conn.execute("SELECT count(*) FROM jobs WHERE kind = 'repo_actions'").fetchone()[0] == 0
+
+    monkeypatch.setenv("PILOT_REPO_ACTIONS", "1")
+    with conn:
+        conn.execute("DELETE FROM jobs WHERE kind = 'dependency_updates'")
+    env.work(("dependency_updates", {"scan_id": scan_id(env), "only": ["express"]}))
     assert conn.execute("SELECT count(*) FROM jobs WHERE kind = 'repo_actions'").fetchone()[0] == 1
 
 

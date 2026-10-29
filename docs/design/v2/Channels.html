@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Channels and schedules</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<style>
+:root{--ink:#1C2632;--ink-2:#4A5765;--ink-3:#5F6B79;--bg:#FAFBFC;--panel:#EEF2F5;--panel-2:#F4F6F8;--rule:#D6DDE4;--white:#FFFFFF;--critical:#C4321C;--critical-bg:#FBEAE6;--high:#9A5C00;--high-bg:#FDF1DD;--medium:#2F6CB0;--medium-bg:#E6EFF9;--low:#2E7A4E;--low-bg:#E5F2EA;--focus:#2F6CB0}
+@media (prefers-color-scheme: dark){:root{--ink:#E6ECF2;--ink-2:#B3BECA;--ink-3:#97A3B1;--bg:#141B23;--panel:#1C252F;--panel-2:#18212A;--rule:#2C3743;--white:#1A232C;--critical:#F0715C;--critical-bg:#3A1F1B;--high:#E7A440;--high-bg:#36291A;--medium:#6FA6E8;--medium-bg:#1C2C40;--low:#67C08C;--low-bg:#1A3226;--focus:#6FA6E8}}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 "Public Sans",system-ui,-apple-system,"Segoe UI",sans-serif;font-variant-numeric:tabular-nums;-webkit-font-smoothing:antialiased}
+a{color:var(--medium)}a:hover{color:var(--ink)}
+code,.mono{font-family:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;font-size:12.5px}
+:focus-visible{outline:2px solid var(--focus);outline-offset:2px;border-radius:4px}
+.shell{display:flex;flex-wrap:wrap;min-height:100vh}
+.rail{flex:0 0 232px;box-sizing:border-box;background:var(--panel-2);border-right:1px solid var(--rule);padding:22px 14px}
+.content{flex:999 1 560px;min-width:0}
+.brand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:16px;margin:0 8px 26px;color:var(--ink);text-decoration:none}
+.railnav{display:flex;flex-direction:column;gap:2px}
+.navlink{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:9px 10px;border-radius:6px;color:var(--ink-2);text-decoration:none;font-weight:500;font-size:14px;white-space:nowrap}
+.navlink:hover{background:var(--panel);color:var(--ink)}
+.navlink.on{background:var(--white);color:var(--ink);box-shadow:inset 3px 0 0 var(--ink)}
+.count{font-size:12px;background:var(--critical);color:#fff;border-radius:10px;padding:0 7px;line-height:18px}
+.railgroup{font-size:12px;color:var(--ink-3);font-weight:600;margin:20px 10px 6px}
+.topbar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:14px 40px;border-bottom:1px solid var(--rule)}
+.page{box-sizing:border-box;max-width:1240px;padding:36px 40px 72px}
+h1{font-size:32px;line-height:1.15;font-weight:700;letter-spacing:-.015em;margin:0 0 8px}
+h2{font-size:19px;font-weight:700;margin:0}
+h3{font-size:15.5px;font-weight:700;margin:0}
+.lede{color:var(--ink-2);margin:0 0 10px;max-width:72ch;font-size:16px}
+.muted{color:var(--ink-3)}.small{font-size:13px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;box-sizing:border-box;border:1px solid var(--rule);background:var(--white);color:var(--ink);padding:0 18px;border-radius:8px;font:600 14px "Public Sans",sans-serif;text-decoration:none;cursor:pointer}
+.btn:hover{border-color:var(--ink-3);color:var(--ink)}
+.btn-primary{background:var(--ink);border-color:var(--ink);color:var(--bg)}
+.btn-primary:hover{color:var(--bg);opacity:.92}
+.btn-sm{min-height:36px;padding:0 12px;font-size:13px}
+.pill{display:inline-flex;align-items:center;gap:6px;padding:2px 10px;border-radius:999px;font-size:12.5px;font-weight:600;background:var(--panel);color:var(--ink-2);white-space:nowrap}
+.pill.wait{background:var(--high-bg);color:var(--high)}.pill.done{background:var(--low-bg);color:var(--low)}
+.sec{margin-top:36px}
+.sechead{display:flex;justify-content:space-between;align-items:baseline;gap:8px 16px;flex-wrap:wrap;margin-bottom:14px}
+.group{font-size:13px;font-weight:700;color:var(--ink-2);margin:22px 0 10px}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.conn{display:flex;flex-direction:column;gap:12px;background:var(--white);border:1px solid var(--rule);border-radius:12px;padding:20px}
+.conn header{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+.conn p{margin:0;font-size:13.5px;color:var(--ink-2)}
+.conn footer{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:auto;padding-top:4px}
+.label{display:block;font-weight:600;font-size:13px;margin:0 0 4px}
+.field{display:block;width:100%;box-sizing:border-box;min-height:40px;padding:8px 12px;border:1px solid var(--rule);border-radius:8px;background:var(--white);color:var(--ink);font:14px "Public Sans",sans-serif}
+.field[readonly]{background:var(--panel-2);font-family:"JetBrains Mono",ui-monospace,monospace;font-size:12.5px}
+.row2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.check{display:flex;gap:8px;align-items:center;font-size:13.5px;min-height:32px}
+.check input{width:16px;height:16px;accent-color:var(--ink)}
+.facts{display:flex;gap:6px 16px;flex-wrap:wrap;font-size:12.5px;color:var(--ink-3)}
+.secret{display:flex;gap:8px;align-items:center;font-size:13px;padding:8px 12px;border-radius:8px;background:var(--panel-2)}
+.tablewrap{border:1px solid var(--rule);border-radius:12px;background:var(--white);overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:14px;min-width:720px}
+th{text-align:left;font-weight:600;color:var(--ink-3);font-size:13px;padding:10px 16px;border-bottom:1px solid var(--rule)}
+td{padding:12px 16px;border-bottom:1px solid var(--rule);vertical-align:middle}
+tr:last-child td{border-bottom:0}
+.note{display:flex;gap:10px;align-items:flex-start;padding:14px 16px;border-radius:10px;background:var(--panel);font-size:13.5px;color:var(--ink-2);margin-top:28px}
+@media (max-width:1100px){.grid{grid-template-columns:minmax(0,1fr)}}
+@media (max-width:760px){.rail{flex-basis:100%;border-right:0;border-bottom:1px solid var(--rule);padding:14px 12px}.brand{margin-bottom:10px}.railnav{flex-direction:row;overflow-x:auto}.railgroup{display:none}.topbar{padding:12px 16px}.page{padding:24px 16px 48px}.row2{grid-template-columns:minmax(0,1fr)}h1{font-size:26px}}
+</style>
+
+</head>
+<body>
+<div class="shell">
+  <nav class="rail" aria-label="Main">
+    <a class="brand" href="Scan.html">
+      <svg width="26" height="26" viewBox="0 0 26 26" aria-hidden="true"><rect x="1" y="1" width="24" height="24" rx="7" fill="none" stroke="currentColor" stroke-width="2"></rect><path d="M7 15.5l4-4 3 3 5-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+      Codebase Pilot
+    </a>
+    <div class="railnav">
+      <a class="navlink" href="#">Overview</a>
+      <a class="navlink" href="Scan.html">Scan a repository</a>
+      <a class="navlink" href="ScanResults.html">Dependencies</a>
+      <a class="navlink" href="ScanResults.html">Vulnerabilities</a>
+      <a class="navlink" href="Updates.html">Updates</a>
+      <a class="navlink" href="#">Approvals <span class="count">1</span></a>
+      <div class="railgroup">Setup</div>
+      <a class="navlink" href="SourceMapping.html">Source mapping</a>
+      <a class="navlink on" href="Channels.html" aria-current="page">Channels and schedules</a>
+    </div>
+  </nav>
+  <main class="content">
+    <div class="topbar">
+      <span class="small muted">Setup · step 3 of 3 · pilot-sandbox-shop</span>
+      <span class="pill">3 of 7 sources connected</span>
+    </div>
+    <div class="page">
+      <h1>Tell Pilot where changes come from</h1>
+      <p class="lede">Every source below feeds the same pipeline: a detected change goes through impact analysis, then into a plan, a tested fix and a pull request that a person approves.</p>
+
+      <section class="sec" aria-labelledby="h-sources" style="margin-top: 20px">
+        <div class="sechead"><h2 id="h-sources">Change sources</h2><span class="small muted">Tokens stay on the server; this page only names them</span></div>
+
+        <div class="group">Outside the company</div>
+        <div class="grid">
+          <article class="conn">
+            <header><h3>New releases</h3><span class="pill done">Connected</span></header>
+            <p>Checks every package for new versions and reads their release notes and changelogs.</p>
+            <div class="facts"><span>npm registry or <code>NPM_REGISTRY_URL</code></span><span>OSV for advisories</span></div>
+            <footer><label class="small" for="rel-every" style="font-weight: 600">Check every</label><select class="field" id="rel-every" style="width: auto"><option>6 hours</option><option>24 hours</option><option>Hour</option></select></footer>
+          </article>
+          <article class="conn">
+            <header><h3>Dependabot alerts</h3><span class="pill done">Connected</span></header>
+            <p>Reads open security alerts for this repository and starts an impact check for each new one.</p>
+            <div class="facts"><span>Token permission: Dependabot alerts, read</span></div>
+            <footer><label class="small" for="dep-every" style="font-weight: 600">Check every</label><select class="field" id="dep-every" style="width: auto"><option>30 minutes</option><option>Hour</option><option>6 hours</option></select></footer>
+          </article>
+          <article class="conn">
+            <header><h3>Dependabot and Renovate pull requests</h3><span class="pill done">Connected</span></header>
+            <p>When a bot opens an upgrade pull request, Pilot runs the impact check on that upgrade and can explain it on the pull request.</p>
+            <div>
+              <label class="label" for="botmode">On the bot's pull request</label>
+              <select class="field" id="botmode"><option>Do not comment</option><option>Comment with the impact and a link to Pilot's fix</option><option>Comment and push the verified fix, after approval</option></select>
+            </div>
+          </article>
+        </div>
+
+        <div class="group">Inside the company</div>
+        <div class="grid">
+          <article class="conn">
+            <header><h3>GitHub push webhook</h3><span class="pill wait">Not installed</span></header>
+            <p>Re-scans the repository on every push to <code>main</code>, so merged fixes close their upgrades and new internal changes are picked up at once.</p>
+            <div><label class="label" for="hookurl">Payload URL</label><input class="field" id="hookurl" readonly value="https://[your-pilot-host]/api/webhooks/github"></div>
+            <div class="facts"><span>Event: push</span><span>Signed with <code>GITHUB_WEBHOOK_SECRET</code></span><span>Token permission: Webhooks, write</span></div>
+            <footer><a class="btn btn-primary btn-sm" href="#">Install webhook</a><a class="btn btn-sm" href="#">Send a test ping</a></footer>
+          </article>
+          <article class="conn">
+            <header><h3>Confluence</h3><span class="pill">Not connected</span></header>
+            <p>Reads release and API-change announcements from a page or space, and can publish Pilot's reports there.</p>
+            <div><label class="label" for="cflink">Page or space link</label><input class="field" id="cflink" placeholder="https://your-site.atlassian.net/wiki/spaces/PAY/pages/…"></div>
+            <div class="row2">
+              <div><label class="label" for="cfuser">Account email</label><input class="field" id="cfuser" placeholder="pilot-bot@acme.com"></div>
+              <div><span class="label">API token</span><div class="secret"><code>CONFLUENCE_API_TOKEN</code><span class="muted">server secret</span></div></div>
+            </div>
+            <div><label class="check"><input type="checkbox" checked> Read changes from this page and its children</label><label class="check"><input type="checkbox"> Publish upgrade reports to this space</label></div>
+            <footer><a class="btn btn-primary btn-sm" href="#">Test connection</a></footer>
+          </article>
+          <article class="conn">
+            <header><h3>Slack</h3><span class="pill">Not connected</span></header>
+            <p>Reads messages that announce changes, such as a field being removed from a topic, and posts Pilot's notifications.</p>
+            <div class="row2">
+              <div><label class="label" for="slch">Channel</label><input class="field" id="slch" placeholder="#payments-changes"></div>
+              <div><span class="label">Bot token</span><div class="secret"><code>SLACK_BOT_TOKEN</code><span class="muted">server secret</span></div></div>
+            </div>
+            <div><label class="check"><input type="checkbox" checked> Read change announcements in this channel</label><label class="check"><input type="checkbox" checked> Post when an upgrade needs a decision</label></div>
+            <footer><a class="btn btn-primary btn-sm" href="#">Test connection</a></footer>
+          </article>
+          <article class="conn">
+            <header><h3>Specs, topics and relationships</h3><span class="pill done">Connected</span></header>
+            <p>OpenAPI, AsyncAPI and protobuf files in your repositories, Kafka schemas, and the links your teams declare between services.</p>
+            <div><label class="label" for="sr">Schema registry</label><input class="field" id="sr" placeholder="https://schema-registry.internal:8081"></div>
+            <div class="facts"><span>Relationships file: <code>pilot-relationships.yaml</code></span><span>Service catalog: <code>catalog-info.yaml</code></span></div>
+          </article>
+        </div>
+      </section>
+
+      <section class="sec" aria-labelledby="h-notify">
+        <div class="sechead"><h2 id="h-notify">Where Pilot reports</h2><span class="small muted">Only after a person decides, except notifications</span></div>
+        <div class="grid">
+          <article class="conn">
+            <header><h3>Email</h3><span class="pill done">On</span></header>
+            <div><label class="label" for="mail">Send decisions and weekly reports to</label><input class="field" id="mail" value="team-shop@acme.com"></div>
+          </article>
+          <article class="conn">
+            <header><h3>GitHub dependency dashboard</h3><span class="pill">Off</span></header>
+            <p>One issue in the repository listing every upgrade, its risk and its pull request, updated in place.</p>
+            <footer><label class="check"><input type="checkbox"> Publish after every scan</label></footer>
+          </article>
+        </div>
+      </section>
+
+      <section class="sec" aria-labelledby="h-sched">
+        <div class="sechead"><h2 id="h-sched">Schedules</h2><span class="small muted">Each trigger queues the same scan job; repeats within a window are merged</span></div>
+        <div class="tablewrap">
+          <table>
+            <thead><tr><th>Trigger</th><th>Watches</th><th>How often</th><th>Status</th></tr></thead>
+            <tbody>
+              <tr><td><b>Push webhook</b></td><td>Inside: code, specs, merged pull requests</td><td>On every push</td><td><span class="pill wait">Not installed</span></td></tr>
+              <tr><td><b>Internal sources</b></td><td>Inside: Confluence, Slack, schema registry</td><td>Every 15 minutes</td><td><span class="pill">Waiting for a connection</span></td></tr>
+              <tr><td><b>Repository re-scan</b></td><td>Inside: anything the webhook missed</td><td>Every 24 hours</td><td><span class="pill done">On</span></td></tr>
+              <tr><td><b>Dependabot alerts</b></td><td>Outside: security advisories</td><td>Every 30 minutes</td><td><span class="pill done">On</span></td></tr>
+              <tr><td><b>New releases</b></td><td>Outside: registry versions and release notes</td><td>Every 6 hours</td><td><span class="pill done">On</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <div class="note" role="note">
+        <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true" style="flex: none; margin-top: 1px"><rect x="3.5" y="8" width="11" height="7.5" rx="1.8" fill="none" stroke="currentColor" stroke-width="1.5"></rect><path d="M6 8V6a3 3 0 016 0v2" fill="none" stroke="currentColor" stroke-width="1.5"></path></svg>
+        <span>Tokens are never sent to the browser or stored in Pilot's database. Each connection names a secret in the server's environment or Key Vault, and Test connection checks it from the server.</span>
+      </div>
+      <div style="display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-top: 30px; padding-top: 22px; border-top: 1px solid var(--rule)">
+        <a class="btn" href="SourceMapping.html">Back</a>
+        <a class="btn btn-primary" href="Updates.html">Save and open the update feed</a>
+      </div>
+    </div>
+  </main>
+</div>
+</body>
+</html>

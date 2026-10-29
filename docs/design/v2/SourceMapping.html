@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Source mapping</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<style>
+:root{--ink:#1C2632;--ink-2:#4A5765;--ink-3:#5F6B79;--bg:#FAFBFC;--panel:#EEF2F5;--panel-2:#F4F6F8;--rule:#D6DDE4;--white:#FFFFFF;--critical:#C4321C;--critical-bg:#FBEAE6;--high:#9A5C00;--high-bg:#FDF1DD;--medium:#2F6CB0;--medium-bg:#E6EFF9;--low:#2E7A4E;--low-bg:#E5F2EA;--focus:#2F6CB0}
+@media (prefers-color-scheme: dark){:root{--ink:#E6ECF2;--ink-2:#B3BECA;--ink-3:#97A3B1;--bg:#141B23;--panel:#1C252F;--panel-2:#18212A;--rule:#2C3743;--white:#1A232C;--critical:#F0715C;--critical-bg:#3A1F1B;--high:#E7A440;--high-bg:#36291A;--medium:#6FA6E8;--medium-bg:#1C2C40;--low:#67C08C;--low-bg:#1A3226;--focus:#6FA6E8}}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 "Public Sans",system-ui,-apple-system,"Segoe UI",sans-serif;font-variant-numeric:tabular-nums;-webkit-font-smoothing:antialiased}
+a{color:var(--medium)}a:hover{color:var(--ink)}
+code,.mono{font-family:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;font-size:13px}
+:focus-visible{outline:2px solid var(--focus);outline-offset:2px;border-radius:4px}
+.shell{display:flex;flex-wrap:wrap;min-height:100vh}
+.rail{flex:0 0 232px;box-sizing:border-box;background:var(--panel-2);border-right:1px solid var(--rule);padding:22px 14px}
+.content{flex:999 1 560px;min-width:0}
+.brand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:16px;margin:0 8px 26px;color:var(--ink);text-decoration:none}
+.railnav{display:flex;flex-direction:column;gap:2px}
+.navlink{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:9px 10px;border-radius:6px;color:var(--ink-2);text-decoration:none;font-weight:500;font-size:14px;white-space:nowrap}
+.navlink:hover{background:var(--panel);color:var(--ink)}
+.navlink.on{background:var(--white);color:var(--ink);box-shadow:inset 3px 0 0 var(--ink)}
+.count{font-size:12px;background:var(--critical);color:#fff;border-radius:10px;padding:0 7px;line-height:18px}
+.railgroup{font-size:12px;color:var(--ink-3);font-weight:600;margin:20px 10px 6px}
+.topbar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:14px 40px;border-bottom:1px solid var(--rule)}
+.page{box-sizing:border-box;max-width:1240px;padding:36px 40px 72px}
+h1{font-size:32px;line-height:1.15;font-weight:700;letter-spacing:-.015em;margin:0 0 8px}
+h2{font-size:19px;font-weight:700;margin:0}
+.lede{color:var(--ink-2);margin:0 0 26px;max-width:72ch;font-size:16px}
+.muted{color:var(--ink-3)}.small{font-size:13px}
+.card{background:var(--white);border:1px solid var(--rule);border-radius:12px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;box-sizing:border-box;border:1px solid var(--rule);background:var(--white);color:var(--ink);padding:0 18px;border-radius:8px;font:600 14px "Public Sans",sans-serif;text-decoration:none;cursor:pointer}
+.btn:hover{border-color:var(--ink-3);color:var(--ink)}
+.btn-primary{background:var(--ink);border-color:var(--ink);color:var(--bg)}
+.btn-primary:hover{color:var(--bg);opacity:.92}
+.btn-sm{min-height:36px;padding:0 12px;font-size:13px}
+.pill{display:inline-flex;align-items:center;gap:6px;padding:2px 10px;border-radius:999px;font-size:12.5px;font-weight:600;background:var(--panel);color:var(--ink-2);white-space:nowrap}
+.pill.wait{background:var(--high-bg);color:var(--high)}.pill.done{background:var(--low-bg);color:var(--low)}
+.tablewrap{border:1px solid var(--rule);border-radius:12px;background:var(--white);overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:14px;min-width:860px}
+th{text-align:left;font-weight:600;color:var(--ink-3);font-size:13px;padding:10px 16px;border-bottom:1px solid var(--rule);white-space:nowrap}
+td{padding:14px 16px;border-bottom:1px solid var(--rule);vertical-align:top}
+tr:last-child td{border-bottom:0}
+tr.ask td{background:var(--high-bg)}
+.kind{font-size:12px;font-weight:600;color:var(--ink-2);border:1px solid var(--rule);border-radius:4px;padding:0 6px;white-space:nowrap}
+.src{font-family:"JetBrains Mono",ui-monospace,monospace;font-size:12.5px}
+.field{display:block;width:100%;box-sizing:border-box;min-height:40px;padding:8px 12px;border:1px solid var(--rule);border-radius:8px;background:var(--white);color:var(--ink);font:14px "Public Sans",sans-serif}
+.legend{display:flex;gap:20px;flex-wrap:wrap;margin:0 0 14px;font-size:13px;color:var(--ink-2)}
+.legend span{display:inline-flex;gap:8px;align-items:center}
+@media (max-width:760px){.rail{flex-basis:100%;border-right:0;border-bottom:1px solid var(--rule);padding:14px 12px}.brand{margin-bottom:10px}.railnav{flex-direction:row;overflow-x:auto}.railgroup{display:none}.topbar{padding:12px 16px}.page{padding:24px 16px 48px}h1{font-size:26px}}
+</style>
+
+</head>
+<body>
+<div class="shell">
+  <nav class="rail" aria-label="Main">
+    <a class="brand" href="Scan.html">
+      <svg width="26" height="26" viewBox="0 0 26 26" aria-hidden="true"><rect x="1" y="1" width="24" height="24" rx="7" fill="none" stroke="currentColor" stroke-width="2"></rect><path d="M7 15.5l4-4 3 3 5-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+      Codebase Pilot
+    </a>
+    <div class="railnav">
+      <a class="navlink" href="#">Overview</a>
+      <a class="navlink" href="Scan.html">Scan a repository</a>
+      <a class="navlink" href="ScanResults.html">Dependencies</a>
+      <a class="navlink" href="ScanResults.html">Vulnerabilities</a>
+      <a class="navlink" href="Updates.html">Updates</a>
+      <a class="navlink" href="#">Approvals <span class="count">1</span></a>
+      <div class="railgroup">Setup</div>
+      <a class="navlink on" href="SourceMapping.html" aria-current="page">Source mapping</a>
+      <a class="navlink" href="Channels.html">Channels and schedules</a>
+    </div>
+  </nav>
+  <main class="content">
+    <div class="topbar">
+      <span class="small muted">Setup · step 2 of 3</span>
+      <span class="pill wait">2 sources to confirm</span>
+    </div>
+    <div class="page">
+      <h1>Where each dependency publishes its changes</h1>
+      <p class="lede">Pilot reads release notes, changelogs and specs from these places. Check the ones it found and fill in the ones it could not; it reads them again on every new version.</p>
+      <div class="legend" aria-label="Legend">
+        <span><span class="pill done">Verified</span> repository exists and matches the package</span>
+        <span><span class="pill wait">Confirm</span> found, but a person should check</span>
+        <span><span class="pill">Not found</span> tell Pilot where to look</span>
+      </div>
+      <div class="tablewrap">
+        <table>
+          <thead><tr><th>Dependency</th><th>Kind</th><th>Where changes come from</th><th>Found by</th><th>Status</th><th><span class="muted">Action</span></th></tr></thead>
+          <tbody>
+            <tr>
+              <td><b>express</b></td>
+              <td><span class="kind">npm · runtime</span></td>
+              <td><span class="src">github.com/expressjs/express</span><br><span class="small muted">GitHub releases and History.md</span></td>
+              <td class="small">Registry metadata</td>
+              <td><span class="pill done">Verified</span></td>
+              <td><a class="btn btn-sm" href="#">Change</a></td>
+            </tr>
+            <tr>
+              <td><b>mocha</b></td>
+              <td><span class="kind">npm · dev</span></td>
+              <td><span class="src">github.com/mochajs/mocha</span><br><span class="small muted">GitHub releases and CHANGELOG.md</span></td>
+              <td class="small">Registry metadata</td>
+              <td><span class="pill done">Verified</span></td>
+              <td><a class="btn btn-sm" href="#">Change</a></td>
+            </tr>
+            <tr>
+              <td><b>orders.created</b><br><span class="small muted">sample</span></td>
+              <td><span class="kind">Kafka topic</span></td>
+              <td><span class="src">schema registry · orders.created-value</span><br><span class="small muted">Compatibility checked on every new version</span></td>
+              <td class="small">pilot-relationships.yaml</td>
+              <td><span class="pill done">Verified</span></td>
+              <td><a class="btn btn-sm" href="#">Change</a></td>
+            </tr>
+            <tr class="ask">
+              <td><b>payments-api</b><br><span class="small muted">sample</span></td>
+              <td><span class="kind">OpenAPI</span></td>
+              <td><span class="src">github.com/acme/payments-service</span><br><span class="small muted">docs/openapi.yaml on main</span></td>
+              <td class="small">Service catalog entry</td>
+              <td><span class="pill wait">Confirm</span></td>
+              <td><div style="display: flex; gap: 8px; flex-wrap: wrap"><a class="btn btn-sm btn-primary" href="#">Confirm</a><a class="btn btn-sm" href="#">Change</a></div></td>
+            </tr>
+            <tr class="ask">
+              <td><b>@acme/money</b><br><span class="small muted">sample</span></td>
+              <td><span class="kind">private npm</span></td>
+              <td colspan="3">
+                <div style="display: grid; grid-template-columns: 200px minmax(0, 1fr); gap: 10px; align-items: end">
+                  <div>
+                    <label class="small" for="srctype" style="display: block; font-weight: 600; margin-bottom: 4px">Source type</label>
+                    <select class="field" id="srctype">
+                      <option>GitHub or Bitbucket repository</option>
+                      <option>Changelog URL</option>
+                      <option>Confluence page</option>
+                      <option>Slack channel</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label class="small" for="srcval" style="display: block; font-weight: 600; margin-bottom: 4px">Repository</label>
+                    <input class="field" id="srcval" placeholder="owner/repo, for example acme/money">
+                  </div>
+                </div>
+                <p class="small muted" style="margin: 8px 0 0">The Artifactory package has no repository field, so Pilot could not find its source.</p>
+              </td>
+              <td><a class="btn btn-sm btn-primary" href="#">Save</a></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="small muted" style="margin: 14px 0 0">156 transitive packages are resolved when an upgrade or advisory needs them. Changes here are saved to <code>config/package_sources.yaml</code> and used from the next scan.</p>
+      <div style="display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-top: 30px; padding-top: 22px; border-top: 1px solid var(--rule)">
+        <a class="btn" href="ScanResults.html">Back to results</a>
+        <a class="btn btn-primary" href="Channels.html">Continue: connect channels</a>
+      </div>
+    </div>
+  </main>
+</div>
+</body>
+</html>

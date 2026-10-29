@@ -103,20 +103,41 @@ def _repo_label(value: str | None) -> str:
 
 
 def _run_by_update(conn: sqlite3.Connection, scan_id: str) -> dict[int, sqlite3.Row]:
-    return {
+    """The run behind each dependency update of this scan.
+
+    A re-scan does not start a second run for an upgrade that is already in play (runner.enqueue_runs_for_scan
+    reuses the open run of the earlier scan), so that run is mapped onto the matching update of this scan.
+    Without this, the Overview of the newest scan would lose a run that is still waiting for a decision.
+    """
+    runs = {
         r["dependency_update_id"]: r for r in conn.execute("SELECT * FROM upgrade_runs WHERE scan_id = ?", (scan_id,))
     }
+    repo_url = run_store.scan_repo(conn, scan_id)["repo_url"]
+    for update in updates_store.list_dependency_updates(conn, scan_id):
+        if update["id"] in runs or not update["recommended_target"]:
+            continue
+        carried = run_store.find_open_run(
+            conn, repo_url=repo_url, ecosystem=update["ecosystem"], package=update["name"],
+            to_version=update["recommended_target"],
+        )
+        if carried is not None:
+            runs[update["id"]] = carried
+    return runs
 
 
-def _reachable_updates(conn: sqlite3.Connection, scan_id: str) -> set[int]:
-    rows = conn.execute(
-        """SELECT DISTINCT u.id FROM dependency_updates u
-           JOIN upgrade_runs r ON r.dependency_update_id = u.id
-           JOIN impact_findings f ON f.upgrade_run_id = r.id
-           WHERE u.scan_id = ? AND (f.confirmed IS NULL OR f.confirmed = 1)""",
-        (scan_id,),
-    ).fetchall()
-    return {r["id"] for r in rows}
+def _reachable_updates(
+    conn: sqlite3.Connection, scan_id: str, runs: dict[int, sqlite3.Row] | None = None
+) -> set[int]:
+    """Updates of this scan whose run (this scan's or a carried one) has confirmed findings."""
+    runs = _run_by_update(conn, scan_id) if runs is None else runs
+    return {
+        update_id
+        for update_id, run in runs.items()
+        if conn.execute(
+            "SELECT 1 FROM impact_findings WHERE upgrade_run_id = ? AND (confirmed IS NULL OR confirmed = 1) LIMIT 1",
+            (run["id"],),
+        ).fetchone()
+    }
 
 
 def reachability(row: sqlite3.Row, reachable: set[int]) -> str:
@@ -128,7 +149,7 @@ def reachability(row: sqlite3.Row, reachable: set[int]) -> str:
 
 def list_dependencies(conn: sqlite3.Connection, scan_id: str) -> list[dict]:
     runs = _run_by_update(conn, scan_id)
-    reachable = _reachable_updates(conn, scan_id)
+    reachable = _reachable_updates(conn, scan_id, runs)
     out = []
     for r in updates_store.list_dependency_updates(conn, scan_id):
         run = runs.get(r["id"])

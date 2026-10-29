@@ -49,6 +49,10 @@ class Settings(BaseSettings):
     github_webhook_secret: str | None = None
     # Re-scan every repository Pilot already knows, this often (0 = never); runs in the embedded worker
     pilot_rescan_minutes: int = 0
+    # Post bot-PR comments and the dashboard / team issues on GitHub after every scan (repo_actions job).
+    # Off by default: nothing leaves the system without a person asking (ground rule 8). The `bot-prs` and
+    # `issues` CLI commands still run them on request.
+    pilot_repo_actions: bool = False
 
     @field_validator("*", mode="before")
     @classmethod

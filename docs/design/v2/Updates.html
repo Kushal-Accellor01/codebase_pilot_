@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Update feed</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<style>
+:root{--ink:#1C2632;--ink-2:#4A5765;--ink-3:#5F6B79;--bg:#FAFBFC;--panel:#EEF2F5;--panel-2:#F4F6F8;--rule:#D6DDE4;--white:#FFFFFF;--critical:#C4321C;--critical-bg:#FBEAE6;--high:#9A5C00;--high-bg:#FDF1DD;--medium:#2F6CB0;--medium-bg:#E6EFF9;--low:#2E7A4E;--low-bg:#E5F2EA;--focus:#2F6CB0}
+@media (prefers-color-scheme: dark){:root{--ink:#E6ECF2;--ink-2:#B3BECA;--ink-3:#97A3B1;--bg:#141B23;--panel:#1C252F;--panel-2:#18212A;--rule:#2C3743;--white:#1A232C;--critical:#F0715C;--critical-bg:#3A1F1B;--high:#E7A440;--high-bg:#36291A;--medium:#6FA6E8;--medium-bg:#1C2C40;--low:#67C08C;--low-bg:#1A3226;--focus:#6FA6E8}}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 "Public Sans",system-ui,-apple-system,"Segoe UI",sans-serif;font-variant-numeric:tabular-nums;-webkit-font-smoothing:antialiased}
+a{color:var(--medium)}a:hover{color:var(--ink)}
+code,.mono{font-family:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;font-size:12.5px}
+:focus-visible{outline:2px solid var(--focus);outline-offset:2px;border-radius:4px}
+.shell{display:flex;flex-wrap:wrap;min-height:100vh}
+.rail{flex:0 0 232px;box-sizing:border-box;background:var(--panel-2);border-right:1px solid var(--rule);padding:22px 14px}
+.content{flex:999 1 560px;min-width:0}
+.brand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:16px;margin:0 8px 26px;color:var(--ink);text-decoration:none}
+.railnav{display:flex;flex-direction:column;gap:2px}
+.navlink{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:9px 10px;border-radius:6px;color:var(--ink-2);text-decoration:none;font-weight:500;font-size:14px;white-space:nowrap}
+.navlink:hover{background:var(--panel);color:var(--ink)}
+.navlink.on{background:var(--white);color:var(--ink);box-shadow:inset 3px 0 0 var(--ink)}
+.count{font-size:12px;background:var(--critical);color:#fff;border-radius:10px;padding:0 7px;line-height:18px}
+.railgroup{font-size:12px;color:var(--ink-3);font-weight:600;margin:20px 10px 6px}
+.topbar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:14px 40px;border-bottom:1px solid var(--rule)}
+.page{box-sizing:border-box;max-width:1240px;padding:36px 40px 72px}
+h1{font-size:32px;line-height:1.15;font-weight:700;letter-spacing:-.015em;margin:0 0 8px}
+h3{font-size:17px;font-weight:700;margin:0}
+.lede{color:var(--ink-2);margin:0 0 22px;max-width:72ch;font-size:16px}
+.muted{color:var(--ink-3)}.small{font-size:13px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;box-sizing:border-box;border:1px solid var(--rule);background:var(--white);color:var(--ink);padding:0 18px;border-radius:8px;font:600 14px "Public Sans",sans-serif;text-decoration:none;cursor:pointer}
+.btn:hover{border-color:var(--ink-3);color:var(--ink)}
+.btn-primary{background:var(--ink);border-color:var(--ink);color:var(--bg)}
+.btn-primary:hover{color:var(--bg);opacity:.92}
+.pill{display:inline-flex;align-items:center;gap:6px;padding:2px 10px;border-radius:999px;font-size:12.5px;font-weight:600;background:var(--panel);color:var(--ink-2);white-space:nowrap}
+.pill.wait{background:var(--high-bg);color:var(--high)}.pill.run{background:var(--medium-bg);color:var(--medium)}.pill.done{background:var(--low-bg);color:var(--low)}.pill.fail{background:var(--critical-bg);color:var(--critical)}
+.chips{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 18px}
+.chip{display:inline-flex;align-items:center;min-height:36px;box-sizing:border-box;border:1px solid var(--rule);background:var(--white);border-radius:999px;padding:0 14px;font:600 13px "Public Sans",sans-serif;color:var(--ink-2);cursor:pointer}
+.chip[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:var(--bg)}
+.sample{display:flex;gap:10px;align-items:flex-start;padding:12px 16px;border:1px dashed var(--ink-3);border-radius:10px;font-size:13.5px;color:var(--ink-2);margin:0 0 22px}
+.feed{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:14px}
+.item{display:grid;grid-template-columns:6px minmax(0,1fr);background:var(--white);border:1px solid var(--rule);border-radius:12px;overflow:hidden}
+.item .bar{background:var(--rule)}
+.bar.critical{background:var(--critical)}.bar.high{background:var(--high)}.bar.medium{background:var(--medium)}.bar.low{background:var(--low)}
+.body{padding:18px 22px;display:grid;grid-template-columns:minmax(0,1fr) 250px;gap:14px 28px}
+.meta{display:flex;gap:8px;flex-wrap:wrap;align-items:center;font-size:12.5px;color:var(--ink-3);margin-bottom:6px}
+.src{display:inline-flex;align-items:center;gap:6px;font-weight:600;color:var(--ink-2);border:1px solid var(--rule);border-radius:4px;padding:0 7px}
+.side{font-size:12.5px;color:var(--ink-3);font-weight:600}
+blockquote{margin:10px 0 0;padding:8px 12px;border-radius:8px;background:var(--panel-2);font-size:13.5px;color:var(--ink-2)}
+blockquote cite{display:block;font-style:normal;font-size:12px;color:var(--ink-3);margin-top:4px}
+.impact{margin:10px 0 0;font-size:14px;color:var(--ink-2)}
+.impact b{color:var(--ink)}
+.track{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:4px;margin:10px 0 6px}
+.track span{height:6px;border-radius:3px;background:var(--panel)}
+.track span.on{background:var(--ink)}
+.track span.now{background:var(--medium)}
+.track span.stop{background:var(--high)}
+.right{display:flex;flex-direction:column;align-items:flex-start;gap:8px}
+@media (max-width:1000px){.body{grid-template-columns:minmax(0,1fr)}}
+@media (max-width:760px){.rail{flex-basis:100%;border-right:0;border-bottom:1px solid var(--rule);padding:14px 12px}.brand{margin-bottom:10px}.railnav{flex-direction:row;overflow-x:auto}.railgroup{display:none}.topbar{padding:12px 16px}.page{padding:24px 16px 48px}.body{padding:16px}h1{font-size:26px}}
+</style>
+
+</head>
+<body>
+<div class="shell">
+  <nav class="rail" aria-label="Main">
+    <a class="brand" href="Scan.html">
+      <svg width="26" height="26" viewBox="0 0 26 26" aria-hidden="true"><rect x="1" y="1" width="24" height="24" rx="7" fill="none" stroke="currentColor" stroke-width="2"></rect><path d="M7 15.5l4-4 3 3 5-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+      Codebase Pilot
+    </a>
+    <div class="railnav">
+      <a class="navlink" href="#">Overview</a>
+      <a class="navlink" href="Scan.html">Scan a repository</a>
+      <a class="navlink" href="ScanResults.html">Dependencies</a>
+      <a class="navlink" href="ScanResults.html">Vulnerabilities</a>
+      <a class="navlink on" href="Updates.html" aria-current="page">Updates</a>
+      <a class="navlink" href="#">Approvals <span class="count">1</span></a>
+      <div class="railgroup">Setup</div>
+      <a class="navlink" href="SourceMapping.html">Source mapping</a>
+      <a class="navlink" href="Channels.html">Channels and schedules</a>
+    </div>
+  </nav>
+  <main class="content">
+    <div class="topbar">
+      <span class="small muted">pilot-sandbox-shop · all sources</span>
+      <span class="pill run">Watching 7 sources</span>
+    </div>
+    <div class="page">
+      <h1>What changed, and what it means for your code</h1>
+      <p class="lede">Changes from outside (new releases, Dependabot) and inside the company (Confluence, Slack, specs, merged code) arrive in one shape and go through the same impact check.</p>
+      <div class="sample" role="note">
+        <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true" style="flex: none; margin-top: 1px"><circle cx="9" cy="9" r="7.5" fill="none" stroke="currentColor" stroke-width="1.5"></circle><path d="M9 5.5v4.2M9 12.3v.2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path></svg>
+        <span>Layout preview. Only the express item is the sandbox's real result; the others show how internal and security changes will look.</span>
+      </div>
+      <div class="chips" role="group" aria-label="Filter changes">
+        <button class="chip" aria-pressed="true">All 5</button>
+        <button class="chip" aria-pressed="false">Needs a decision 1</button>
+        <button class="chip" aria-pressed="false">Outside 2</button>
+        <button class="chip" aria-pressed="false">Inside 3</button>
+        <button class="chip" aria-pressed="false">Security 1</button>
+      </div>
+      <ol class="feed">
+        <li class="item">
+          <span class="bar critical" aria-hidden="true"></span>
+          <div class="body">
+            <div>
+              <div class="meta"><span class="src">New release</span><span>outside</span><span>·</span><span>today</span></div>
+              <h3>express 4.21.2 → 5.x removes APIs your routes use</h3>
+              <blockquote>Express 5 no longer supports the signature res.send(status), where status is a number. Instead, use the res.sendStatus(statusCode) function…<cite>Quoted from "Moving to Express 5" on expressjs.com, checked word for word</cite></blockquote>
+              <p class="impact"><b>7 lines in 5 files</b> use APIs that change. Tests fail on 5.x as the code stands and pass with Pilot's fix.</p>
+            </div>
+            <div class="right">
+              <span class="side">Step 5 of 6 · awaiting approval</span>
+              <div class="track" style="width: 100%" aria-hidden="true"><span class="on"></span><span class="on"></span><span class="on"></span><span class="on"></span><span class="now"></span><span></span></div>
+              <a class="btn btn-primary" href="#">Review and approve</a>
+            </div>
+          </div>
+        </li>
+        <li class="item">
+          <span class="bar high" aria-hidden="true"></span>
+          <div class="body">
+            <div>
+              <div class="meta"><span class="src">Dependabot alert</span><span>outside · security</span><span>·</span><span>sample</span></div>
+              <h3>SAMPLE-1 in qs reaches your code through express</h3>
+              <p class="impact"><b>Applies:</b> <code>app.js</code> parses form bodies with <code>express.urlencoded</code>, which hands input to the affected parser. Fixed by the express upgrade above.</p>
+            </div>
+            <div class="right">
+              <span class="side">Step 3 of 6 · plan ready</span>
+              <div class="track" style="width: 100%" aria-hidden="true"><span class="on"></span><span class="on"></span><span class="now"></span><span></span><span></span><span></span></div>
+              <a class="btn" href="#">Open the plan</a>
+            </div>
+          </div>
+        </li>
+        <li class="item">
+          <span class="bar medium" aria-hidden="true"></span>
+          <div class="body">
+            <div>
+              <div class="meta"><span class="src">Confluence</span><span>inside</span><span>·</span><span>sample</span></div>
+              <h3>payments-api v2 drops a field from the charge response</h3>
+              <blockquote>The amount_cents field is removed from the charge response in v2. Read amount.value instead.<cite>Quoted from the page "Payments API v2 changes"; the OpenAPI diff in acme/payments-service agrees</cite></blockquote>
+              <p class="impact"><b>2 call sites</b> in <code>lib/payments-client.js</code> read <code>amount_cents</code>. Owner: team-shop.</p>
+            </div>
+            <div class="right">
+              <span class="side">Step 2 of 6 · impact found</span>
+              <div class="track" style="width: 100%" aria-hidden="true"><span class="on"></span><span class="now"></span><span></span><span></span><span></span><span></span></div>
+              <a class="btn" href="#">See affected code</a>
+            </div>
+          </div>
+        </li>
+        <li class="item">
+          <span class="bar high" aria-hidden="true"></span>
+          <div class="body">
+            <div>
+              <div class="meta"><span class="src">Slack · #payments-changes</span><span>inside</span><span>·</span><span>sample</span></div>
+              <h3>orders.created will require a currency field</h3>
+              <blockquote>From next week every orders.created event must carry currency.<cite>Message in #payments-changes; the new schema fails the registry's compatibility check against the version you publish</cite></blockquote>
+              <p class="impact"><b>1 producer</b> in <code>routes/orders.js</code> sends events without it. No test covers the event, so Pilot cannot prove a fix.</p>
+            </div>
+            <div class="right">
+              <span class="side">Step 4 of 6 · needs an engineer</span>
+              <div class="track" style="width: 100%" aria-hidden="true"><span class="on"></span><span class="on"></span><span class="on"></span><span class="stop"></span><span></span><span></span></div>
+              <a class="btn" href="#">Open the issue</a>
+            </div>
+          </div>
+        </li>
+        <li class="item">
+          <span class="bar" aria-hidden="true"></span>
+          <div class="body">
+            <div>
+              <div class="meta"><span class="src">Push to main</span><span>inside</span><span>·</span><span>sample</span></div>
+              <h3>@acme/money upgrade merged, the change is closed</h3>
+              <p class="impact">The re-scan after the push found the new version in the lockfile, so Pilot marked the upgrade resolved and its pull request merged.</p>
+            </div>
+            <div class="right">
+              <span class="side">Done · resolved</span>
+              <div class="track" style="width: 100%" aria-hidden="true"><span class="on"></span><span class="on"></span><span class="on"></span><span class="on"></span><span class="on"></span><span class="on"></span></div>
+              <a class="btn" href="#">View the pull request</a>
+            </div>
+          </div>
+        </li>
+      </ol>
+    </div>
+  </main>
+</div>
+</body>
+</html>

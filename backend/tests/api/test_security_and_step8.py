@@ -20,7 +20,8 @@ def sign(body: bytes, secret: str = SECRET) -> str:
 
 def push(slug="acme/shop", ref="refs/heads/main", default="main", after="abc123") -> bytes:
     return json.dumps({"ref": ref, "after": after, "repository": {
-        "full_name": slug, "default_branch": default, "clone_url": f"https://github.com/{slug}.git"}}).encode()
+        "full_name": slug, "default_branch": default, "clone_url": f"https://github.com/{slug}.git",
+        "html_url": f"https://github.com/{slug}"}}).encode()
 
 
 def post_hook(client, body: bytes, event="push", signature=None):
@@ -94,7 +95,7 @@ def test_a_signed_push_to_the_default_branch_queues_one_scan(seeded):
         assert again.json()["job_id"] == first.json()["job_id"]
         post_hook(client, push(after="beef"))
     jobs_after = scan_jobs(seeded)
-    assert len(jobs_after) == before + 2 and jobs_after[-1]["repo_url"] == "https://github.com/acme/shop.git"
+    assert len(jobs_after) == before + 2 and jobs_after[-1]["repo_url"] == "https://github.com/acme/shop"  # same spelling as the dashboard
 
 
 # --- scheduled re-scan --------------------------------------------------------------------------------------------

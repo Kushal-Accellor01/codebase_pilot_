@@ -229,7 +229,8 @@ def create_app(
         conn = core_db.connect(db)
         try:
             job = jobs.enqueue(
-                conn, "scan", {"repo_url": repo.get("clone_url") or f"https://github.com/{slug}", "only": None},
+                # html_url (no .git) is how people type the repository in the dashboard; ingest also normalises.
+                conn, "scan", {"repo_url": repo.get("html_url") or f"https://github.com/{slug}", "only": None},
                 dedupe_key=f"scan:{slug}:{payload.get('after', '')}",
             )
         finally:

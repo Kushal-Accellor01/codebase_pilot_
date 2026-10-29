@@ -49,6 +49,17 @@ def repo_name(repo_url: str) -> str:
     return repo_url.rstrip("/\\").replace("\\", "/").split("/")[-1].removesuffix(".git") or "repo"
 
 
+def canonical_repo_url(repo_url: str) -> str:
+    """One spelling per repository, so re-scans, the push webhook and loop closure compare equal.
+
+    `https://github.com/o/r.git`, `https://github.com/o/r/` and `https://github.com/o/r` are the same repository;
+    a local path is kept as given (minus a trailing separator)."""
+    url = repo_url.strip().rstrip("/\\")
+    if "://" in url or url.startswith("git@"):
+        url = url.removesuffix(".git")
+    return url
+
+
 def clone_key(repo_url: str) -> str:
     """`<owner>__<repo>` so org-a/api and org-b/api never share a folder."""
     parts = [p for p in re.split(r"[/\\:]+", repo_url.rstrip("/\\")) if p]
@@ -110,7 +121,7 @@ def ingest(repo_url: str, db_path: str | None = None, workspace: str | Path | No
         with conn:
             conn.execute(
                 "INSERT OR REPLACE INTO scan_meta (scan_id, repo_url, branch, clone_path) VALUES (?, ?, ?, ?)",
-                (scan_id, repo_url.rstrip("/"), branch, str(clone)),
+                (scan_id, canonical_repo_url(repo_url), branch, str(clone)),
             )
         try:
             prune_clones(conn, workspace)

@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Scan in progress</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<style>
+:root{--ink:#1C2632;--ink-2:#4A5765;--ink-3:#5F6B79;--bg:#FAFBFC;--panel:#EEF2F5;--panel-2:#F4F6F8;--rule:#D6DDE4;--white:#FFFFFF;--critical:#C4321C;--critical-bg:#FBEAE6;--high:#9A5C00;--high-bg:#FDF1DD;--medium:#2F6CB0;--medium-bg:#E6EFF9;--low:#2E7A4E;--low-bg:#E5F2EA;--focus:#2F6CB0}
+@media (prefers-color-scheme: dark){:root{--ink:#E6ECF2;--ink-2:#B3BECA;--ink-3:#97A3B1;--bg:#141B23;--panel:#1C252F;--panel-2:#18212A;--rule:#2C3743;--white:#1A232C;--critical:#F0715C;--critical-bg:#3A1F1B;--high:#E7A440;--high-bg:#36291A;--medium:#6FA6E8;--medium-bg:#1C2C40;--low:#67C08C;--low-bg:#1A3226;--focus:#6FA6E8}}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 "Public Sans",system-ui,-apple-system,"Segoe UI",sans-serif;font-variant-numeric:tabular-nums;-webkit-font-smoothing:antialiased}
+a{color:var(--medium)}a:hover{color:var(--ink)}
+code,.mono{font-family:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;font-size:13px}
+:focus-visible{outline:2px solid var(--focus);outline-offset:2px;border-radius:4px}
+.shell{display:flex;flex-wrap:wrap;min-height:100vh}
+.rail{flex:0 0 232px;box-sizing:border-box;background:var(--panel-2);border-right:1px solid var(--rule);padding:22px 14px}
+.content{flex:999 1 560px;min-width:0}
+.brand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:16px;margin:0 8px 26px;color:var(--ink);text-decoration:none}
+.railnav{display:flex;flex-direction:column;gap:2px}
+.navlink{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:9px 10px;border-radius:6px;color:var(--ink-2);text-decoration:none;font-weight:500;font-size:14px;white-space:nowrap}
+.navlink:hover{background:var(--panel);color:var(--ink)}
+.navlink.on{background:var(--white);color:var(--ink);box-shadow:inset 3px 0 0 var(--ink)}
+.count{font-size:12px;background:var(--critical);color:#fff;border-radius:10px;padding:0 7px;line-height:18px}
+.railgroup{font-size:12px;color:var(--ink-3);font-weight:600;margin:20px 10px 6px}
+.topbar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:14px 40px;border-bottom:1px solid var(--rule)}
+.page{box-sizing:border-box;max-width:1240px;padding:36px 40px 72px}
+h1{font-size:32px;line-height:1.15;font-weight:700;letter-spacing:-.015em;margin:0 0 8px}
+h2{font-size:18px;font-weight:700;margin:0 0 12px}
+h3{font-size:15px;font-weight:700;margin:0}
+.lede{color:var(--ink-2);margin:0 0 28px;max-width:70ch;font-size:16px}
+.muted{color:var(--ink-3)}.small{font-size:13px}
+.card{background:var(--white);border:1px solid var(--rule);border-radius:12px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;box-sizing:border-box;border:1px solid var(--rule);background:var(--white);color:var(--ink);padding:0 18px;border-radius:8px;font:600 14px "Public Sans",sans-serif;text-decoration:none;cursor:pointer}
+.btn:hover{border-color:var(--ink-3);color:var(--ink)}
+.btn-primary{background:var(--ink);border-color:var(--ink);color:var(--bg)}
+.btn-primary:hover{color:var(--bg);opacity:.92}
+.pill{display:inline-flex;align-items:center;gap:6px;padding:2px 10px;border-radius:999px;font-size:12.5px;font-weight:600;background:var(--panel);color:var(--ink-2);white-space:nowrap}
+.pill.wait{background:var(--high-bg);color:var(--high)}.pill.run{background:var(--medium-bg);color:var(--medium)}.pill.done{background:var(--low-bg);color:var(--low)}.pill.fail{background:var(--critical-bg);color:var(--critical)}
+.split{display:grid;grid-template-columns:minmax(0,1fr) 380px;gap:32px;align-items:start}
+.progress{height:8px;border-radius:999px;background:var(--panel);overflow:hidden;margin:18px 0 6px}
+.progress span{display:block;height:100%;width:44%;background:var(--medium);border-radius:999px}
+.stage{display:grid;grid-template-columns:28px minmax(0,1fr) auto;gap:14px;align-items:start;padding:16px 22px;border-top:1px solid var(--rule)}
+.stage:first-child{border-top:0}
+.stage.running{background:var(--medium-bg)}
+.stage b{display:block;font-size:15px}
+.stage p{margin:2px 0 0;font-size:13.5px;color:var(--ink-2)}
+.ico{width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;margin-top:1px}
+.ico.done{background:var(--low);color:#fff}
+.ico.running{border:2px solid var(--medium);box-sizing:border-box}
+.ico.running::after{content:"";width:8px;height:8px;border-radius:50%;background:var(--medium)}
+.ico.queued{border:2px solid var(--rule);box-sizing:border-box}
+.tag{font-size:12px;font-weight:600;color:var(--ink-3);border:1px solid var(--rule);border-radius:4px;padding:0 6px;margin-left:6px;vertical-align:1px}
+.log{background:var(--ink);color:#DCE3EA;border-radius:12px;padding:18px 20px;font:12.5px/1.75 "JetBrains Mono",ui-monospace,monospace;overflow-x:auto;white-space:pre}
+.log .ok{color:#8FD3A8}.log .dim{color:#9AA7B4}
+.found{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1px;background:var(--rule);border:1px solid var(--rule);border-radius:12px;overflow:hidden}
+.found div{background:var(--white);padding:14px 16px}
+.found b{display:block;font-size:24px;letter-spacing:-.01em}
+.found span{font-size:13px;color:var(--ink-2)}
+@media (max-width:1000px){.split{grid-template-columns:minmax(0,1fr)}}
+@media (max-width:760px){.rail{flex-basis:100%;border-right:0;border-bottom:1px solid var(--rule);padding:14px 12px}.brand{margin-bottom:10px}.railnav{flex-direction:row;overflow-x:auto}.railgroup{display:none}.topbar{padding:12px 16px}.page{padding:24px 16px 48px}.stage{padding:14px 16px;grid-template-columns:28px minmax(0,1fr)}.stage .when{grid-column:2}h1{font-size:26px}}
+</style>
+
+</head>
+<body>
+<div class="shell">
+  <nav class="rail" aria-label="Main">
+    <a class="brand" href="Scan.html">
+      <svg width="26" height="26" viewBox="0 0 26 26" aria-hidden="true"><rect x="1" y="1" width="24" height="24" rx="7" fill="none" stroke="currentColor" stroke-width="2"></rect><path d="M7 15.5l4-4 3 3 5-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+      Codebase Pilot
+    </a>
+    <div class="railnav">
+      <a class="navlink" href="#">Overview</a>
+      <a class="navlink on" href="Scan.html" aria-current="page">Scan a repository</a>
+      <a class="navlink" href="ScanResults.html">Dependencies</a>
+      <a class="navlink" href="ScanResults.html">Vulnerabilities</a>
+      <a class="navlink" href="Updates.html">Updates</a>
+      <a class="navlink" href="#">Approvals <span class="count">1</span></a>
+      <div class="railgroup">Setup</div>
+      <a class="navlink" href="SourceMapping.html">Source mapping</a>
+      <a class="navlink" href="Channels.html">Channels and schedules</a>
+    </div>
+  </nav>
+  <main class="content">
+    <div class="topbar">
+      <span class="small muted"><a href="Scan.html" style="color: var(--ink-3)">Scan a repository</a> / pilot-sandbox-shop</span>
+      <span class="pill run">Scanning</span>
+    </div>
+    <div class="page">
+      <div style="display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; flex-wrap: wrap">
+        <div>
+          <h1>Scanning pilot-sandbox-shop</h1>
+          <p class="lede" style="margin-bottom: 0">Branch <code>main</code>. You can leave this page; the scan keeps going and the results appear under Dependencies and Vulnerabilities.</p>
+        </div>
+        <a class="btn" href="Scan.html">Cancel scan</a>
+      </div>
+      <div class="progress" role="progressbar" aria-label="Scan progress" aria-valuenow="44" aria-valuemin="0" aria-valuemax="100"><span></span></div>
+      <p class="small muted" style="margin: 0 0 26px">4 of 9 steps done</p>
+      <div class="split">
+        <ol class="card" style="list-style: none; margin: 0; padding: 0; overflow: hidden" aria-label="Scan steps">
+          <li class="stage"><span class="ico done"><svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 6.2l2.2 2.2 4.8-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg></span><div><b>Clone the repository</b><p>One fresh copy per scan, kept while an upgrade from it waits for approval</p></div><span class="small muted when">done</span></li>
+          <li class="stage"><span class="ico done"><svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 6.2l2.2 2.2 4.8-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg></span><div><b>Structure graph <span class="tag">Layer 1</span></b><p>61 graph nodes, 35 imports with line numbers, 3 declared packages</p></div><span class="small muted when">done</span></li>
+          <li class="stage"><span class="ico done"><svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 6.2l2.2 2.2 4.8-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg></span><div><b>Bill of materials</b><p>159 packages from <code>package-lock.json</code>, written as CycloneDX</p></div><span class="small muted when">done</span></li>
+          <li class="stage"><span class="ico done"><svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 6.2l2.2 2.2 4.8-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg></span><div><b>Internal dependencies</b><p>Specs, API clients, message topics and private packages the code uses</p></div><span class="small muted when">done</span></li>
+          <li class="stage running" aria-current="step"><span class="ico running"></span><div><b>Symbols and references <span class="tag">Layer 2</span></b><p>Indexing with scip-typescript: who calls each imported function</p></div><span class="small when" style="color: var(--medium); font-weight: 600">running</span></li>
+          <li class="stage"><span class="ico queued"></span><div><b>Vulnerabilities</b><p>Every package against OSV, plus open Dependabot alerts on GitHub</p></div><span class="small muted when">queued</span></li>
+          <li class="stage"><span class="ico queued"></span><div><b>Versions and sources</b><p>Registry versions, lockfile basis, where each package publishes its changes</p></div><span class="small muted when">queued</span></li>
+          <li class="stage"><span class="ico queued"></span><div><b>What changed <span class="tag">Layer 3</span></b><p>Release notes and specs read by the model; every claim must quote its source</p></div><span class="small muted when">queued</span></li>
+          <li class="stage"><span class="ico queued"></span><div><b>Impact on your code</b><p>Affected lines, blast radius, runtime warnings and failing tests on the new version</p></div><span class="small muted when">queued</span></li>
+        </ol>
+        <aside style="display: flex; flex-direction: column; gap: 20px">
+          <section>
+            <h2>Found so far</h2>
+            <div class="found">
+              <div><b>159</b><span>packages in the lockfile</span></div>
+              <div><b>3</b><span>declared in package.json</span></div>
+              <div><b>35</b><span>imports traced</span></div>
+              <div><b>0</b><span>internal contracts</span></div>
+            </div>
+          </section>
+          <section>
+            <h2>Activity</h2>
+            <div class="log" aria-label="Scan log"><span class="dim">clone</span>   <span class="ok">ok</span>  main, depth 1
+<span class="dim">layer 1</span> <span class="ok">ok</span>  scanner, js_analyzer, resolver
+<span class="dim">sbom</span>    <span class="ok">ok</span>  cyclonedx 1.6, 159 components
+<span class="dim">internal</span><span class="ok"> ok</span>  no openapi, asyncapi or .proto
+<span class="dim">layer 2</span> ..  scip-typescript --infer-tsconfig</div>
+          </section>
+        </aside>
+      </div>
+      <div style="display: flex; justify-content: flex-end; margin-top: 28px">
+        <a class="btn btn-primary" href="ScanResults.html">See results so far</a>
+      </div>
+    </div>
+  </main>
+</div>
+</body>
+</html>

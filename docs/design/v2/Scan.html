@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Scan a repository</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<style>
+:root{--ink:#1C2632;--ink-2:#4A5765;--ink-3:#5F6B79;--bg:#FAFBFC;--panel:#EEF2F5;--panel-2:#F4F6F8;--rule:#D6DDE4;--white:#FFFFFF;--critical:#C4321C;--critical-bg:#FBEAE6;--high:#9A5C00;--high-bg:#FDF1DD;--medium:#2F6CB0;--medium-bg:#E6EFF9;--low:#2E7A4E;--low-bg:#E5F2EA;--focus:#2F6CB0}
+@media (prefers-color-scheme: dark){:root{--ink:#E6ECF2;--ink-2:#B3BECA;--ink-3:#97A3B1;--bg:#141B23;--panel:#1C252F;--panel-2:#18212A;--rule:#2C3743;--white:#1A232C;--critical:#F0715C;--critical-bg:#3A1F1B;--high:#E7A440;--high-bg:#36291A;--medium:#6FA6E8;--medium-bg:#1C2C40;--low:#67C08C;--low-bg:#1A3226;--focus:#6FA6E8}}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 "Public Sans",system-ui,-apple-system,"Segoe UI",sans-serif;font-variant-numeric:tabular-nums;-webkit-font-smoothing:antialiased}
+a{color:var(--medium)}a:hover{color:var(--ink)}
+code,.mono{font-family:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;font-size:13px}
+:focus-visible{outline:2px solid var(--focus);outline-offset:2px;border-radius:4px}
+.shell{display:flex;flex-wrap:wrap;min-height:100vh}
+.rail{flex:0 0 232px;box-sizing:border-box;background:var(--panel-2);border-right:1px solid var(--rule);padding:22px 14px}
+.content{flex:999 1 560px;min-width:0}
+.brand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:16px;margin:0 8px 26px;color:var(--ink);text-decoration:none}
+.railnav{display:flex;flex-direction:column;gap:2px}
+.navlink{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:9px 10px;border-radius:6px;color:var(--ink-2);text-decoration:none;font-weight:500;font-size:14px;white-space:nowrap}
+.navlink:hover{background:var(--panel);color:var(--ink)}
+.navlink.on{background:var(--white);color:var(--ink);box-shadow:inset 3px 0 0 var(--ink)}
+.count{font-size:12px;background:var(--critical);color:#fff;border-radius:10px;padding:0 7px;line-height:18px}
+.railgroup{font-size:12px;color:var(--ink-3);font-weight:600;margin:20px 10px 6px}
+.topbar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:14px 40px;border-bottom:1px solid var(--rule)}
+.page{box-sizing:border-box;max-width:1240px;padding:36px 40px 72px}
+h1{font-size:32px;line-height:1.15;font-weight:700;letter-spacing:-.015em;margin:0 0 8px}
+h2{font-size:18px;font-weight:700;margin:0 0 12px}
+h3{font-size:15px;font-weight:700;margin:0}
+.lede{color:var(--ink-2);margin:0 0 30px;max-width:70ch;font-size:16px}
+.muted{color:var(--ink-3)}.small{font-size:13px}
+.card{background:var(--white);border:1px solid var(--rule);border-radius:12px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;box-sizing:border-box;border:1px solid var(--rule);background:var(--white);color:var(--ink);padding:0 18px;border-radius:8px;font:600 14px "Public Sans",sans-serif;text-decoration:none;cursor:pointer}
+.btn:hover{border-color:var(--ink-3);color:var(--ink)}
+.btn-primary{background:var(--ink);border-color:var(--ink);color:var(--bg)}
+.btn-primary:hover{color:var(--bg);opacity:.92}
+.pill{display:inline-flex;align-items:center;gap:6px;padding:2px 10px;border-radius:999px;font-size:12.5px;font-weight:600;background:var(--panel);color:var(--ink-2);white-space:nowrap}
+.pill.wait{background:var(--high-bg);color:var(--high)}.pill.run{background:var(--medium-bg);color:var(--medium)}.pill.done{background:var(--low-bg);color:var(--low)}.pill.fail{background:var(--critical-bg);color:var(--critical)}
+.label{display:block;font-weight:600;font-size:14px;margin:0 0 6px}
+.field{display:block;width:100%;box-sizing:border-box;min-height:46px;padding:10px 14px;border:1px solid var(--rule);border-radius:8px;background:var(--white);color:var(--ink);font:15px "Public Sans",sans-serif}
+.field.big{min-height:56px;font-size:17px;font-family:"JetBrains Mono",ui-monospace,monospace}
+.split{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:32px;align-items:start}
+.tiles{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.tile{display:flex;gap:12px;align-items:flex-start;padding:14px 16px;border:1px solid var(--rule);border-radius:10px;cursor:pointer;background:var(--white)}
+.tile:hover{border-color:var(--ink-3)}
+.tile input{width:18px;height:18px;margin:2px 0 0;accent-color:var(--ink);flex:none}
+.tile b{display:block;font-size:14.5px}
+.tile small{display:block;color:var(--ink-2);font-size:13px;line-height:1.45;margin-top:2px}
+.layer{display:grid;grid-template-columns:32px minmax(0,1fr);gap:12px;padding:14px 0;border-top:1px solid var(--rule)}
+.layer:first-of-type{border-top:0}
+.num{width:28px;height:28px;border-radius:8px;background:var(--panel);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px}
+@media (max-width:1000px){.split{grid-template-columns:minmax(0,1fr)}}
+@media (max-width:760px){.rail{flex-basis:100%;border-right:0;border-bottom:1px solid var(--rule);padding:14px 12px}.brand{margin-bottom:10px}.railnav{flex-direction:row;overflow-x:auto}.railgroup{display:none}.topbar{padding:12px 16px}.page{padding:24px 16px 48px}.tiles{grid-template-columns:minmax(0,1fr)}h1{font-size:26px}}
+</style>
+
+</head>
+<body>
+<div class="shell">
+  <nav class="rail" aria-label="Main">
+    <a class="brand" href="Scan.html">
+      <svg width="26" height="26" viewBox="0 0 26 26" aria-hidden="true"><rect x="1" y="1" width="24" height="24" rx="7" fill="none" stroke="currentColor" stroke-width="2"></rect><path d="M7 15.5l4-4 3 3 5-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+      Codebase Pilot
+    </a>
+    <div class="railnav">
+      <a class="navlink" href="#">Overview</a>
+      <a class="navlink on" href="Scan.html" aria-current="page">Scan a repository</a>
+      <a class="navlink" href="ScanResults.html">Dependencies</a>
+      <a class="navlink" href="ScanResults.html">Vulnerabilities</a>
+      <a class="navlink" href="Updates.html">Updates</a>
+      <a class="navlink" href="#">Approvals <span class="count">1</span></a>
+      <div class="railgroup">Setup</div>
+      <a class="navlink" href="SourceMapping.html">Source mapping</a>
+      <a class="navlink" href="Channels.html">Channels and schedules</a>
+    </div>
+  </nav>
+  <main class="content">
+    <div class="topbar">
+      <span class="small muted">Workspace · Accellor demo</span>
+      <span class="pill done">Server ready · model, GitHub and registry reachable</span>
+    </div>
+    <div class="page">
+      <h1>Scan a repository</h1>
+      <p class="lede">Paste a repository link. Pilot maps every dependency, external and internal, checks each one for vulnerabilities and breaking changes, and shows which lines of your code a change reaches.</p>
+      <div class="split">
+        <form class="card" style="padding: 28px; display: flex; flex-direction: column; gap: 24px" action="ScanProgress.html">
+          <div>
+            <label class="label" for="repo">Repository link</label>
+            <input class="field big" id="repo" name="repo" type="url" value="https://github.com/Kushal-Accellor01/pilot-sandbox-shop">
+            <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-top: 10px">
+              <span class="pill done">
+                <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 6.2l2.2 2.2 4.8-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+                GitHub · reachable with the server's token
+              </span>
+              <span class="small muted">Also takes Bitbucket links and local paths</span>
+            </div>
+          </div>
+          <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px">
+            <div>
+              <label class="label" for="branch">Branch</label>
+              <input class="field" id="branch" value="main">
+            </div>
+            <div>
+              <label class="label" for="access">Access</label>
+              <select class="field" id="access">
+                <option>Server token (GITHUB_TOKEN)</option>
+                <option>Bitbucket app password (BITBUCKET_TOKEN)</option>
+                <option>Public repository, no token</option>
+              </select>
+            </div>
+          </div>
+          <fieldset style="border: 0; padding: 0; margin: 0">
+            <legend class="label" style="margin-bottom: 10px">What should Pilot look for?</legend>
+            <div class="tiles">
+              <label class="tile"><input type="checkbox" checked><span><b>Vulnerabilities</b><small>Every package in the lockfile, direct and transitive, against OSV and GitHub advisories</small></span></label>
+              <label class="tile"><input type="checkbox" checked><span><b>Breaking changes and deprecations</b><small>Release notes read for each upgrade, every claim quoted from the source</small></span></label>
+              <label class="tile"><input type="checkbox" checked><span><b>Internal contracts</b><small>OpenAPI, AsyncAPI, protobuf, Kafka topics and private packages your code uses</small></span></label>
+              <label class="tile"><input type="checkbox"><span><b>Production evidence</b><small>Runtime warnings in Azure Monitor or log files, matched to code lines</small></span></label>
+              <label class="tile"><input type="checkbox" checked><span><b>Tested fixes</b><small>Run your tests on the new version and propose a fix, for allowed repositories</small></span></label>
+              <label class="tile"><input type="checkbox" checked><span><b>SBOM</b><small>A CycloneDX bill of materials for the scanned commit, ready to download</small></span></label>
+            </div>
+          </fieldset>
+          <div>
+            <label class="label" for="only">Only these packages <span class="muted" style="font-weight: 500">(optional)</span></label>
+            <input class="field" id="only" placeholder="express, @acme/money · leave empty to check everything">
+          </div>
+          <div style="display: flex; gap: 12px; flex-wrap: wrap; align-items: center; border-top: 1px solid var(--rule); padding-top: 22px">
+            <a class="btn btn-primary" href="ScanProgress.html">Start scan</a>
+            <a class="btn" href="#">Check access first</a>
+            <span class="small muted" style="flex: 1 1 240px">Pilot installs and tests code only for repositories in <code>EXEC_ALLOWED_REPOS</code>. Nothing leaves your systems until someone approves it.</span>
+          </div>
+        </form>
+        <aside style="display: flex; flex-direction: column; gap: 20px">
+          <section class="card" style="padding: 22px 22px 8px">
+            <h2 style="margin-bottom: 4px">How Pilot reads your code</h2>
+            <p class="small muted" style="margin: 0 0 6px">Three layers, each checked by code before the next one uses it.</p>
+            <div class="layer"><span class="num">1</span><div><h3>Structure</h3><p class="small" style="margin: 2px 0 0; color: var(--ink-2)">Files, imports and manifests, parsed into a graph</p></div></div>
+            <div class="layer"><span class="num">2</span><div><h3>Symbols and references</h3><p class="small" style="margin: 2px 0 0; color: var(--ink-2)">Who calls what, from a SCIP index (scip-typescript)</p></div></div>
+            <div class="layer"><span class="num">3</span><div><h3>Meaning</h3><p class="small" style="margin: 2px 0 0; color: var(--ink-2)">The model reads release notes, specs and docs; code verifies every quote, file and line</p></div></div>
+          </section>
+          <section class="card" style="padding: 22px">
+            <h2 style="margin-bottom: 10px">Recent scans</h2>
+            <a href="ScanResults.html" style="display: flex; justify-content: space-between; gap: 12px; text-decoration: none; color: inherit; padding: 10px 0; border-top: 1px solid var(--rule)">
+              <span><b style="display: block">pilot-sandbox-shop</b><span class="small muted">main · today</span></span>
+              <span class="pill fail">1 critical</span>
+            </a>
+          </section>
+        </aside>
+      </div>
+    </div>
+  </main>
+</div>
+</body>
+</html>

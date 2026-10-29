@@ -1,0 +1,227 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Scan results</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<style>
+:root{--ink:#1C2632;--ink-2:#4A5765;--ink-3:#5F6B79;--bg:#FAFBFC;--panel:#EEF2F5;--panel-2:#F4F6F8;--rule:#D6DDE4;--white:#FFFFFF;--critical:#C4321C;--critical-bg:#FBEAE6;--high:#9A5C00;--high-bg:#FDF1DD;--medium:#2F6CB0;--medium-bg:#E6EFF9;--low:#2E7A4E;--low-bg:#E5F2EA;--focus:#2F6CB0}
+@media (prefers-color-scheme: dark){:root{--ink:#E6ECF2;--ink-2:#B3BECA;--ink-3:#97A3B1;--bg:#141B23;--panel:#1C252F;--panel-2:#18212A;--rule:#2C3743;--white:#1A232C;--critical:#F0715C;--critical-bg:#3A1F1B;--high:#E7A440;--high-bg:#36291A;--medium:#6FA6E8;--medium-bg:#1C2C40;--low:#67C08C;--low-bg:#1A3226;--focus:#6FA6E8}}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 "Public Sans",system-ui,-apple-system,"Segoe UI",sans-serif;font-variant-numeric:tabular-nums;-webkit-font-smoothing:antialiased}
+a{color:var(--medium)}a:hover{color:var(--ink)}
+code,.mono{font-family:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;font-size:13px}
+:focus-visible{outline:2px solid var(--focus);outline-offset:2px;border-radius:4px}
+.shell{display:flex;flex-wrap:wrap;min-height:100vh}
+.rail{flex:0 0 232px;box-sizing:border-box;background:var(--panel-2);border-right:1px solid var(--rule);padding:22px 14px}
+.content{flex:999 1 560px;min-width:0}
+.brand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:16px;margin:0 8px 26px;color:var(--ink);text-decoration:none}
+.railnav{display:flex;flex-direction:column;gap:2px}
+.navlink{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:9px 10px;border-radius:6px;color:var(--ink-2);text-decoration:none;font-weight:500;font-size:14px;white-space:nowrap}
+.navlink:hover{background:var(--panel);color:var(--ink)}
+.navlink.on{background:var(--white);color:var(--ink);box-shadow:inset 3px 0 0 var(--ink)}
+.count{font-size:12px;background:var(--critical);color:#fff;border-radius:10px;padding:0 7px;line-height:18px}
+.railgroup{font-size:12px;color:var(--ink-3);font-weight:600;margin:20px 10px 6px}
+.topbar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:14px 40px;border-bottom:1px solid var(--rule)}
+.page{box-sizing:border-box;max-width:1240px;padding:36px 40px 72px}
+h1{font-size:32px;line-height:1.15;font-weight:700;letter-spacing:-.015em;margin:0 0 8px}
+h2{font-size:19px;font-weight:700;margin:0}
+h3{font-size:15px;font-weight:700;margin:0}
+.lede{color:var(--ink-2);margin:0;max-width:70ch;font-size:16px}
+.muted{color:var(--ink-3)}.small{font-size:13px}
+.card{background:var(--white);border:1px solid var(--rule);border-radius:12px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;box-sizing:border-box;border:1px solid var(--rule);background:var(--white);color:var(--ink);padding:0 18px;border-radius:8px;font:600 14px "Public Sans",sans-serif;text-decoration:none;cursor:pointer}
+.btn:hover{border-color:var(--ink-3);color:var(--ink)}
+.btn-primary{background:var(--ink);border-color:var(--ink);color:var(--bg)}
+.btn-primary:hover{color:var(--bg);opacity:.92}
+.pill{display:inline-flex;align-items:center;gap:6px;padding:2px 10px;border-radius:999px;font-size:12.5px;font-weight:600;background:var(--panel);color:var(--ink-2);white-space:nowrap}
+.pill.wait{background:var(--high-bg);color:var(--high)}.pill.run{background:var(--medium-bg);color:var(--medium)}.pill.done{background:var(--low-bg);color:var(--low)}.pill.fail{background:var(--critical-bg);color:var(--critical)}
+.risk{display:inline-flex;align-items:center;gap:6px;font-weight:600;font-size:13px;white-space:nowrap}
+.risk::before{content:"";width:9px;height:9px;border-radius:2px;background:currentColor}
+.risk.critical{color:var(--critical)}.risk.high{color:var(--high)}.risk.medium{color:var(--medium)}.risk.low{color:var(--low)}
+.sample{display:flex;gap:10px;align-items:flex-start;padding:12px 16px;border:1px dashed var(--ink-3);border-radius:10px;font-size:13.5px;color:var(--ink-2);margin:22px 0 26px}
+.strip{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));border:1px solid var(--rule);border-radius:12px;background:var(--white);overflow:hidden}
+.strip a,.strip div{display:block;padding:16px 20px;border-right:1px solid var(--rule);text-decoration:none;color:inherit}
+.strip > :last-child{border-right:0}
+.strip a:hover{background:var(--panel-2)}
+.strip b{display:block;font-size:28px;letter-spacing:-.015em;line-height:1.2}
+.strip span{font-size:13.5px;color:var(--ink-2)}
+.sec{margin-top:40px}
+.sechead{display:flex;justify-content:space-between;align-items:baseline;gap:8px 16px;flex-wrap:wrap;margin-bottom:12px}
+.chips{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 12px}
+.chip{display:inline-flex;align-items:center;min-height:36px;box-sizing:border-box;border:1px solid var(--rule);background:var(--white);border-radius:999px;padding:0 14px;font:600 13px "Public Sans",sans-serif;color:var(--ink-2);cursor:pointer}
+.chip[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:var(--bg)}
+.tablewrap{border:1px solid var(--rule);border-radius:12px;background:var(--white);overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th{text-align:left;font-weight:600;color:var(--ink-3);font-size:13px;padding:10px 14px;border-bottom:1px solid var(--rule);white-space:nowrap}
+td{padding:13px 14px;border-bottom:1px solid var(--rule);vertical-align:top}
+tr:last-child td{border-bottom:0}
+.path{font-family:"JetBrains Mono",ui-monospace,monospace;font-size:12.5px;color:var(--ink-2)}
+.verdict b{display:block;font-size:13.5px}
+.verdict span{font-size:12.5px;color:var(--ink-2)}
+.two{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px}
+.deprow{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 12px;padding:14px 18px;border-top:1px solid var(--rule)}
+.deprow:first-of-type{border-top:0}
+.deprow b{font-size:15px}
+.deprow p{margin:0;font-size:13px;color:var(--ink-2);grid-column:1 / -1}
+.kind{font-size:12px;font-weight:600;color:var(--ink-2);border:1px solid var(--rule);border-radius:4px;padding:0 6px;margin-left:6px}
+.board{display:grid;grid-template-columns:6px minmax(140px,1fr) minmax(220px,1.3fr) minmax(0,2fr) auto;gap:18px;align-items:center;padding:18px 20px 18px 0;text-decoration:none;color:inherit}
+.board:hover{background:var(--panel-2)}
+.bar{align-self:stretch;margin:-18px 0;background:var(--critical)}
+.journey{display:flex;align-items:center;gap:12px;font-size:26px;font-weight:600;letter-spacing:-.01em;white-space:nowrap}
+.journey .from{color:var(--ink-3)}
+.split{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:32px;align-items:start}
+.steps{list-style:none;margin:0;padding:0}
+.steps li{display:grid;grid-template-columns:26px minmax(0,1fr);gap:10px;padding:12px 0;border-top:1px solid var(--rule)}
+.steps li:first-child{border-top:0}
+.dot{width:22px;height:22px;border-radius:50%;border:2px solid var(--rule);box-sizing:border-box;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700}
+.dot.on{background:var(--low);border-color:var(--low);color:#fff}
+@media (max-width:1100px){.split{grid-template-columns:minmax(0,1fr)}.two{grid-template-columns:minmax(0,1fr)}.board{grid-template-columns:6px minmax(0,1fr);row-gap:6px}.board > :nth-child(n+3){grid-column:2}}
+@media (max-width:760px){.rail{flex-basis:100%;border-right:0;border-bottom:1px solid var(--rule);padding:14px 12px}.brand{margin-bottom:10px}.railnav{flex-direction:row;overflow-x:auto}.railgroup{display:none}.topbar{padding:12px 16px}.page{padding:24px 16px 48px}.strip{grid-template-columns:repeat(2,minmax(0,1fr))}.strip > :nth-child(2){border-right:0}.strip > :nth-child(-n+2){border-bottom:1px solid var(--rule)}h1{font-size:26px}.journey{font-size:22px}}
+</style>
+
+</head>
+<body>
+<div class="shell">
+  <nav class="rail" aria-label="Main">
+    <a class="brand" href="Scan.html">
+      <svg width="26" height="26" viewBox="0 0 26 26" aria-hidden="true"><rect x="1" y="1" width="24" height="24" rx="7" fill="none" stroke="currentColor" stroke-width="2"></rect><path d="M7 15.5l4-4 3 3 5-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+      Codebase Pilot
+    </a>
+    <div class="railnav">
+      <a class="navlink" href="#">Overview</a>
+      <a class="navlink" href="Scan.html">Scan a repository</a>
+      <a class="navlink on" href="ScanResults.html" aria-current="page">Dependencies</a>
+      <a class="navlink" href="ScanResults.html">Vulnerabilities</a>
+      <a class="navlink" href="Updates.html">Updates</a>
+      <a class="navlink" href="#">Approvals <span class="count">1</span></a>
+      <div class="railgroup">Setup</div>
+      <a class="navlink" href="SourceMapping.html">Source mapping</a>
+      <a class="navlink" href="Channels.html">Channels and schedules</a>
+    </div>
+  </nav>
+  <main class="content">
+    <div class="topbar">
+      <span class="small muted"><a href="Scan.html" style="color: var(--ink-3)">Scans</a> / pilot-sandbox-shop / main</span>
+      <span class="pill done">Scan complete</span>
+    </div>
+    <div class="page">
+      <div style="display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; flex-wrap: wrap">
+        <div>
+          <h1>One upgrade needs a decision</h1>
+          <p class="lede">pilot-sandbox-shop on <code>main</code>: 159 packages, 3 of them declared directly. Pilot checked each one for advisories and breaking changes.</p>
+        </div>
+        <div style="display: flex; gap: 10px; flex-wrap: wrap">
+          <a class="btn" href="#">Download SBOM</a>
+          <a class="btn" href="ScanProgress.html">Scan again</a>
+        </div>
+      </div>
+      <div class="sample" role="note">
+        <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true" style="flex: none; margin-top: 1px"><circle cx="9" cy="9" r="7.5" fill="none" stroke="currentColor" stroke-width="1.5"></circle><path d="M9 5.5v4.2M9 12.3v.2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path></svg>
+        <span>Layout preview. The advisories and internal contracts are sample rows, not scan output; a real scan fills them from OSV, Dependabot and your specs. The express upgrade is the sandbox's real result.</span>
+      </div>
+      <div class="split">
+        <div style="min-width: 0">
+          <div class="strip">
+            <a href="#vulns"><b>4</b><span>advisories, 1 applies to your code</span></a>
+            <a href="#upgrade"><b style="color: var(--critical)">1</b><span>upgrade needs a decision</span></a>
+            <a href="#deps"><b>3</b><span>internal contracts watched</span></a>
+            <a href="SourceMapping.html"><b style="color: var(--high)">2</b><span>sources to confirm</span></a>
+          </div>
+
+          <section class="sec" id="upgrade" aria-labelledby="h-upgrade">
+            <div class="sechead"><h2 id="h-upgrade">Needs a decision</h2><span class="small muted">Sorted by risk, then effort</span></div>
+            <a class="card board" href="#" style="overflow: hidden">
+              <span class="bar" aria-hidden="true"></span>
+              <span><b style="font-size: 17px; display: block">express</b><span class="small muted">runtime dependency</span></span>
+              <span class="journey"><span class="from">4.21.2</span><svg width="22" height="12" viewBox="0 0 22 12" aria-hidden="true"><path d="M1 6h19M15 1l5 5-5 5" fill="none" stroke="currentColor" stroke-width="1.6"></path></svg><span>5.x</span></span>
+              <span class="small" style="color: var(--ink-2)"><b style="color: var(--ink)">7 lines in 5 files</b> use APIs that change. Tests fail on 5.x without changes and pass with Pilot's fix.</span>
+              <span style="text-align: right"><span class="risk critical">Critical</span><br><span class="pill wait" style="margin-top: 6px">Awaiting approval</span></span>
+            </a>
+          </section>
+
+          <section class="sec" id="vulns" aria-labelledby="h-vulns">
+            <div class="sechead"><h2 id="h-vulns">Vulnerabilities</h2><span class="small muted">OSV and Dependabot alerts, every package in the lockfile</span></div>
+            <div class="chips" role="group" aria-label="Filter advisories">
+              <button class="chip" aria-pressed="true">All 4</button>
+              <button class="chip" aria-pressed="false">Applies to your code 1</button>
+              <button class="chip" aria-pressed="false">Runtime 2</button>
+              <button class="chip" aria-pressed="false">Development only 2</button>
+              <button class="chip" aria-pressed="false">Transitive 4</button>
+            </div>
+            <div class="tablewrap">
+              <table>
+                <thead><tr><th>Severity</th><th>Advisory</th><th>Package</th><th>How it gets in</th><th>Applies to your code?</th><th>Fixed in</th></tr></thead>
+                <tbody>
+                  <tr>
+                    <td><span class="risk high">High</span></td>
+                    <td><b>SAMPLE-1</b><br><span class="small" style="color: var(--ink-2)">Resource exhaustion on deeply nested input</span></td>
+                    <td><code>qs</code> 6.13.0</td>
+                    <td class="path">express › body-parser › qs<br><span class="muted">runtime</span></td>
+                    <td class="verdict"><b style="color: var(--critical)">Applies</b><span>Your code reaches the parser through <code>express.urlencoded</code> in app.js</span></td>
+                    <td>[version]</td>
+                  </tr>
+                  <tr>
+                    <td><span class="risk medium">Medium</span></td>
+                    <td><b>SAMPLE-2</b><br><span class="small" style="color: var(--ink-2)">Expensive pattern in a formatting helper</span></td>
+                    <td><code>debug</code> 2.6.9</td>
+                    <td class="path">express › debug<br><span class="muted">runtime</span></td>
+                    <td class="verdict"><b style="color: var(--low)">Does not apply</b><span>No call path from your code to the affected function</span></td>
+                    <td>[version]</td>
+                  </tr>
+                  <tr>
+                    <td><span class="risk medium">Medium</span></td>
+                    <td><b>SAMPLE-3</b><br><span class="small" style="color: var(--ink-2)">Predictable boundary in multipart bodies</span></td>
+                    <td><code>form-data</code> 4.0.6</td>
+                    <td class="path">supertest › superagent › form-data<br><span class="muted">development only</span></td>
+                    <td class="verdict"><b>Not shipped</b><span>Used only by tests; production builds leave it out</span></td>
+                    <td>[version]</td>
+                  </tr>
+                  <tr>
+                    <td><span class="risk low">Low</span></td>
+                    <td><b>SAMPLE-4</b><br><span class="small" style="color: var(--ink-2)">Slow expansion of crafted patterns</span></td>
+                    <td><code>brace-expansion</code> 2.1.7</td>
+                    <td class="path">mocha › minimatch › brace-expansion<br><span class="muted">development only</span></td>
+                    <td class="verdict"><b style="color: var(--high)">Undetermined</b><span>Reached through a dynamic call Pilot cannot follow</span></td>
+                    <td>[version]</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </section>
+
+          <section class="sec" id="deps" aria-labelledby="h-deps">
+            <div class="sechead"><h2 id="h-deps">Dependencies</h2><span class="small muted">What your code relies on, from outside and inside the company</span></div>
+            <div class="two">
+              <div class="card" style="overflow: hidden">
+                <div style="padding: 16px 18px; border-bottom: 1px solid var(--rule); display: flex; justify-content: space-between; gap: 8px"><h3>External packages</h3><span class="small muted">3 declared · 156 transitive</span></div>
+                <div class="deprow"><b>express <span class="kind">runtime</span></b><span class="risk critical">Critical</span><p>4.21.2 → 5.x · imported by 4 files, reached by 5 route files</p></div>
+                <div class="deprow"><b>mocha <span class="kind">dev</span></b><span class="small muted">No action</span><p>10.8.2 · test runner</p></div>
+                <div class="deprow"><b>supertest <span class="kind">dev</span></b><span class="small muted">No action</span><p>6.3.4 · imported by 6 test files</p></div>
+              </div>
+              <div class="card" style="overflow: hidden">
+                <div style="padding: 16px 18px; border-bottom: 1px solid var(--rule); display: flex; justify-content: space-between; gap: 8px"><h3>Internal contracts <span class="muted" style="font-weight: 500">· sample</span></h3><span class="small muted">3 found</span></div>
+                <div class="deprow"><b>payments-api <span class="kind">OpenAPI</span></b><span class="pill">Watching</span><p>Called by lib/payments-client.js · owned by team-payments</p></div>
+                <div class="deprow"><b>orders.created <span class="kind">Kafka topic</span></b><span class="pill">Watching</span><p>Produced by routes/orders.js · schema in the registry</p></div>
+                <div class="deprow"><b>@acme/money <span class="kind">private npm</span></b><span class="pill wait">Source unknown</span><p>Imported by routes/invoices.js · from Artifactory</p></div>
+              </div>
+            </div>
+          </section>
+        </div>
+        <aside class="card" style="padding: 22px">
+          <h2 style="margin-bottom: 4px">Finish setting up</h2>
+          <p class="small muted" style="margin: 0 0 10px">So Pilot keeps watching after this scan.</p>
+          <ol class="steps">
+            <li><span class="dot on"><svg width="10" height="10" viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 6.2l2.2 2.2 4.8-5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg></span><div><b>First scan</b><br><span class="small muted">Done</span></div></li>
+            <li><span class="dot">2</span><div><b>Confirm where changes come from</b><br><span class="small muted">2 packages need a source</span><br><a class="btn btn-primary" href="SourceMapping.html" style="margin-top: 10px">Review source mapping</a></div></li>
+            <li><span class="dot">3</span><div><b>Connect channels</b><br><span class="small muted">Webhook, Dependabot, Confluence, Slack</span><br><a href="Channels.html" class="small">Set up channels</a></div></li>
+            <li><span class="dot">4</span><div><b>Watch the update feed</b><br><span class="small muted">New changes, their impact and fixes</span><br><a href="Updates.html" class="small">Open the feed</a></div></li>
+          </ol>
+        </aside>
+      </div>
+    </div>
+  </main>
+</div>
+</body>
+</html>

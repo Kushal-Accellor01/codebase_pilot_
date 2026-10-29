@@ -75,6 +75,38 @@ def find_open_run(
     ).fetchone()
 
 
+def runs_for_scan(conn: sqlite3.Connection, scan_id: str) -> dict[int, sqlite3.Row]:
+    """The run behind each dependency update of this scan.
+
+    A re-scan does not start a second run for an upgrade that is already in play (runner.enqueue_runs_for_scan
+    reuses the open run of the earlier scan), so that run is mapped onto the matching update of this scan.
+    """
+    from app.updates import store as updates_store
+
+    runs = {
+        r["dependency_update_id"]: r for r in conn.execute("SELECT * FROM upgrade_runs WHERE scan_id = ?", (scan_id,))
+    }
+    repo_url = scan_repo(conn, scan_id)["repo_url"]
+    for update in updates_store.list_dependency_updates(conn, scan_id):
+        if update["id"] in runs or not update["recommended_target"]:
+            continue
+        carried = find_open_run(
+            conn, repo_url=repo_url, ecosystem=update["ecosystem"], package=update["name"],
+            to_version=update["recommended_target"],
+        )
+        if carried is not None:
+            runs[update["id"]] = carried
+    return runs
+
+
+def status_counts_for_scan(conn: sqlite3.Connection, scan_id: str) -> dict[str, int]:
+    """Runs behind the scan's updates by status, carried runs included."""
+    counts: dict[str, int] = {}
+    for run in runs_for_scan(conn, scan_id).values():
+        counts[run["status"]] = counts.get(run["status"], 0) + 1
+    return counts
+
+
 def known_repos(conn: sqlite3.Connection) -> list[str]:
     """Repository URLs that have been scanned, oldest first (what a scheduled re-scan walks)."""
     return [

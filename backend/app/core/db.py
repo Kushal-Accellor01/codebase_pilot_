@@ -27,6 +27,7 @@ class Migration:
 MIGRATIONS = (
     Migration("002_dependency_updates", UPDATES_DIR / "migrations" / "002_dependency_updates.sql"),
     Migration("003_pipeline", CORE_DIR / "migrations" / "003_pipeline.sql"),
+    Migration("004_scan_layers", CORE_DIR / "migrations" / "004_scan_layers.sql"),
 )
 
 

@@ -6,6 +6,7 @@ import sqlite3
 from app.actions.codeowners import load_codeowners, owners_for
 from app.impact import store as impact_store
 from app.orchestrator import store as run_store
+from app.scan import store as scan_store
 from app.updates import store as updates_store
 from app.updates.events import RISK_ORDER, build_event, wants_event
 
@@ -103,26 +104,8 @@ def _repo_label(value: str | None) -> str:
 
 
 def _run_by_update(conn: sqlite3.Connection, scan_id: str) -> dict[int, sqlite3.Row]:
-    """The run behind each dependency update of this scan.
-
-    A re-scan does not start a second run for an upgrade that is already in play (runner.enqueue_runs_for_scan
-    reuses the open run of the earlier scan), so that run is mapped onto the matching update of this scan.
-    Without this, the Overview of the newest scan would lose a run that is still waiting for a decision.
-    """
-    runs = {
-        r["dependency_update_id"]: r for r in conn.execute("SELECT * FROM upgrade_runs WHERE scan_id = ?", (scan_id,))
-    }
-    repo_url = run_store.scan_repo(conn, scan_id)["repo_url"]
-    for update in updates_store.list_dependency_updates(conn, scan_id):
-        if update["id"] in runs or not update["recommended_target"]:
-            continue
-        carried = run_store.find_open_run(
-            conn, repo_url=repo_url, ecosystem=update["ecosystem"], package=update["name"],
-            to_version=update["recommended_target"],
-        )
-        if carried is not None:
-            runs[update["id"]] = carried
-    return runs
+    """The run behind each dependency update of this scan, carried runs of earlier scans included."""
+    return run_store.runs_for_scan(conn, scan_id)
 
 
 def _reachable_updates(
@@ -589,3 +572,117 @@ def has_pending_decision(conn: sqlite3.Connection, run_id: str) -> bool:
         ).fetchone()
         is not None
     )
+
+
+# --- scan requests, results and vulnerabilities (S2, S3) -----------------------------------------------------------
+
+DEV_SCOPES = ("dev",)
+
+
+def _scope_model(raw: dict) -> dict:
+    from app.scan.pipeline import scope_of
+
+    return scope_of(raw)
+
+
+def scan_request_detail(conn: sqlite3.Connection, request_id: str) -> dict:
+    request = scan_store.get_scan_request(conn, request_id)
+    if request is None:
+        raise NotFound(f"scan request {request_id}")
+    stages = scan_store.stage_summary(conn, request_id)
+    scan_id = request["scan_id"]
+    components = scan_store.component_counts(conn, scan_id) if scan_id else {"total": 0, "direct": 0}
+    layer1 = scan_store.layer1_counts(conn, scan_id) if scan_id else {"imports": 0, "declared": 0}
+    return {
+        "id": request["id"],
+        "repo": _repo_label(request["repo_url"]),
+        "repo_url": request["repo_url"],
+        "branch": request["branch"],
+        "status": request["status"],
+        "scan_id": scan_id,
+        "error": request["error"],
+        "scope": _scope_model(request["scope"]),
+        "stages": [{"stage": s["stage"], "status": s["status"], "summary": s["summary"]} for s in stages],
+        "found": {"packages": components["total"], "declared": layer1["declared"], "imports": layer1["imports"],
+                  "internal_contracts": 0},
+        "steps_done": sum(1 for s in stages if s["status"] in ("done", "skipped")),
+        "steps_total": len(stages),
+    }
+
+
+def cancel_scan_request(conn: sqlite3.Connection, request_id: str) -> str:
+    request = scan_store.get_scan_request(conn, request_id)
+    if request is None:
+        raise NotFound(f"scan request {request_id}")
+    if request["status"] in ("queued", "running"):
+        scan_store.update_scan_request(conn, request_id, status="cancelled")
+        scan_store.add_scan_event(conn, request_id, "impact", "skipped", "Cancelled by a person")
+        return "cancelled"
+    return request["status"]
+
+
+def _vuln_counts(rows: list[dict]) -> dict:
+    return {
+        "all": len(rows),
+        "applies": sum(r["verdict"] == "applies" for r in rows),
+        "runtime": sum(r["scope"] != "dev" for r in rows),
+        "development": sum(r["scope"] == "dev" for r in rows),
+        "transitive": sum(not r["direct"] for r in rows),
+    }
+
+
+def list_vulnerabilities(conn: sqlite3.Connection, scan_id: str) -> dict:
+    rows = scan_store.list_scan_vulns(conn, scan_id)
+    return {"scan_id": scan_id, "packages": scan_store.component_counts(conn, scan_id)["total"],
+            "counts": _vuln_counts(rows), "rows": rows}
+
+
+def list_vulnerabilities_all(conn: sqlite3.Connection) -> dict:
+    """The latest scan of every repository, one table."""
+    latest: dict[str, str] = {}
+    for s in conn.execute("SELECT id FROM scans ORDER BY scanned_at, rowid"):
+        meta = run_store.scan_repo(conn, s["id"])
+        if conn.execute("SELECT 1 FROM sbom_components WHERE scan_id = ? LIMIT 1", (s["id"],)).fetchone():
+            latest[meta["repo_url"] or s["id"]] = s["id"]
+    rows: list[dict] = []
+    packages = 0
+    for repo_url, scan_id in latest.items():
+        packages += scan_store.component_counts(conn, scan_id)["total"]
+        for row in scan_store.list_scan_vulns(conn, scan_id):
+            rows.append({**row, "repo": _repo_label(repo_url), "scan_id": scan_id})
+    rows.sort(key=lambda r: (scan_store.SEVERITY_RANK.get(r["severity"], 4),
+                             scan_store.VERDICT_RANK.get(r["verdict"], 9)))
+    return {"scan_id": None, "packages": packages, "counts": _vuln_counts(rows), "rows": rows}
+
+
+def scan_summary(conn: sqlite3.Connection, scan_id: str) -> dict:
+    info = updates_store.get_scan_info(conn, scan_id)
+    meta = run_store.scan_repo(conn, scan_id)
+    vulns = scan_store.list_scan_vulns(conn, scan_id)
+    runs = _run_by_update(conn, scan_id)
+    rows = updates_store.list_dependency_updates(conn, scan_id)
+    needs = sum(1 for r in rows if (runs.get(r["id"]) is not None and runs[r["id"]]["status"] == "awaiting_approval"))
+    request = scan_store.request_for_scan(conn, scan_id)
+    from pathlib import Path
+
+    from app.core.config import get_settings
+
+    components = scan_store.component_counts(conn, scan_id)
+    layer1 = scan_store.layer1_counts(conn, scan_id)
+    return {
+        "scan_id": scan_id,
+        "repo": _repo_label(meta["repo_url"] or info["repository_path"]),
+        "repo_url": meta["repo_url"],
+        "branch": meta["branch"],
+        "commit_sha": info["commit_sha"],
+        "scanned_at": info["scanned_at"],
+        "packages": components["total"],
+        "declared": layer1["declared"],
+        "advisories": len(vulns),
+        "advisories_apply": sum(v["verdict"] == "applies" for v in vulns),
+        "needs_decision": needs,
+        "internal_contracts": 0,
+        "sources_to_confirm": 0,
+        "has_sbom": (Path(get_settings().sbom_dir) / f"{scan_id}.cdx.json").is_file(),
+        "scan_request_id": request["id"] if request else None,
+    }

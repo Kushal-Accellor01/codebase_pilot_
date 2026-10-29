@@ -53,6 +53,8 @@ class Settings(BaseSettings):
     # Off by default: nothing leaves the system without a person asking (ground rule 8). The `bot-prs` and
     # `issues` CLI commands still run them on request.
     pilot_repo_actions: bool = False
+    # Where CycloneDX bills of materials are written (<scan id>.cdx.json)
+    sbom_dir: str = "sbom"
 
     @field_validator("*", mode="before")
     @classmethod

@@ -17,6 +17,7 @@ from app.orchestrator import store as run_store
 from app.orchestrator.config_loader import RepoPilotConfig, load_repo_config
 from app.planning.plan import build_plan, route_after_plan
 from app.remediation import fix as fix_module
+from app.scan import pipeline as scan_pipeline
 from app.telemetry.seeded import SeededLogSource, collect_evidence
 from app.updates import store as updates_store
 from app.updates.events import build_event
@@ -151,9 +152,18 @@ async def impact(ctx: RunContext, state: UpgradeState) -> dict:
     }
 
 
+def _scan_scope(conn: sqlite3.Connection, run_id: str) -> dict[str, bool]:
+    """What the scan request asked for (everything, for scans started from the CLI, a webhook or a schedule)."""
+    run = run_store.get_run(conn, run_id)
+    return scan_pipeline.scope_for_scan(conn, run["scan_id"]) if run else scan_pipeline.full_scope()
+
+
 @traced("telemetry")
 async def telemetry(ctx: RunContext, state: UpgradeState) -> dict:
     run_id = state["run_id"]
+    if not _scan_scope(ctx.conn, run_id)["production_evidence"]:
+        run_store.save_telemetry(ctx.conn, run_id, [])
+        return {"telemetry_count": 0, "_summary": "production evidence was not requested for this scan"}
     logs = ctx.settings.seeded_logs_dir
     directory = Path(logs) if logs else Path(state.get("clone", "")) / "logs"
     findings = run_store.load_findings(ctx.conn, run_id, include_rejected=False)
@@ -198,6 +208,8 @@ async def plan(ctx: RunContext, state: UpgradeState) -> dict:
         reason = f"severity {result.severity} is below the configured minimum {config.min_severity}"
     elif route == "full" and not state.get("exec_allowed"):
         route, reason = "report_only", "the repository is not allowed to run code: no fix was attempted"
+    elif route == "full" and not _scan_scope(ctx.conn, run_id)["fixes"]:
+        route, reason = "report_only", "tested fixes were not requested for this scan"
     return {"route": route, "severity": result.severity,
             "_summary": f"{result.severity}, about {result.effort_hours} h" + (f"; {reason}" if reason else "")}
 

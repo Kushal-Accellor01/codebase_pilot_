@@ -84,7 +84,9 @@ def prune_clones(conn: sqlite3.Connection, workspace: str | Path) -> list[str]:
     return removed
 
 
-def ingest(repo_url: str, db_path: str | None = None, workspace: str | Path | None = None) -> str:
+def ingest(
+    repo_url: str, db_path: str | None = None, workspace: str | Path | None = None, branch: str | None = None
+) -> str:
     """Clone `repo_url` into its own folder, scan it, and return the scan id.
 
     Every scan gets a fresh clone (the code stays identical to the scanned commit) in `clones/<owner>__<repo>/<stamp>`.
@@ -97,7 +99,8 @@ def ingest(repo_url: str, db_path: str | None = None, workspace: str | Path | No
     clone = (workspace / "clones" / clone_key(repo_url) / stamp).resolve()
     clone.parent.mkdir(parents=True, exist_ok=True)
 
-    result = _git("clone", "--depth", "1", repo_url, str(clone))
+    result = _git("clone", "--depth", "1", *(["--branch", branch] if branch else []), "--",
+                 repo_url, str(clone))
     if result.returncode != 0:
         raise RuntimeError(f"git clone failed: {result.stderr.strip()}")
     commit = _git("-C", str(clone), "rev-parse", "HEAD")

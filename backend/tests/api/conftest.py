@@ -28,6 +28,7 @@ class Env:
             "REPORTS_DIR": str(tmp_path / "reports"),
             "EXEC_ALLOWED_REPOS": str(self.origin),
             "PACKAGE_SOURCES_PATH": str(tmp_path / "sources.yaml"),
+            "SBOM_DIR": str(tmp_path / "sbom"),
         }.items():
             monkeypatch.setenv(name, value)
         monkeypatch.delenv("GITHUB_TOKEN", raising=False)

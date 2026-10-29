@@ -14,19 +14,23 @@ import logging
 import secrets
 from collections.abc import AsyncIterator, Iterator
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import Depends, FastAPI, Header, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
 from sse_starlette.sse import EventSourceResponse
 
 from app.api import queries, schemas
 from app.core import db as core_db
-from app.core import events, jobs, workspace
+from app.core import events, jobs, preflight, workspace
 from app.core.config import Settings, get_settings
 from app.core.logging import configure_logging
 from app.database import GraphDatabase
 from app.orchestrator import schedule
 from app.orchestrator.worker import Services, run_worker
+from app.scan import pipeline as scan_pipeline
+from app.scan import store as scan_store
 from app.updates import sources
 from app.updates import store as updates_store
 
@@ -151,7 +155,50 @@ def create_app(
         allowed = {a.replace("\\", "/").rstrip("/") for a in settings.exec_allowed}
         if workspace.repo_identity(body.repo_url) not in allowed:
             raise HTTPException(403, "this repository is not in EXEC_ALLOWED_REPOS; ask an administrator to add it")
-        return {"job_id": jobs.enqueue(conn, "scan", {"repo_url": body.repo_url, "only": body.only})}
+        scope = body.scope.model_dump() if body.scope else None
+        request_id = scan_store.create_scan_request(
+            conn, repo_url=body.repo_url, branch=body.branch, scope=scope or scan_pipeline.full_scope(), only=body.only)
+        job_id = jobs.enqueue(
+            conn, "scan",
+            {"repo_url": body.repo_url, "only": body.only, "branch": body.branch, "scope": scope,
+             "request_id": request_id},
+        )
+        scan_store.set_request_job(conn, request_id, job_id)
+        return {"job_id": job_id, "scan_request_id": request_id}
+
+    @app.post("/api/scans/check", response_model=schemas.RepoCheck)
+    def check_repository(body: schemas.RepoCheckRequest, _who=Depends(writer)):
+        """Can the server read this repository, and may Pilot work on it? Runs `git ls-remote` on the server."""
+        url = body.repo_url.strip()
+        identity = workspace.repo_identity(url) or url
+        allowed = identity in {a.replace("\\", "/").rstrip("/") for a in settings.exec_allowed}
+        host = "github" if "github.com" in url else "bitbucket" if "bitbucket.org" in url else (
+            "gitlab" if "gitlab" in url else "local" if "://" not in url and not url.startswith("git@") else "other")
+        label = queries._repo_label(url)
+        if not allowed:
+            return {"provider": host, "repo": label, "allowed": False, "ok": False,
+                    "detail": "This repository is not in EXEC_ALLOWED_REPOS, so Pilot will not scan it."}
+        if url.startswith("-"):
+            raise HTTPException(422, "not a repository link")
+        found = preflight.check_repo_access(url)[0]
+        branches = [b.strip() for b in found.detail.split("e.g.")[-1].split(",")] if found.status == "ok" else []
+        return {"provider": host, "repo": label, "allowed": True, "ok": found.status == "ok", "detail": found.detail,
+                "branches": branches}
+
+    @app.get("/api/scan-requests/{request_id}", response_model=schemas.ScanRequestOut)
+    def scan_request(request_id: str, conn=Depends(get_conn)):
+        try:
+            return queries.scan_request_detail(conn, request_id)
+        except queries.NotFound as exc:
+            raise not_found(exc) from exc
+
+    @app.post("/api/scan-requests/{request_id}/cancel", response_model=schemas.ScanRequestOut)
+    def cancel_scan(request_id: str, conn=Depends(get_conn), _who=Depends(writer)):
+        try:
+            queries.cancel_scan_request(conn, request_id)
+            return queries.scan_request_detail(conn, request_id)
+        except queries.NotFound as exc:
+            raise not_found(exc) from exc
 
     @app.post("/api/upgrades/{run_id}/decision", response_model=schemas.DecisionAccepted, status_code=202)
     def decide(run_id: str, body: schemas.DecisionRequest, conn=Depends(get_conn), who=Depends(writer)):
@@ -237,7 +284,76 @@ def create_app(
             conn.close()
         return {"status": "queued", "job_id": job}
 
+    # --- scan results (S3) ------------------------------------------------------------------------------------
+
+    @app.get("/api/scans/{scan}/summary", response_model=schemas.ScanSummary)
+    def scan_summary(scan: str, conn=Depends(get_conn)):
+        try:
+            return queries.scan_summary(conn, queries.resolve_scan(conn, scan))
+        except queries.NotFound as exc:
+            raise not_found(exc) from exc
+
+    @app.get("/api/scans/{scan}/vulnerabilities", response_model=schemas.VulnerabilityList)
+    def scan_vulnerabilities(scan: str, conn=Depends(get_conn)):
+        try:
+            return queries.list_vulnerabilities(conn, queries.resolve_scan(conn, scan))
+        except queries.NotFound as exc:
+            raise not_found(exc) from exc
+
+    @app.get("/api/vulnerabilities", response_model=schemas.VulnerabilityList)
+    def all_vulnerabilities(conn=Depends(get_conn)):
+        return queries.list_vulnerabilities_all(conn)
+
+    @app.get("/api/scans/{scan}/sbom")
+    def scan_sbom(scan: str, conn=Depends(get_conn)):
+        try:
+            scan_id = queries.resolve_scan(conn, scan)
+        except queries.NotFound as exc:
+            raise not_found(exc) from exc
+        path = Path(settings.sbom_dir) / f"{scan_id}.cdx.json"
+        if not path.is_file():
+            raise HTTPException(404, "no bill of materials for this scan: it was not selected, or there is no lockfile")
+        return FileResponse(path, media_type="application/vnd.cyclonedx+json", filename=f"{scan_id}.cdx.json")
+
     # --- server-sent events ----------------------------------------------------------------------------------
+
+    @app.get("/api/scan-requests/{request_id}/events")
+    async def scan_request_events(
+        request_id: str,
+        request: Request,
+        last_event_id: str | None = Header(default=None),
+        after: int | None = Query(default=None),
+    ):
+        probe = core_db.connect(db)
+        try:
+            queries.scan_request_detail(probe, request_id)
+        except queries.NotFound as exc:
+            raise not_found(exc) from exc
+        finally:
+            probe.close()
+        cursor = after if after is not None else int(last_event_id) if (last_event_id or "").isdigit() else 0
+
+        async def stream() -> AsyncIterator[dict]:
+            nonlocal cursor
+            conn = core_db.connect(db)
+            try:
+                while not await request.is_disconnected():
+                    batch = scan_store.list_scan_events(conn, request_id, cursor)
+                    for event in batch:
+                        cursor = event["id"]
+                        yield {"id": str(event["id"]), "event": "scan_event", "data": json.dumps(
+                            {"stage": event["stage"], "status": event["status"], "summary": event["summary"],
+                             "ts": event["ts"]})}
+                    current = scan_store.get_scan_request(conn, request_id)
+                    if not batch and current and current["status"] in ("complete", "failed", "cancelled"):
+                        yield {"event": "end", "data": json.dumps({"status": current["status"]})}
+                        return
+                    await asyncio.sleep(SSE_POLL_S)
+            finally:
+                conn.close()
+
+        return EventSourceResponse(stream())
+
 
     @app.get("/api/upgrades/{run_id}/events")
     async def run_events(

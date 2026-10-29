@@ -28,7 +28,8 @@ export default function ScanPage() {
   const navigate = useNavigate();
   const health = useHealth();
   const scans = useScans().data ?? [];
-  const [repo, setRepo] = useState(scans.find((s) => s.repo_url)?.repo_url ?? "");
+  const [typed, setRepo] = useState<string | null>(null); // null until a person types: then the last scanned repository shows
+  const repo = typed ?? scans.find((s) => s.repo_url)?.repo_url ?? "";
   const [branch, setBranch] = useState("");
   const [only, setOnly] = useState("");
   const [scope, setScope] = useState<ScanScope>(DEFAULT_SCOPE);

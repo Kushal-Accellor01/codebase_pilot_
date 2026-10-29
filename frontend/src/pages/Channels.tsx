@@ -227,7 +227,7 @@ function Schedules({ repoId, schedules }: { repoId: string; schedules: ScheduleO
         <table className="wide">
           <thead><tr><th>Trigger</th><th>Watches</th><th>How often</th><th>On</th><th>Next run</th></tr></thead>
           <tbody>
-            {schedules.map((s) => {
+            {[...schedules].sort((a, b) => Object.keys(SOURCE_LABEL).indexOf(a.source) - Object.keys(SOURCE_LABEL).indexOf(b.source)).map((s) => {
               const label = SOURCE_LABEL[s.source] ?? { name: s.source, watches: "" };
               const ready = s.source !== "internal_sources";
               return (

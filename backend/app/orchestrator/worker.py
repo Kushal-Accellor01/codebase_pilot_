@@ -115,7 +115,8 @@ async def _dependency_updates(conn, job: jobs.Job, db_path: str, settings: Setti
     if scope["breaking_changes"]:
         rows = updates_store.list_dependency_updates(conn, scan_id)
         read = sum(1 for r in rows if r["status"] == "analyzed")
-        stages("changes", "done", f"{read} upgrades with release notes read")
+        noun = "upgrade has" if read == 1 else "upgrades have"
+        stages("changes", "done", f"Release notes read: {read} {noun} a change list")
     else:
         stages("changes", "skipped", "Not selected for this scan")
     if stages.cancelled():

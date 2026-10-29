@@ -681,15 +681,15 @@ cd ../frontend && npm run build && npm test
 | ID | Phase | Status | Owner |
 | --- | --- | --- | --- |
 | A1–A7, B1–B4, C1–C3, D1–D2, E1–E5, F1–F2, G1–G6, and the review fixes H1–H8 | done | Done | team |
-| S0 Apply patch and this file | H | Not started | Kushal |
-| S1 SBOM and transitive vulnerabilities | H | Not started | P5 |
-| S2 Scan request with scope and live stages | H | Not started | Kushal (API) + P6 (UI) |
-| S3 Results and vulnerabilities pages | H | Not started | P6 |
-| S4 Source mapping review | H | Not started | P3 |
-| S5 Dependabot alerts source | H | Not started | P4 |
-| S6 Channels, webhook install, notifications, schedules | H | Not started | P4 |
-| S7 Update feed on the common change event | H | Not started | Kushal |
-| S8 Visual pass | H | Not started | P6 |
+| S0 Apply patch and this file | H | Done | Kushal |
+| S1 SBOM and transitive vulnerabilities | H | Done (shortest path to `qs` in the sandbox lockfile is `express › qs`, not via body-parser) | P5 |
+| S2 Scan request with scope and live stages | H | Done (progress page polls every 1.5 s; the SSE endpoint exists) | Kushal (API) + P6 (UI) |
+| S3 Results and vulnerabilities pages | H | Done | P6 |
+| S4 Source mapping review | H | Done (Confluence, Slack and changelog-URL sources are saved but read in a later release) | P3 |
+| S5 Dependabot alerts source | H | Done (fixtures hand-built from GitHub's documented schema; not run against a real repository) | P4 |
+| S6 Channels, webhook install, notifications, schedules | H | Done (connectors tested against recorded requests only) | P4 |
+| S7 Update feed on the common change event | H | Done | Kushal |
+| S8 Visual pass | H | Done (contrast report in `src/__tests__/contrast.test.ts`; screenshots via `SHOTS=1 npx playwright test e2e/shots.spec.ts`) | P6 |
 | I1–I8 Internal changes | I | Not started | — |
 | J1–J3 Precision and scale | J | Not started | — |
 | K1–K4 SDK and self-hosting | K | Not started | — |

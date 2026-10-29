@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen, within } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -253,15 +253,15 @@ describe("Blast radius layout", () => {
   });
 });
 
-describe("Scan a repository", () => {
-  it("sends the URL typed in the header, and rescans the last repository when it is empty", async () => {
+describe("Scan buttons in the header", () => {
+  it("scans the last repository again, and links to the scan page for a new one", async () => {
     const start = vi.spyOn(api, "startScan").mockResolvedValue({ job_id: "j1" });
     const user = userEvent.setup();
     renderAt("/");
-    const field = await screen.findByLabelText("Repository to scan");
-    await user.type(field, "https://github.com/acme/shop");
-    await user.click(screen.getByRole("button", { name: "Scan this repository" }));
-    expect(start).toHaveBeenCalledWith("https://github.com/acme/shop");
-    expect(await screen.findByRole("button", { name: "Scan now" })).toBeEnabled();
+    const button = await screen.findByRole("button", { name: "Scan now" });
+    await waitFor(() => expect(button).toBeEnabled()); // enabled once the scans have loaded
+    await user.click(button);
+    expect(start).toHaveBeenCalledWith(fixtures.scans[0].repo_url);
+    expect(screen.getByRole("link", { name: "New scan" })).toHaveAttribute("href", "/scan");
   });
 });

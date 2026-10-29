@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
-import { NavLink, Outlet, useLocation } from "react-router-dom";
+import { Link, NavLink, Outlet, useLocation } from "react-router-dom";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 import { API_MODE, api } from "../api/client";
@@ -63,17 +63,14 @@ function TopBar() {
   const scan = scans?.find((s) => s.has_nodes);
   const toast = useToast();
   const client = useQueryClient();
-  const [target, setTarget] = useState("");
   const start = useMutation({
     mutationFn: (repoUrl: string) => api.startScan(repoUrl),
     onSuccess: () => {
-      setTarget("");
       toast("Scan started. Results update as each step finishes.");
       void client.invalidateQueries();
     },
     onError: (error: Error) => toast(`Could not start the scan: ${error.message}`),
   });
-  const repoToScan = target.trim() || scan?.repo_url || "";
   return (
     <div className="topbar">
       <div className="scope">
@@ -85,23 +82,12 @@ function TopBar() {
           </span>
         ) : null}
       </div>
-      <form
-        className="scanform"
-        onSubmit={(event) => {
-          event.preventDefault();
-          if (repoToScan) start.mutate(repoToScan);
-        }}
-      >
-        <input
-          aria-label="Repository to scan"
-          placeholder={scan?.repo_url ? "Another repository URL (empty: scan again)" : "https://github.com/owner/repo"}
-          value={target}
-          onChange={(event) => setTarget(event.target.value)}
-        />
-        <button className="btn" type="submit" disabled={!repoToScan || start.isPending}>
-          {target.trim() ? "Scan this repository" : "Scan now"}
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+        <button className="btn" onClick={() => scan?.repo_url && start.mutate(scan.repo_url)} disabled={!scan?.repo_url || start.isPending}>
+          Scan now
         </button>
-      </form>
+        <Link className="btn btn-primary" to="/scan">New scan</Link>
+      </div>
     </div>
   );
 }

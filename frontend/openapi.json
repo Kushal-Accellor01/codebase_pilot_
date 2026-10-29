@@ -499,6 +499,88 @@
         }
       }
     },
+    "/api/scan-requests/{request_id}/retry": {
+      "post": {
+        "summary": "Retry Scan Stage",
+        "description": "Re-queue one failed stage. Idempotent: the stage's rows are replaced, never duplicated.",
+        "operationId": "retry_scan_stage_api_scan_requests__request_id__retry_post",
+        "parameters": [
+          {
+            "name": "request_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Request Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "name": "x-pilot-user",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Pilot-User"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RetryStage"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScanRequestOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/scan-requests/{request_id}/cancel": {
       "post": {
         "summary": "Cancel Scan",
@@ -2867,6 +2949,11 @@
             "type": "boolean",
             "title": "Embedded Worker",
             "default": false
+          },
+          "model_configured": {
+            "type": "boolean",
+            "title": "Model Configured",
+            "default": false
           }
         },
         "type": "object",
@@ -2894,6 +2981,11 @@
               }
             ],
             "title": "Scan Request Id"
+          },
+          "read_only": {
+            "type": "boolean",
+            "title": "Read Only",
+            "default": false
           }
         },
         "type": "object",
@@ -2989,6 +3081,11 @@
             "type": "boolean",
             "title": "Allowed"
           },
+          "read_only": {
+            "type": "boolean",
+            "title": "Read Only",
+            "default": false
+          },
           "ok": {
             "type": "boolean",
             "title": "Ok"
@@ -3069,6 +3166,19 @@
           "repo_id"
         ],
         "title": "RepoOut"
+      },
+      "RetryStage": {
+        "properties": {
+          "stage": {
+            "type": "string",
+            "title": "Stage"
+          }
+        },
+        "type": "object",
+        "required": [
+          "stage"
+        ],
+        "title": "RetryStage"
       },
       "ScanFound": {
         "properties": {

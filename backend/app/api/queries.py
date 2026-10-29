@@ -4,6 +4,7 @@ import json
 import sqlite3
 
 from app.actions.codeowners import load_codeowners, owners_for
+from app.core import jobs
 from app.impact import store as impact_store
 from app.orchestrator import store as run_store
 from app.scan import store as scan_store
@@ -621,6 +622,29 @@ def cancel_scan_request(conn: sqlite3.Connection, request_id: str) -> str:
     return request["status"]
 
 
+def retry_scan_stage(conn: sqlite3.Connection, request_id: str, stage: str) -> str | None:
+    """Queue one failed stage again. Returns the job id, or None when the stage is not retryable."""
+    request = scan_store.get_scan_request(conn, request_id)
+    if request is None:
+        raise NotFound(f"scan request {request_id}")
+    current = {s["stage"]: s for s in scan_store.stage_summary(conn, request_id)}
+    if stage not in scan_pipeline_retry() or current.get(stage, {}).get("status") != "error" or not request["scan_id"]:
+        return None
+    attempt = len([e for e in scan_store.list_scan_events(conn, request_id) if e["stage"] == stage])
+    scan_store.reopen_scan_request(conn, request_id)
+    return jobs.enqueue(
+        conn, "dependency_updates",
+        {"scan_id": request["scan_id"], "only": request["only"], "scope": request["scope"], "request_id": request_id,
+         "retry_stage": stage},
+        dedupe_key=f"retry:{request_id}:{stage}:{attempt}")
+
+
+def scan_pipeline_retry():
+    from app.scan.pipeline import RETRY_STAGES
+
+    return RETRY_STAGES
+
+
 def _vuln_counts(rows: list[dict]) -> dict:
     return {
         "all": len(rows),
@@ -695,9 +719,9 @@ FOUND_BY = {
     "homepage": "Package homepage", "manual": "A person",
 }
 SAVED_NOTE = {
-    "changelog_url": "Saved. Other changelog pages are read in a later release; the repository is used meanwhile.",
-    "confluence": "Saved. Confluence pages are read as a change source in a later release.",
-    "slack": "Saved. Slack channels are read as a change source in a later release.",
+    "changelog_url": "Saved. Not read in this version; the package's repository is used meanwhile.",
+    "confluence": "Saved. Not read in this version: Confluence pages become a change source later.",
+    "slack": "Saved. Not read in this version: Slack channels become a change source later.",
 }
 
 

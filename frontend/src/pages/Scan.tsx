@@ -7,16 +7,16 @@ import { useHealth, useScans } from "../api/hooks";
 import type { RepoCheck, ScanScope } from "../api/models";
 import { Pill } from "../components/ui";
 
-const TILES: { key: keyof ScanScope; title: string; text: string }[] = [
+const TILES: { key: keyof ScanScope; title: string; text: string; soon?: boolean }[] = [
   { key: "vulnerabilities", title: "Vulnerabilities", text: "Every package in the lockfile, direct and transitive, against OSV and Dependabot alerts" },
   { key: "breaking_changes", title: "Breaking changes and deprecations", text: "Release notes read for each upgrade, every claim quoted from the source" },
-  { key: "internal_contracts", title: "Internal contracts", text: "OpenAPI, AsyncAPI, protobuf and topics your code uses. Not read in this version" },
+  { key: "internal_contracts", title: "Internal contracts", text: "OpenAPI, AsyncAPI, protobuf and topics your code uses", soon: true },
   { key: "production_evidence", title: "Production evidence", text: "Runtime warnings in Azure Monitor or log files, matched to code lines" },
   { key: "fixes", title: "Tested fixes", text: "Run your tests on the new version and propose a fix, for allowed repositories" },
   { key: "sbom", title: "SBOM", text: "A CycloneDX bill of materials for the scanned commit, ready to download" },
 ];
 const DEFAULT_SCOPE: ScanScope = {
-  vulnerabilities: true, breaking_changes: true, internal_contracts: true, production_evidence: false, fixes: true, sbom: true,
+  vulnerabilities: true, breaking_changes: true, internal_contracts: false, production_evidence: false, fixes: true, sbom: true,
 };
 
 export function isRepoLink(value: string): boolean {
@@ -24,19 +24,30 @@ export function isRepoLink(value: string): boolean {
   return /^(https?:\/\/|git@|ssh:\/\/)[^\s]+$/.test(v) || /^([A-Za-z]:[\\/]|\/|\.\.?[\\/])[^\s]*$/.test(v);
 }
 
+/** The exact reason a link cannot be scanned, or null when it can. */
+export function linkProblem(value: string): string | null {
+  const v = value.trim();
+  if (!v) return "Enter a repository link or a local path";
+  if (/^https?:\/\/[^/\s]+\/?$/.test(v) || /^https?:\/\/(github\.com|bitbucket\.org)\/[^/\s]+\/?$/.test(v)) {
+    return "Add the repository name, like https://github.com/owner/repo";
+  }
+  return isRepoLink(v) ? null : "Enter a repository link or a local path";
+}
+
 export default function ScanPage() {
   const navigate = useNavigate();
   const health = useHealth();
   const scans = useScans().data ?? [];
-  const [typed, setRepo] = useState<string | null>(null); // null until a person types: then the last scanned repository shows
-  const repo = typed ?? scans.find((s) => s.repo_url)?.repo_url ?? "";
+  const [repo, setRepo] = useState(""); // starts empty: Enter must never scan something nobody chose
+  const recent = scans.filter((s, i) => s.repo_url && scans.findIndex((o) => o.repo_url === s.repo_url) === i).slice(0, 4);
   const [branch, setBranch] = useState("");
   const [only, setOnly] = useState("");
   const [scope, setScope] = useState<ScanScope>(DEFAULT_SCOPE);
   const [touched, setTouched] = useState(false);
   const [check, setCheck] = useState<RepoCheck | null>(null);
 
-  const valid = isRepoLink(repo);
+  const problem = linkProblem(repo);
+  const valid = problem === null;
   const checkAccess = useMutation({ mutationFn: () => api.checkRepo(repo.trim()), onSuccess: setCheck });
   const start = useMutation({
     mutationFn: () =>
@@ -67,20 +78,37 @@ export default function ScanPage() {
             <label className="label" htmlFor="repo">Repository link</label>
             <input
               id="repo" className="field big" type="text" value={repo} aria-invalid={touched && !valid}
+              onBlur={() => repo && setTouched(true)}
               aria-describedby="repo-help" placeholder="https://github.com/owner/repo"
               onChange={(e) => { setRepo(e.target.value); setCheck(null); }}
             />
             <div id="repo-help" style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center", marginTop: 10 }}>
               {touched && !valid ? (
-                <span className="pill fail" role="alert">Enter a repository link or a local path</span>
+                <span className="pill fail" role="alert">{problem}</span>
               ) : check ? (
                 <Pill pill={check.ok ? "done" : "fail"}>
-                  {check.ok ? `${check.provider} · reachable` : check.allowed ? `${check.provider} · ${check.detail}` : "Not in EXEC_ALLOWED_REPOS"}
+                  {check.ok ? `${check.provider} · reachable${check.read_only ? " · read-only" : ""}` : check.allowed ? `${check.provider} · ${check.detail}` : "Not in EXEC_ALLOWED_REPOS"}
                 </Pill>
               ) : null}
               <span className="small muted">Pilot installs and tests code only for repositories in <code>EXEC_ALLOWED_REPOS</code>.</span>
             </div>
             {check && !check.ok ? <p className="small" style={{ color: "var(--critical)", margin: "8px 0 0" }}>{check.detail}</p> : null}
+            {check?.ok && check.read_only ? (
+              <p className="small" role="note" style={{ margin: "8px 0 0" }}>
+                <b>Read-only scan:</b> Pilot will not install or test code in this repository. Fixes and production
+                evidence are switched off; vulnerabilities, the dependency list and the SBOM still work.
+              </p>
+            ) : null}
+            {recent.length > 0 && !repo ? (
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center", marginTop: 12 }} role="group" aria-label="Recent repositories">
+                <span className="small muted">Recent:</span>
+                {recent.map((s) => (
+                  <button key={s.id} type="button" className="btn" style={{ minHeight: 36 }} onClick={() => { setRepo(s.repo_url!); setCheck(null); }}>
+                    {s.repo}
+                  </button>
+                ))}
+              </div>
+            ) : null}
           </div>
           <div className="row2">
             <div>
@@ -96,9 +124,12 @@ export default function ScanPage() {
             <legend className="label" style={{ marginBottom: 10 }}>What should Pilot look for?</legend>
             <div className="tiles">
               {TILES.map((t) => (
-                <label key={t.key} className="tile">
+                <label key={t.key} className="tile" data-checked={scope[t.key]} style={scope[t.key] ? { borderWidth: 2 } : undefined}>
                   <input type="checkbox" checked={scope[t.key]} onChange={(e) => setScope({ ...scope, [t.key]: e.target.checked })} />
-                  <span><b>{t.title}</b><small>{t.text}</small></span>
+                  <span>
+                    <b>{scope[t.key] ? "✓ " : ""}{t.title}{t.soon ? <span className="pill" style={{ marginLeft: 8 }}>Not in this version</span> : null}</b>
+                    <small>{t.text}</small>
+                  </span>
                 </label>
               ))}
             </div>

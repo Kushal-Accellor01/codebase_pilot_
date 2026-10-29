@@ -84,13 +84,26 @@ def prune_clones(conn: sqlite3.Connection, workspace: str | Path) -> list[str]:
     return removed
 
 
+def _tree_mb(path: Path) -> float:
+    total = 0
+    for root, _dirs, files in os.walk(path):
+        for name in files:
+            try:
+                total += (Path(root) / name).stat().st_size
+            except OSError:
+                pass
+    return total / 1_048_576
+
+
 def ingest(
-    repo_url: str, db_path: str | None = None, workspace: str | Path | None = None, branch: str | None = None
+    repo_url: str, db_path: str | None = None, workspace: str | Path | None = None, branch: str | None = None,
+    *, limited: bool = False,
 ) -> str:
     """Clone `repo_url` into its own folder, scan it, and return the scan id.
 
     Every scan gets a fresh clone (the code stays identical to the scanned commit) in `clones/<owner>__<repo>/<stamp>`.
     Older clones stay while a run that started on them is unfinished: its worktree depends on them.
+    `limited` (read-only scans of repositories nobody listed) caps clone time and size.
     """
     settings = get_settings()
     db_path = db_path or settings.codebase_pilot_db
@@ -99,10 +112,21 @@ def ingest(
     clone = (workspace / "clones" / clone_key(repo_url) / stamp).resolve()
     clone.parent.mkdir(parents=True, exist_ok=True)
 
-    result = _git("clone", "--depth", "1", *(["--branch", branch] if branch else []), "--",
-                 repo_url, str(clone))
+    try:
+        result = subprocess.run(
+            ["git", "clone", "--depth", "1", *(["--branch", branch] if branch else []), "--", repo_url, str(clone)],
+            capture_output=True, text=True, encoding="utf-8", errors="replace",
+            timeout=settings.scan_clone_timeout_s if limited else None,
+        )
+    except subprocess.TimeoutExpired as exc:
+        if clone.exists():
+            _remove_tree(clone)
+        raise RuntimeError(f"git clone took longer than {settings.scan_clone_timeout_s} s and was stopped") from exc
     if result.returncode != 0:
         raise RuntimeError(f"git clone failed: {result.stderr.strip()}")
+    if limited and (size := _tree_mb(clone)) > settings.scan_clone_max_mb:
+        _remove_tree(clone)
+        raise RuntimeError(f"repository is {size:.0f} MB; read-only scans stop at {settings.scan_clone_max_mb} MB")
     commit = _git("-C", str(clone), "rev-parse", "HEAD")
     commit_sha = commit.stdout.strip() if commit.returncode == 0 else "HEAD"
     branch = _git("-C", str(clone), "rev-parse", "--abbrev-ref", "HEAD").stdout.strip() or None

@@ -231,10 +231,10 @@ def test_scan_request_queues_a_job(seeded):
 def test_scan_request_for_a_repository_outside_the_allowlist_is_refused(seeded):
     """B-10: the API never clones a URL or path just because someone posted it."""
     with client_for(seeded, exec_allowed_repos="acme/shop") as client:
-        for url in ("https://github.com/evil/repo", "C:/Users/someone/private", "https://github.com/acme/shop-fork"):
-            assert client.post("/api/scans", json={"repo_url": url}).status_code == 403
-    with client_for(seeded) as client:  # nothing allowed at all
-        assert client.post("/api/scans", json={"repo_url": "https://github.com/acme/shop"}).status_code == 403
+        for url in ("https://evil.example/evil/repo", "C:/Users/someone/private", "ssh://github.com/other/shop",
+                    "git@github.com:other/shop.git", "http://github.com/other/shop", "https://tok@github.com/other/shop",
+                    "--upload-pack=x"):
+            assert client.post("/api/scans", json={"repo_url": url}).status_code == 403, url
     conn = core_db.connect(seeded.db)
     assert conn.execute("SELECT count(*) FROM jobs WHERE kind = 'scan' AND status = 'queued'").fetchone()[0] == 0
 

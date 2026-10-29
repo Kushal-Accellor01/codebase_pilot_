@@ -162,6 +162,13 @@ def update_scan_request(
         )
 
 
+def reopen_scan_request(conn: sqlite3.Connection, request_id: str) -> None:
+    """A retry is running: the request is working again and the old error no longer applies."""
+    with conn:
+        conn.execute("UPDATE scan_requests SET status = 'running', error = NULL, "
+                     "updated_at = strftime('%Y-%m-%dT%H:%M:%SZ','now') WHERE id = ?", (request_id,))
+
+
 def get_scan_request(conn: sqlite3.Connection, request_id: str) -> dict | None:
     row = conn.execute("SELECT * FROM scan_requests WHERE id = ?", (request_id,)).fetchone()
     if row is None:

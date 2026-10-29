@@ -1,60 +1,60 @@
 [
   {
     "id": 1,
-    "run_id": "e570d33a-d738-4ba7-b49d-ed6498ebf12e",
+    "run_id": "8594c8c9-8432-4788-b421-fe3b983c7222",
     "node": "prepare",
     "status": "started",
     "summary": null,
-    "ts": "2026-10-29T07:08:01.624Z",
+    "ts": "2026-10-29T08:39:08.205Z",
     "data": null
   },
   {
     "id": 2,
-    "run_id": "e570d33a-d738-4ba7-b49d-ed6498ebf12e",
+    "run_id": "8594c8c9-8432-4788-b421-fe3b983c7222",
     "node": "prepare",
     "status": "finished",
     "summary": "worktree ready, repository may be executed (express)",
-    "ts": "2026-10-29T07:08:01.924Z",
+    "ts": "2026-10-29T08:39:08.830Z",
     "data": null
   },
   {
     "id": 3,
-    "run_id": "e570d33a-d738-4ba7-b49d-ed6498ebf12e",
+    "run_id": "8594c8c9-8432-4788-b421-fe3b983c7222",
     "node": "impact",
     "status": "started",
     "summary": null,
-    "ts": "2026-10-29T07:08:01.929Z",
+    "ts": "2026-10-29T08:39:08.835Z",
     "data": null
   },
   {
     "id": 4,
-    "run_id": "e570d33a-d738-4ba7-b49d-ed6498ebf12e",
+    "run_id": "8594c8c9-8432-4788-b421-fe3b983c7222",
     "node": "scope",
     "status": "finished",
     "summary": "8 files in scope",
-    "ts": "2026-10-29T07:08:01.929Z",
+    "ts": "2026-10-29T08:39:08.838Z",
     "data": {
       "files": 8
     }
   },
   {
     "id": 5,
-    "run_id": "e570d33a-d738-4ba7-b49d-ed6498ebf12e",
+    "run_id": "8594c8c9-8432-4788-b421-fe3b983c7222",
     "node": "patterns",
     "status": "finished",
     "summary": "5 candidate lines",
-    "ts": "2026-10-29T07:08:02.009Z",
+    "ts": "2026-10-29T08:39:08.930Z",
     "data": {
       "hits": 5
     }
   },
   {
     "id": 6,
-    "run_id": "e570d33a-d738-4ba7-b49d-ed6498ebf12e",
+    "run_id": "8594c8c9-8432-4788-b421-fe3b983c7222",
     "node": "baseline_probe",
     "status": "finished",
     "summary": "6 runtime deprecation warnings",
-    "ts": "2026-10-29T07:08:02.018Z",
+    "ts": "2026-10-29T08:39:08.951Z",
     "data": {
       "passed": true,
       "tests_passed": 9,
@@ -63,11 +63,11 @@
   },
   {
     "id": 7,
-    "run_id": "e570d33a-d738-4ba7-b49d-ed6498ebf12e",
+    "run_id": "8594c8c9-8432-4788-b421-fe3b983c7222",
     "node": "upgrade_probe",
     "status": "finished",
     "summary": "tests fail on 5.3.0",
-    "ts": "2026-10-29T07:08:02.040Z",
+    "ts": "2026-10-29T08:39:09.030Z",
     "data": {
       "passed": false,
       "tests_passed": 1,
@@ -76,92 +76,92 @@
   },
   {
     "id": 8,
-    "run_id": "e570d33a-d738-4ba7-b49d-ed6498ebf12e",
+    "run_id": "8594c8c9-8432-4788-b421-fe3b983c7222",
     "node": "confirm",
     "status": "finished",
     "summary": "0 lines reviewed",
-    "ts": "2026-10-29T07:08:02.049Z",
+    "ts": "2026-10-29T08:39:09.043Z",
     "data": null
   },
   {
     "id": 9,
-    "run_id": "e570d33a-d738-4ba7-b49d-ed6498ebf12e",
+    "run_id": "8594c8c9-8432-4788-b421-fe3b983c7222",
     "node": "impact",
     "status": "finished",
     "summary": "7 affected lines in 5 files",
-    "ts": "2026-10-29T07:08:02.051Z",
+    "ts": "2026-10-29T08:39:09.043Z",
     "data": null
   },
   {
     "id": 10,
-    "run_id": "e570d33a-d738-4ba7-b49d-ed6498ebf12e",
+    "run_id": "8594c8c9-8432-4788-b421-fe3b983c7222",
     "node": "telemetry",
     "status": "started",
     "summary": null,
-    "ts": "2026-10-29T07:08:02.054Z",
+    "ts": "2026-10-29T08:39:09.050Z",
     "data": null
   },
   {
     "id": 11,
-    "run_id": "e570d33a-d738-4ba7-b49d-ed6498ebf12e",
+    "run_id": "8594c8c9-8432-4788-b421-fe3b983c7222",
     "node": "telemetry",
     "status": "finished",
     "summary": "110 matching production log lines in 4 patterns",
-    "ts": "2026-10-29T07:08:02.069Z",
+    "ts": "2026-10-29T08:39:09.075Z",
     "data": null
   },
   {
     "id": 12,
-    "run_id": "e570d33a-d738-4ba7-b49d-ed6498ebf12e",
+    "run_id": "8594c8c9-8432-4788-b421-fe3b983c7222",
     "node": "plan",
     "status": "started",
     "summary": null,
-    "ts": "2026-10-29T07:08:02.070Z",
+    "ts": "2026-10-29T08:39:09.091Z",
     "data": null
   },
   {
     "id": 13,
-    "run_id": "e570d33a-d738-4ba7-b49d-ed6498ebf12e",
+    "run_id": "8594c8c9-8432-4788-b421-fe3b983c7222",
     "node": "plan",
     "status": "finished",
     "summary": "critical, about 6.5 h",
-    "ts": "2026-10-29T07:08:02.076Z",
+    "ts": "2026-10-29T08:39:09.098Z",
     "data": null
   },
   {
     "id": 14,
-    "run_id": "e570d33a-d738-4ba7-b49d-ed6498ebf12e",
+    "run_id": "8594c8c9-8432-4788-b421-fe3b983c7222",
     "node": "fix",
     "status": "started",
     "summary": null,
-    "ts": "2026-10-29T07:08:02.078Z",
+    "ts": "2026-10-29T08:39:09.109Z",
     "data": null
   },
   {
     "id": 15,
-    "run_id": "e570d33a-d738-4ba7-b49d-ed6498ebf12e",
+    "run_id": "8594c8c9-8432-4788-b421-fe3b983c7222",
     "node": "fix",
     "status": "finished",
     "summary": "attempt 1: 7 edits applied, 0 rejected",
-    "ts": "2026-10-29T07:08:03.133Z",
+    "ts": "2026-10-29T08:39:11.617Z",
     "data": null
   },
   {
     "id": 16,
-    "run_id": "e570d33a-d738-4ba7-b49d-ed6498ebf12e",
+    "run_id": "8594c8c9-8432-4788-b421-fe3b983c7222",
     "node": "validate",
     "status": "started",
     "summary": null,
-    "ts": "2026-10-29T07:08:03.135Z",
+    "ts": "2026-10-29T08:39:11.617Z",
     "data": null
   },
   {
     "id": 17,
-    "run_id": "e570d33a-d738-4ba7-b49d-ed6498ebf12e",
+    "run_id": "8594c8c9-8432-4788-b421-fe3b983c7222",
     "node": "validate",
     "status": "waiting",
     "summary": "tests pass on attempt 1 (9/9)",
-    "ts": "2026-10-29T07:08:03.141Z",
+    "ts": "2026-10-29T08:39:11.635Z",
     "data": null
   }
 ]

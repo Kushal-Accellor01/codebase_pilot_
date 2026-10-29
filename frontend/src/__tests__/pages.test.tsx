@@ -7,7 +7,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import App from "../App";
 import { api } from "../api/client";
 import { fixtures } from "../api/fixtures";
-import { isRepoLink } from "../pages/Scan";
+import { isRepoLink, linkProblem } from "../pages/Scan";
 
 function renderAt(path: string) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -30,6 +30,42 @@ describe("Scan a repository", () => {
     for (const bad of ["", "shop", "acme shop", "javascript:alert(1)"]) expect(isRepoLink(bad)).toBe(false);
   });
 
+  it("gives the exact reason a link cannot be scanned", () => {
+    expect(linkProblem("")).toMatch(/Enter a repository link/);
+    expect(linkProblem("https://github.com/acme")).toMatch(/Add the repository name/);
+    expect(linkProblem("https://github.com/acme/shop")).toBeNull();
+  });
+
+  it("starts empty, and Enter on the empty field shows the error and starts nothing", async () => {
+    const start = vi.spyOn(api, "startScan");
+    const user = userEvent.setup();
+    renderAt("/scan");
+    const field = await screen.findByLabelText("Repository link");
+    expect(field).toHaveValue("");
+    await user.type(field, "{Enter}");
+    expect(await screen.findByRole("alert")).toHaveTextContent("Enter a repository link");
+    expect(start).not.toHaveBeenCalled();
+  });
+
+  it("offers recent repositories as chips that fill the field", async () => {
+    const user = userEvent.setup();
+    renderAt("/scan");
+    const group = await screen.findByRole("group", { name: "Recent repositories" });
+    await user.click(within(group).getAllByRole("button")[0]);
+    expect(screen.getByLabelText("Repository link")).not.toHaveValue("");
+  });
+
+  it("says a scan of an unlisted public repository is read-only", async () => {
+    vi.spyOn(api, "checkRepo").mockResolvedValue({
+      provider: "github", repo: "shop", allowed: true, read_only: true, ok: true, detail: "3 branches", branches: ["main"],
+    });
+    const user = userEvent.setup();
+    renderAt("/scan");
+    await user.type(await screen.findByLabelText("Repository link"), "https://github.com/acme/shop");
+    await user.click(screen.getByRole("button", { name: "Check access first" }));
+    expect(await screen.findByRole("note")).toHaveTextContent("Read-only scan: Pilot will not install or test code");
+  });
+
   it("explains an invalid link and does not start a scan", async () => {
     const start = vi.spyOn(api, "startScan");
     const user = userEvent.setup();
@@ -43,7 +79,7 @@ describe("Scan a repository", () => {
   });
 
   it("starts a scan with the chosen scope and opens the progress page", async () => {
-    const start = vi.spyOn(api, "startScan").mockResolvedValue({ job_id: "j", scan_request_id: fixtures.scanRequest.id });
+    const start = vi.spyOn(api, "startScan").mockResolvedValue({ job_id: "j", scan_request_id: fixtures.scanRequest.id, read_only: false });
     const user = userEvent.setup();
     renderAt("/scan");
     const field = await screen.findByLabelText("Repository link");
@@ -55,7 +91,7 @@ describe("Scan a repository", () => {
     expect(start).toHaveBeenCalledWith("https://github.com/acme/shop", {
       branch: "release", only: [],
       scope: {
-        vulnerabilities: true, breaking_changes: true, internal_contracts: true, production_evidence: false, fixes: true, sbom: false,
+        vulnerabilities: true, breaking_changes: true, internal_contracts: false, production_evidence: false, fixes: true, sbom: false,
       },
     });
     expect(await screen.findByRole("list", { name: "Scan steps" })).toBeInTheDocument();
@@ -63,7 +99,7 @@ describe("Scan a repository", () => {
 
   it("checks access before scanning and shows why a repository is refused", async () => {
     vi.spyOn(api, "checkRepo").mockResolvedValue({
-      provider: "github", repo: "shop", allowed: false, ok: false, detail: "This repository is not in EXEC_ALLOWED_REPOS.", branches: [],
+      provider: "github", repo: "shop", allowed: false, read_only: false, ok: false, detail: "This repository is not in EXEC_ALLOWED_REPOS.", branches: [],
     });
     const user = userEvent.setup();
     renderAt("/scan");
@@ -106,6 +142,22 @@ describe("Scan progress", () => {
 });
 
 describe("Results and vulnerabilities", () => {
+  it("lists a failed step at the top and retries only that step", async () => {
+    const failed = {
+      ...fixtures.scanRequest,
+      stages: fixtures.scanRequest.stages.map((s) => (s.stage === "vulnerabilities" ? { ...s, status: "error", summary: "RuntimeError: OSV is down" } : s)),
+    };
+    vi.spyOn(api, "scanRequest").mockResolvedValue(failed);
+    const retry = vi.spyOn(api, "retryStage").mockResolvedValue(fixtures.scanRequest);
+    const user = userEvent.setup();
+    renderAt("/scans/latest");
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent("One step failed");
+    expect(alert).toHaveTextContent("OSV is down");
+    await user.click(within(alert).getByRole("button", { name: "Retry this step" }));
+    expect(retry).toHaveBeenCalledWith(failed.id, "vulnerabilities");
+  });
+
   it("shows the four numbers, filters advisories and offers the SBOM", async () => {
     const user = userEvent.setup();
     renderAt("/scans/latest");

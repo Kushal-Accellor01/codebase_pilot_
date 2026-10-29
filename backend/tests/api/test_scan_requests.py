@@ -64,15 +64,37 @@ def test_unknown_request_is_404_and_repo_outside_the_allowlist_is_403(fresh):
         assert client.get("/api/scan-requests/nope").status_code == 404
         assert client.get("/api/scan-requests/nope/events").status_code == 404
         assert client.post("/api/scan-requests/nope/cancel").status_code == 404
-        assert client.post("/api/scans", json={"repo_url": "https://github.com/evil/repo"}).status_code == 403
+        assert client.post("/api/scans", json={"repo_url": "https://evil.example/evil/repo"}).status_code == 403
+
+
+def test_public_https_repository_outside_the_allowlist_is_a_read_only_scan(fresh):
+    """B-S1: scanning runs no repository code, so it is open; fixes and production evidence are forced off."""
+    with client_for(fresh, **allowed(fresh)) as client:
+        accepted = client.post("/api/scans", json={"repo_url": "https://github.com/evil/repo"})
+        assert accepted.status_code == 202 and accepted.json()["read_only"] is True
+        scope = client.get(f"/api/scan-requests/{accepted.json()['scan_request_id']}").json()["scope"]
+        assert scope["fixes"] is False and scope["production_evidence"] is False and scope["vulnerabilities"] is True
+        listed = client.post("/api/scans", json={"repo_url": str(fresh.origin), "only": ["express"]}).json()
+        assert listed["read_only"] is False
+        check = client.post("/api/scans/check", json={"repo_url": "https://github.com/evil/repo"}).json()
+        assert check["allowed"] is True and check["read_only"] is True
+
+
+def test_clone_limits_stop_a_big_or_slow_repository(tmp_path, monkeypatch, sandbox_origin):
+    from app.orchestrator import ingest as ingest_module
+
+    monkeypatch.setenv("SCAN_CLONE_MAX_MB", "0")
+    with pytest.raises(RuntimeError, match="read-only scans stop at 0 MB"):
+        ingest_module.ingest(str(sandbox_origin), str(tmp_path / "p.db"), tmp_path / "ws", limited=True)
+    assert not list((tmp_path / "ws" / "clones").rglob("package.json"))  # the oversized clone was removed
 
 
 def test_repo_check_reports_allowlist_and_access(fresh):
     with client_for(fresh, **allowed(fresh)) as client:
         ok = client.post("/api/scans/check", json={"repo_url": str(fresh.origin)}).json()
         assert ok["allowed"] and ok["ok"] and ok["provider"] == "local" and ok["branches"]
-        no = client.post("/api/scans/check", json={"repo_url": "https://github.com/evil/repo"}).json()
-        assert no["allowed"] is False and no["provider"] == "github" and "EXEC_ALLOWED_REPOS" in no["detail"]
+        no = client.post("/api/scans/check", json={"repo_url": "https://evil.example/evil/repo"}).json()
+        assert no["allowed"] is False and no["provider"] == "other" and "EXEC_ALLOWED_REPOS" in no["detail"]
         assert client.post("/api/scans/check", json={"repo_url": "--upload-pack=x"}).json()["allowed"] is False
 
 
@@ -211,3 +233,25 @@ def test_clone_failure_is_recorded_on_the_stage(fresh):
         assert stages(client, request_id)["clone"]["status"] == "error"
         assert "git clone failed" in stages(client, request_id)["clone"]["summary"]
         assert detail["status"] in ("running", "failed")  # failed once the retries are used up
+
+
+# --- B-S6: retry one failed stage ----------------------------------------------------------------------------------
+
+
+def test_a_failed_stage_can_be_retried_once_and_only_that_stage(fresh):
+    with client_for(fresh, **allowed(fresh)) as client:
+        conn = core_db.connect(fresh.db)
+        request_id = scan_store.create_scan_request(
+            conn, repo_url=str(fresh.origin), branch=None, scope={"vulnerabilities": True}, only=None)
+        scan_store.update_scan_request(conn, request_id, status="failed", scan_id="s-1", error="vulnerabilities: boom")
+        scan_store.add_scan_event(conn, request_id, "sbom", "done", "159 packages")
+        scan_store.add_scan_event(conn, request_id, "vulnerabilities", "error", "RuntimeError: boom")
+
+        assert client.post(f"/api/scan-requests/{request_id}/retry", json={"stage": "sbom"}).status_code == 409  # not failed
+        assert client.post(f"/api/scan-requests/{request_id}/retry", json={"stage": "clone"}).status_code == 409  # not retryable
+        for _ in range(2):  # a double click queues one job
+            reply = client.post(f"/api/scan-requests/{request_id}/retry", json={"stage": "vulnerabilities"})
+            assert reply.status_code == 202 and reply.json()["status"] == "running" and reply.json()["error"] is None
+        queued = conn.execute("SELECT payload FROM jobs WHERE kind = 'dependency_updates' AND status = 'queued'").fetchall()
+        assert len(queued) == 1 and json.loads(queued[0]["payload"])["retry_stage"] == "vulnerabilities"
+        assert client.post("/api/scan-requests/nope/retry", json={"stage": "sbom"}).status_code == 404

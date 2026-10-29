@@ -19,7 +19,7 @@ from app import notifications
 from app.actions.repo_actions import run_repo_actions
 from app.changes import feed
 from app.core import db as core_db
-from app.core import jobs
+from app.core import jobs, scan_policy
 from app.core.config import Settings, get_settings
 from app.core.llm import LLM
 from app.orchestrator import push_tracker, runner
@@ -67,7 +67,8 @@ async def _scan(conn, job: jobs.Job, db_path: str, settings: Settings) -> None:
     stages("clone", "running", f"Cloning {payload['repo_url']}{branch}")
     try:
         scan_id = await asyncio.to_thread(
-            ingest, payload["repo_url"], db_path, settings.codebase_pilot_workspace, payload.get("branch"))
+            ingest, payload["repo_url"], db_path, settings.codebase_pilot_workspace, payload.get("branch"),
+            limited=scan_policy.access_for(payload["repo_url"], settings) != "full")
     except Exception as exc:
         stages("clone", "error", f"{type(exc).__name__}: {exc}"[:300])
         if request_id and job.attempts >= job.max_attempts:
@@ -92,13 +93,18 @@ async def _dependency_updates(conn, job: jobs.Job, db_path: str, settings: Setti
     payload = job.payload
     scan_id = payload["scan_id"]
     scope = scan_pipeline.scope_of(payload.get("scope"))
-    stages = scan_pipeline.Stages(conn, payload.get("request_id"))
+    retry = payload.get("retry_stage")  # "Retry this stage": only that stage's work runs again
+    stages = scan_pipeline.Stages(conn, payload.get("request_id"), scan_pipeline.RETRY_STAGES.get(retry or ""))
     if stages.cancelled():
         return
     offline = services.update_options.get("security") is False
-    await scan_pipeline.run_layers(
-        conn, services.http, settings, scan_id, scope, stages, vulnerabilities_enabled=not offline)
+    if retry in (None, "sbom", "vulnerabilities"):
+        await scan_pipeline.run_layers(
+            conn, services.http, settings, scan_id, scope, stages, vulnerabilities_enabled=not offline)
     if stages.cancelled():
+        return
+    if retry in ("sbom", "vulnerabilities"):
+        scan_pipeline.finish_if_done(conn, scan_id)
         return
 
     async def versions() -> str:

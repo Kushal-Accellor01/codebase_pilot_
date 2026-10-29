@@ -15,6 +15,7 @@ class Health(BaseModel):
     llm_mode: str
     jobs_queued: int
     embedded_worker: bool = False
+    model_configured: bool = False  # a live model can answer (replay mode counts as configured)
 
 
 class ScanOut(BaseModel):
@@ -188,6 +189,11 @@ class ScanRequest(BaseModel):
 class JobAccepted(BaseModel):
     job_id: str
     scan_request_id: str | None = None
+    read_only: bool = False
+
+
+class RetryStage(BaseModel):
+    stage: str
 
 
 class RepoCheckRequest(BaseModel):
@@ -198,6 +204,7 @@ class RepoCheck(BaseModel):
     provider: str  # github | bitbucket | gitlab | local | other
     repo: str
     allowed: bool
+    read_only: bool = False
     ok: bool
     detail: str
     branches: list[str] = []

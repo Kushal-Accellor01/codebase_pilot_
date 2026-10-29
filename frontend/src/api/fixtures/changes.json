@@ -8,7 +8,7 @@
   },
   "cards": [
     {
-      "event_id": "c9efe799d6597f766e87bf8d",
+      "event_id": "9efc7f74d478138ce9c12406",
       "origin": "external",
       "source": "registry",
       "source_label": "New release",
@@ -32,13 +32,13 @@
         "now",
         "todo"
       ],
-      "run_id": "e570d33a-d738-4ba7-b49d-ed6498ebf12e",
+      "run_id": "8594c8c9-8432-4788-b421-fe3b983c7222",
       "action": {
         "kind": "approve",
         "label": "Review and approve",
-        "run_id": "e570d33a-d738-4ba7-b49d-ed6498ebf12e"
+        "run_id": "8594c8c9-8432-4788-b421-fe3b983c7222"
       },
-      "detected_at": "2026-10-29T07:08:01Z",
+      "detected_at": "2026-10-29T08:39:08Z",
       "repo": "pilot-sandbox-shop",
       "subject": "express",
       "from_version": "4.21.2",

@@ -23,6 +23,7 @@ for (const scheme of ["light", "dark"] as const) {
       await page.waitForLoadState("networkidle");
       const link = page.getByRole("link", { name: "Scan a repository" }).first();
       await link.click();
+      await page.getByRole("group", { name: "Recent repositories" }).getByRole("button").first().click();
       await page.getByRole("button", { name: "Start scan" }).click();
       await page.getByText("Scan complete").waitFor({ timeout: 90_000 });
       await page.screenshot({ path: `screenshots/${scheme}-${size.name}_progress.png`, fullPage: true });

@@ -1,7 +1,7 @@
 import { useId, useMemo, useRef, useState, type KeyboardEvent } from "react";
 import { Link, useParams } from "react-router-dom";
 
-import { useFeedback, useGraph, useRunEvents, useUpgrade } from "../api/hooks";
+import { useFeedback, useGraph, useHealth, useRunEvents, useUpgrade } from "../api/hooks";
 import {
   asEvent, asFindings, asPatches, asPlan, asTelemetry, asTests,
   type Finding, type ProbeSummary, type RunEvent, type UpgradeDetail,
@@ -22,6 +22,19 @@ function testsText(p: ProbeSummary | null | undefined): { big: string; small: st
   const ok = Boolean(p.passed);
   const counts = p.tests_total ? `${p.tests_passed ?? 0} of ${p.tests_total} pass` : ok ? "Passed" : "Failed";
   return { big: counts, small: ok ? "All green" : "Some tests fail", color: ok ? "var(--low)" : "var(--critical)" };
+}
+
+/** B-S5: with no model, plan text comes from templates and no fix is proposed; say so instead of showing nothing. */
+function NoModelNotice({ what }: { what: "plan" | "fix" }) {
+  const health = useHealth().data;
+  if (!health || health.model_configured) return null;
+  return (
+    <p className="small" role="note" style={{ padding: "10px 14px", border: "1px solid var(--rule)", borderRadius: 8, background: "var(--panel)" }}>
+      <b>No model configured:</b>{" "}
+      {what === "plan" ? "this plan is from templates." : "no fix was proposed."} Set <code>LLM_PROVIDER</code> and its key in <code>backend/.env</code> to
+      let Pilot read release notes and write fixes.
+    </p>
+  );
 }
 
 // --- tabs ---------------------------------------------------------------------------------------------------------
@@ -148,6 +161,7 @@ function PlanTab({ detail }: { detail: UpgradeDetail }) {
   if (!plan) return <Empty title="No plan yet">The plan is written once the impact analysis is done.</Empty>;
   return (
     <>
+      <NoModelNotice what="plan" />
       <p><b>Why {plan.severity}:</b> {plan.rationale}</p>
       <p className="small muted">Estimated effort if done by hand: about {plan.effort_hours} h</p>
       <h3>Steps</h3>
@@ -183,6 +197,7 @@ function FixTests({ detail }: { detail: UpgradeDetail }) {
   ];
   return (
     <>
+      {latest ? null : <NoModelNotice what="fix" />}
       {latest ? (
         <>
           <DiffView diff={latest.diff} />

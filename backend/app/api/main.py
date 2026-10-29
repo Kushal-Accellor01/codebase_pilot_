@@ -25,7 +25,8 @@ from app.api import queries, schemas
 from app.channels import service as channel_service
 from app.channels import store as channel_store
 from app.core import db as core_db
-from app.core import events, jobs, preflight, workspace
+from app.core import events, jobs, preflight, scan_policy
+from app.core import llm as llm_module
 from app.core.config import Settings, get_settings
 from app.core.logging import configure_logging
 from app.database import GraphDatabase
@@ -41,6 +42,14 @@ logger = logging.getLogger(__name__)
 
 CORS_ORIGINS = ["http://localhost:5173", "http://127.0.0.1:5173"]
 SSE_POLL_S = 0.5
+
+
+def _private_hint(detail: str) -> str:
+    """git's reason, plus what to do when the repository looks private."""
+    low = detail.lower()
+    if any(w in low for w in ("authentication", "not found", "could not read", "denied", "403", "404")):
+        return detail + " If the repository is private, set GITHUB_TOKEN to a token with read access to it."
+    return detail
 
 
 def create_app(
@@ -99,7 +108,8 @@ def create_app(
 
     @app.get("/api/health", response_model=schemas.Health)
     def health(conn=Depends(get_conn)):
-        return {**queries.health(conn, settings.llm_mode), "embedded_worker": settings.pilot_embedded_worker}
+        return {**queries.health(conn, settings.llm_mode), "embedded_worker": settings.pilot_embedded_worker,
+                "model_configured": settings.llm_mode == "replay" or llm_module.is_configured(settings)}
 
     @app.get("/api/scans", response_model=list[schemas.ScanOut])
     def scans(conn=Depends(get_conn)):
@@ -159,11 +169,13 @@ def create_app(
 
     @app.post("/api/scans", response_model=schemas.JobAccepted, status_code=202)
     def start_scan(body: schemas.ScanRequest, conn=Depends(get_conn), _who=Depends(writer)):
-        # The API clones whatever it is given, so it only accepts repositories Pilot is configured to work on.
-        allowed = {a.replace("\\", "/").rstrip("/") for a in settings.exec_allowed}
-        if workspace.repo_identity(body.repo_url) not in allowed:
+        # Read-only scans (no code is run) are open to public https links; anything else needs the allowlist.
+        access = scan_policy.access_for(body.repo_url, settings)
+        if access == "refused":
             raise HTTPException(403, "this repository is not in EXEC_ALLOWED_REPOS; ask an administrator to add it")
         scope = body.scope.model_dump() if body.scope else None
+        if access == "read_only":
+            scope = scan_policy.read_only_scope(scope or scan_pipeline.full_scope())
         request_id = scan_store.create_scan_request(
             conn, repo_url=body.repo_url, branch=body.branch, scope=scope or scan_pipeline.full_scope(), only=body.only)
         job_id = jobs.enqueue(
@@ -172,30 +184,41 @@ def create_app(
              "request_id": request_id},
         )
         scan_store.set_request_job(conn, request_id, job_id)
-        return {"job_id": job_id, "scan_request_id": request_id}
+        return {"job_id": job_id, "scan_request_id": request_id, "read_only": access == "read_only"}
 
     @app.post("/api/scans/check", response_model=schemas.RepoCheck)
     def check_repository(body: schemas.RepoCheckRequest, _who=Depends(writer)):
         """Can the server read this repository, and may Pilot work on it? Runs `git ls-remote` on the server."""
         url = body.repo_url.strip()
-        identity = workspace.repo_identity(url) or url
-        allowed = identity in {a.replace("\\", "/").rstrip("/") for a in settings.exec_allowed}
+        access = scan_policy.access_for(url, settings)
         host = "github" if "github.com" in url else "bitbucket" if "bitbucket.org" in url else (
             "gitlab" if "gitlab" in url else "local" if "://" not in url and not url.startswith("git@") else "other")
         label = queries._repo_label(url)
-        if not allowed:
+        if access == "refused":
             return {"provider": host, "repo": label, "allowed": False, "ok": False,
-                    "detail": "This repository is not in EXEC_ALLOWED_REPOS, so Pilot will not scan it."}
+                    "detail": "This repository is not in EXEC_ALLOWED_REPOS, so Pilot will not scan it. "
+                              "Public https links on github.com and bitbucket.org can be scanned read-only."}
         if url.startswith("-"):
             raise HTTPException(422, "not a repository link")
         found = preflight.check_repo_access(url)[0]
         branches = [b.strip() for b in found.detail.split("e.g.")[-1].split(",")] if found.status == "ok" else []
-        return {"provider": host, "repo": label, "allowed": True, "ok": found.status == "ok", "detail": found.detail,
-                "branches": branches}
+        return {"provider": host, "repo": label, "allowed": True, "read_only": access == "read_only",
+                "ok": found.status == "ok",
+                "detail": found.detail if found.status == "ok" else _private_hint(found.detail), "branches": branches}
 
     @app.get("/api/scan-requests/{request_id}", response_model=schemas.ScanRequestOut)
     def scan_request(request_id: str, conn=Depends(get_conn)):
         try:
+            return queries.scan_request_detail(conn, request_id)
+        except queries.NotFound as exc:
+            raise not_found(exc) from exc
+
+    @app.post("/api/scan-requests/{request_id}/retry", response_model=schemas.ScanRequestOut, status_code=202)
+    def retry_scan_stage(request_id: str, body: schemas.RetryStage, conn=Depends(get_conn), _who=Depends(writer)):
+        """Re-queue one failed stage. Idempotent: the stage's rows are replaced, never duplicated."""
+        try:
+            if queries.retry_scan_stage(conn, request_id, body.stage) is None:
+                raise HTTPException(409, "only a failed stage that can run on its own may be retried")
             return queries.scan_request_detail(conn, request_id)
         except queries.NotFound as exc:
             raise not_found(exc) from exc

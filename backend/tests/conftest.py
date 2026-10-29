@@ -5,6 +5,7 @@ from pathlib import Path
 
 import pytest
 
+
 @pytest.fixture(autouse=True)
 def _sbom_dir(tmp_path_factory, monkeypatch):
     """Scans write a CycloneDX file; tests must never put them in the repository."""

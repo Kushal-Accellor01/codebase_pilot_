@@ -57,6 +57,11 @@ export function SourceForm({ row, onDone }: { row: SourceRow; onDone: () => void
         <label className="label small" htmlFor={`val-${row.name}`}>{current.field}</label>
         <input id={`val-${row.name}`} className="field" value={value} placeholder={current.placeholder} onChange={(e) => setValue(e.target.value)} />
       </div>
+      {kind !== "repository" ? (
+        <p className="small muted" role="note" style={{ flexBasis: "100%", margin: 0 }}>
+          Saved. Not read in this version: Pilot keeps this link but still reads the package's repository for changes.
+        </p>
+      ) : null}
       <button className="btn btn-primary btn-sm" type="submit" disabled={!valid || save.isPending}>Save</button>
     </form>
   );

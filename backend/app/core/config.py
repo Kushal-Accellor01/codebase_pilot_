@@ -61,6 +61,9 @@ class Settings(BaseSettings):
     pilot_repo_actions: bool = False
     # Where CycloneDX bills of materials are written (<scan id>.cdx.json)
     sbom_dir: str = "sbom"
+    # Clone limits for repositories outside EXEC_ALLOWED_REPOS (read-only scans)
+    scan_clone_max_mb: int = 200
+    scan_clone_timeout_s: int = 120
     # Public address of this server (used in webhook installs and links in notifications)
     pilot_public_url: str | None = None
     # Connectors (all optional; the values are server secrets and never leave the server)

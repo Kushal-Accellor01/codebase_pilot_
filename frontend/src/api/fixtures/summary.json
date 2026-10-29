@@ -1,10 +1,10 @@
 {
-  "scan_id": "66e769f7-570b-432b-bdce-9a550f40cb4f",
+  "scan_id": "512d482a-7020-4386-94e4-a1b119864a8b",
   "repo": "pilot-sandbox-shop",
-  "repo_url": "C:\\Users\\KUSHAL~1\\AppData\\Local\\Temp\\tmpdgwqfduf\\origin\\pilot-sandbox-shop",
+  "repo_url": "C:\\Users\\KUSHAL~1\\AppData\\Local\\Temp\\tmpkh01l3oi\\origin\\pilot-sandbox-shop",
   "branch": "master",
-  "commit_sha": "cd7cbef788dcd88626f99508810c975e54ca476f",
-  "scanned_at": "2026-10-29 07:08:04",
+  "commit_sha": "71e043d97feaa1728ec0e28122ec4de5f593bd6b",
+  "scanned_at": "2026-10-29 08:39:14",
   "packages": 159,
   "declared": 3,
   "advisories": 4,
@@ -13,5 +13,5 @@
   "internal_contracts": 0,
   "sources_to_confirm": 2,
   "has_sbom": true,
-  "scan_request_id": "bc65956f-1abf-48c9-aa8d-0c0ea025a3ca"
+  "scan_request_id": "b8269ffb-2766-4105-b08f-367e48b39295"
 }

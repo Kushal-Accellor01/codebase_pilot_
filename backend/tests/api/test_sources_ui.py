@@ -55,7 +55,7 @@ def test_override_kinds_are_saved_and_explained(fresh):
                                                        "url": "https://acme.atlassian.net/wiki/spaces/X/pages/1"})
         assert r.status_code == 201
         saved = rows_by_name(client)["mocha"]
-        assert saved["status"] == "saved" and "later release" in saved["note"] and saved["source"].endswith("/pages/1")
+        assert saved["status"] == "saved" and "Not read in this version" in saved["note"] and saved["source"].endswith("/pages/1")
         assert sources.load_overrides()["npm/mocha"] == {"kind": "confluence", "url": "https://acme.atlassian.net/wiki/spaces/X/pages/1"}
         assert client.post("/api/sources/override", json={"name": "mocha", "kind": "slack"}).status_code == 422  # no channel
         assert client.post("/api/sources/override", json={"name": "mocha", "kind": "repository"}).status_code == 422

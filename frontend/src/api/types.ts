@@ -178,6 +178,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/scan-requests/{request_id}/retry": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Retry Scan Stage
+         * @description Re-queue one failed stage. Idempotent: the stage's rows are replaced, never duplicated.
+         */
+        post: operations["retry_scan_stage_api_scan_requests__request_id__retry_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/scan-requests/{request_id}/cancel": {
         parameters: {
             query?: never;
@@ -924,6 +944,11 @@ export interface components {
              * @default false
              */
             embedded_worker: boolean;
+            /**
+             * Model Configured
+             * @default false
+             */
+            model_configured: boolean;
         };
         /** JobAccepted */
         JobAccepted: {
@@ -931,6 +956,11 @@ export interface components {
             job_id: string;
             /** Scan Request Id */
             scan_request_id?: string | null;
+            /**
+             * Read Only
+             * @default false
+             */
+            read_only: boolean;
         };
         /** Overview */
         Overview: {
@@ -965,6 +995,11 @@ export interface components {
             repo: string;
             /** Allowed */
             allowed: boolean;
+            /**
+             * Read Only
+             * @default false
+             */
+            read_only: boolean;
             /** Ok */
             ok: boolean;
             /** Detail */
@@ -990,6 +1025,11 @@ export interface components {
             repo_url?: string | null;
             /** Scan Id */
             scan_id?: string | null;
+        };
+        /** RetryStage */
+        RetryStage: {
+            /** Stage */
+            stage: string;
         };
         /** ScanFound */
         ScanFound: {
@@ -1771,6 +1811,44 @@ export interface operations {
         responses: {
             /** @description Successful Response */
             200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ScanRequestOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    retry_scan_stage_api_scan_requests__request_id__retry_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "x-pilot-user"?: string | null;
+            };
+            path: {
+                request_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RetryStage"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            202: {
                 headers: {
                     [name: string]: unknown;
                 };

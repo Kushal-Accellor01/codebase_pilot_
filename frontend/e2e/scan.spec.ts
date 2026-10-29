@@ -9,7 +9,8 @@ test("scan from the browser: form, live stages, results", async ({ page }) => {
 
   // An invalid link is refused with a plain sentence, before anything is sent.
   const field = page.getByLabel("Repository link");
-  await expect(field).not.toHaveValue(""); // the last scanned repository is filled in once the scans load
+  await expect(field).toHaveValue(""); // nothing is prefilled: a recent-repository chip fills it
+  await page.getByRole("group", { name: "Recent repositories" }).getByRole("button").first().click();
   const original = await field.inputValue();
   await field.fill("not a link");
   await page.getByRole("button", { name: "Start scan" }).click();

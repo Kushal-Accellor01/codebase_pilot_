@@ -1,10 +1,10 @@
 {
-  "id": "bc65956f-1abf-48c9-aa8d-0c0ea025a3ca",
+  "id": "b8269ffb-2766-4105-b08f-367e48b39295",
   "repo": "pilot-sandbox-shop",
-  "repo_url": "C:\\Users\\KUSHAL~1\\AppData\\Local\\Temp\\tmpdgwqfduf\\origin\\pilot-sandbox-shop",
+  "repo_url": "C:\\Users\\KUSHAL~1\\AppData\\Local\\Temp\\tmpkh01l3oi\\origin\\pilot-sandbox-shop",
   "branch": null,
   "status": "complete",
-  "scan_id": "66e769f7-570b-432b-bdce-9a550f40cb4f",
+  "scan_id": "512d482a-7020-4386-94e4-a1b119864a8b",
   "error": null,
   "scope": {
     "vulnerabilities": true,
@@ -18,7 +18,7 @@
     {
       "stage": "clone",
       "status": "done",
-      "summary": "Cloned at commit cd7cbef on master"
+      "summary": "Cloned at commit 71e043d on master"
     },
     {
       "stage": "layer1",
@@ -53,7 +53,7 @@
     {
       "stage": "changes",
       "status": "done",
-      "summary": "1 upgrades with release notes read"
+      "summary": "Release notes read: 1 upgrade has a change list"
     },
     {
       "stage": "impact",

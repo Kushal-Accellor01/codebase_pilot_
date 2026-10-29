@@ -55,6 +55,13 @@ def sha256_json(value) -> str:
     return hashlib.sha256(json.dumps(value, sort_keys=True, separators=(",", ":")).encode("utf-8")).hexdigest()
 
 
+def is_configured(settings: Settings) -> bool:
+    """Can a live model answer? (Replay mode answers from the cache and does not need one.)"""
+    if settings.llm_provider == "openai_compatible":
+        return bool(settings.llm_base_url and settings.llm_api_key and settings.llm_model_strong)
+    return bool(settings.azure_openai_endpoint and settings.azure_openai_deployment_strong)
+
+
 def deployment_for(settings: Settings, tier: Tier) -> str:
     if settings.llm_provider == "openai_compatible":
         name = settings.llm_model_strong if tier == "strong" else settings.llm_model_fast

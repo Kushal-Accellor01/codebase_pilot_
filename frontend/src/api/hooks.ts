@@ -95,6 +95,14 @@ export const useScanRequest = (id: string) =>
     refetchInterval: (query) => (!live || SCAN_DONE.includes(query.state.data?.status ?? "") ? false : 1500),
   });
 
+export function useRetryStage(requestId: string) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (stage: string) => api.retryStage(requestId, stage),
+    onSuccess: () => { void client.invalidateQueries({ queryKey: ["scan-request", requestId] }); },
+  });
+}
+
 export const useScanSummary = (scan: string) =>
   useQuery({ queryKey: ["summary", scan], queryFn: () => api.summary(scan), refetchInterval: live ? 8000 : false });
 

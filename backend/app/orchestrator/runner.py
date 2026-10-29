@@ -13,7 +13,7 @@ from langgraph.types import Command
 
 from app.core import events, jobs
 from app.core.config import Settings, get_settings
-from app.core.llm import LLM
+from app.core.llm import LLM, is_configured
 from app.orchestrator import graph as graph_module
 from app.orchestrator import nodes
 from app.orchestrator import store as run_store
@@ -30,10 +30,7 @@ class RunConflict(RuntimeError):
 
 def build_llm(conn: sqlite3.Connection, http: HttpClient | None, settings: Settings) -> LLM | None:
     """An LLM only when one can answer: Azure configured, or replay mode (answers come from the cache)."""
-    if settings.llm_provider == "openai_compatible":
-        configured = bool(settings.llm_base_url and settings.llm_api_key and settings.llm_model_strong)
-    else:
-        configured = bool(settings.azure_openai_endpoint and settings.azure_openai_deployment_strong)
+    configured = is_configured(settings)
     if http is None or not (configured or settings.llm_mode == "replay"):
         return None
     return LLM(conn, http, settings)

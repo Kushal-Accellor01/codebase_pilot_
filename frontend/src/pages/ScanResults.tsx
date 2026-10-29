@@ -1,7 +1,7 @@
 import { Link, useParams } from "react-router-dom";
 
 import { API_MODE } from "../api/client";
-import { useDependencies, useScanSummary, useUpgrades, useVulns } from "../api/hooks";
+import { useDependencies, useRetryStage, useScanRequest, useScanSummary, useUpgrades, useVulns } from "../api/hooks";
 import type { DependencyRow } from "../api/models";
 import { Async, Empty, Journey, Pill, RiskBadge, plural } from "../components/ui";
 import { VulnTable } from "../components/VulnTable";
@@ -36,6 +36,38 @@ function Dependencies({ rows }: { rows: DependencyRow[] }) {
   );
 }
 
+const STAGE_NAME: Record<string, string> = {
+  clone: "Clone", layer1: "Structure", sbom: "Bill of materials", internal: "Internal contracts", layer2: "Symbols",
+  vulnerabilities: "Vulnerabilities", versions: "Versions and sources", changes: "What changed", impact: "Impact",
+};
+const RETRYABLE = ["sbom", "vulnerabilities", "versions", "changes"];
+
+/** B-S6: a failed stage is listed at the top with its message and a retry that re-runs only that stage. */
+function FailedStages({ requestId }: { requestId: string }) {
+  const request = useScanRequest(requestId);
+  const retry = useRetryStage(requestId);
+  const failed = request.data?.stages.filter((st) => st.status === "error") ?? [];
+  if (failed.length === 0) return null;
+  return (
+    <div className="error-box" role="alert" style={{ margin: "18px 0 0" }}>
+      <b>{failed.length === 1 ? "One step failed" : `${failed.length} steps failed`}</b>. The rest of the scan finished; these results may be incomplete.
+      <ul style={{ margin: "8px 0 0", paddingLeft: 18 }}>
+        {failed.map((st) => (
+          <li key={st.stage} style={{ margin: "6px 0" }}>
+            <b>{STAGE_NAME[st.stage] ?? st.stage}:</b> {st.summary ?? "failed"}{" "}
+            {RETRYABLE.includes(st.stage) ? (
+              <button className="btn btn-sm" type="button" disabled={retry.isPending} onClick={() => retry.mutate(st.stage)}>
+                {retry.isPending ? "Retrying…" : "Retry this step"}
+              </button>
+            ) : null}
+          </li>
+        ))}
+      </ul>
+      {retry.isError ? <p className="small" style={{ margin: "8px 0 0" }}>{(retry.error as Error).message}</p> : null}
+    </div>
+  );
+}
+
 export default function ScanResultsPage() {
   const { scanId = "latest" } = useParams();
   const summary = useScanSummary(scanId);
@@ -62,6 +94,7 @@ export default function ScanResultsPage() {
                 <Link className="btn" to="/scan">Scan again</Link>
               </div>
             </div>
+            {s.scan_request_id ? <FailedStages requestId={s.scan_request_id} /> : null}
             <div className="note dashed" role="note" hidden={API_MODE !== "fixtures"}>Recorded sample data. Advisory rows are samples; a real scan fills them from OSV and Dependabot.</div>
             <div className="split" style={{ marginTop: 22 }}>
               <div style={{ minWidth: 0 }}>

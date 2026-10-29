@@ -39,6 +39,15 @@ def scope_of(raw: dict | None) -> dict[str, bool]:
     return scope
 
 
+# Stage a person may retry -> every stage that retry re-runs (the rest keep their result)
+RETRY_STAGES: dict[str, frozenset[str]] = {
+    "sbom": frozenset({"sbom", "vulnerabilities"}),
+    "vulnerabilities": frozenset({"vulnerabilities"}),
+    "versions": frozenset({"versions", "changes", "impact"}),
+    "changes": frozenset({"versions", "changes", "impact"}),
+}
+
+
 def scope_for_scan(conn: sqlite3.Connection, scan_id: str) -> dict[str, bool]:
     request = scan_store.request_for_scan(conn, scan_id)
     return scope_of(request["scope"] if request else None)
@@ -47,12 +56,13 @@ def scope_for_scan(conn: sqlite3.Connection, scan_id: str) -> dict[str, bool]:
 class Stages:
     """Writes stage events for one scan request. With no request id every call is a no-op."""
 
-    def __init__(self, conn: sqlite3.Connection, request_id: str | None):
+    def __init__(self, conn: sqlite3.Connection, request_id: str | None, only: frozenset[str] | None = None):
         self.conn = conn
         self.request_id = request_id
+        self.only = only  # a retry touches only these stages; the others keep their last status
 
     def __call__(self, stage: str, status: str, summary: str | None = None, data: dict | None = None) -> None:
-        if self.request_id:
+        if self.request_id and (self.only is None or stage in self.only):
             scan_store.add_scan_event(self.conn, self.request_id, stage, status, summary, data)
 
     def cancelled(self) -> bool:
@@ -63,6 +73,8 @@ class Stages:
 
     async def guard(self, stage: str, work: Callable[[], Awaitable[str | None]]) -> bool:
         """Run one stage: `running`, then `done` with the summary `work` returns, or `error`. True when it worked."""
+        if self.only is not None and stage not in self.only:
+            return True
         self(stage, "running")
         try:
             summary = await work()

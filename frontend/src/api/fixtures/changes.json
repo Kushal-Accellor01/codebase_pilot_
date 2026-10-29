@@ -1,0 +1,48 @@
+{
+  "counts": {
+    "all": 1,
+    "needs_decision": 1,
+    "outside": 1,
+    "inside": 0,
+    "security": 0
+  },
+  "cards": [
+    {
+      "event_id": "c9efe799d6597f766e87bf8d",
+      "origin": "external",
+      "source": "registry",
+      "source_label": "New release",
+      "severity": "critical",
+      "title": "express 4.21.2 → 5.3.0 changes APIs your code uses",
+      "quote": {
+        "text": "`app.del` - use `app.delete`",
+        "source": "Quoted from the release notes, checked word for word",
+        "url": "https://github.com/expressjs/express/blob/master/History.md",
+        "verified": true
+      },
+      "impact": "7 lines in 5 files use APIs that change. Tests fail on the new version as the code stands and pass with Pilot's fix.",
+      "step": 5,
+      "step_total": 6,
+      "step_label": "awaiting approval",
+      "tracker": [
+        "done",
+        "done",
+        "done",
+        "done",
+        "now",
+        "todo"
+      ],
+      "run_id": "e570d33a-d738-4ba7-b49d-ed6498ebf12e",
+      "action": {
+        "kind": "approve",
+        "label": "Review and approve",
+        "run_id": "e570d33a-d738-4ba7-b49d-ed6498ebf12e"
+      },
+      "detected_at": "2026-10-29T07:08:01Z",
+      "repo": "pilot-sandbox-shop",
+      "subject": "express",
+      "from_version": "4.21.2",
+      "to_version": "5.3.0"
+    }
+  ]
+}

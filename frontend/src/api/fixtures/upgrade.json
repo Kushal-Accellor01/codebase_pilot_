@@ -1,7 +1,7 @@
 {
   "run": {
-    "id": "829bf606-a994-4e4d-8ab1-9ddee36c6b2f",
-    "scan_id": "5929e487-6457-4c97-baf9-435673629011",
+    "id": "e570d33a-d738-4ba7-b49d-ed6498ebf12e",
+    "scan_id": "76a56fe3-100c-4300-bac0-3dcec2b5f57f",
     "package": "express",
     "ecosystem": "npm",
     "from": "4.21.2",
@@ -13,15 +13,15 @@
     "current_node": "validate",
     "error": null,
     "effort_hours": 6.5,
-    "created_at": "2026-10-28T11:37:07Z",
-    "updated_at": "2026-10-28T11:37:09Z"
+    "created_at": "2026-10-29T07:08:01Z",
+    "updated_at": "2026-10-29T07:08:03Z"
   },
   "event": {
-    "event_id": "5929e487-6457-4c97-baf9-435673629011:npm:express:4.21.2->5.3.0",
-    "scan_id": "5929e487-6457-4c97-baf9-435673629011",
+    "event_id": "76a56fe3-100c-4300-bac0-3dcec2b5f57f:npm:express:4.21.2->5.3.0",
+    "scan_id": "76a56fe3-100c-4300-bac0-3dcec2b5f57f",
     "ecosystem": "npm",
     "package": "express",
-    "dependency_type": "unknown",
+    "dependency_type": "runtime",
     "manifest_path": "package.json",
     "declared_constraint": "4.21.2",
     "current_version": "4.21.2",
@@ -106,26 +106,34 @@
     "importing_files": [
       {
         "path": "app.js",
-        "lines": []
+        "lines": [
+          1
+        ]
       },
       {
         "path": "routes/invoices.js",
-        "lines": []
+        "lines": [
+          2
+        ]
       },
       {
         "path": "routes/orders.js",
-        "lines": []
+        "lines": [
+          1
+        ]
       },
       {
         "path": "test/helpers.js",
-        "lines": []
+        "lines": [
+          1
+        ]
       }
     ],
-    "priority_score": 45.3,
+    "priority_score": 56.6,
     "risk_level": "high",
     "status": "analyzed",
     "id": 2,
-    "run_id": "829bf606-a994-4e4d-8ab1-9ddee36c6b2f",
+    "run_id": "e570d33a-d738-4ba7-b49d-ed6498ebf12e",
     "run_status": "awaiting_approval",
     "error": null
   },
@@ -371,7 +379,7 @@
         "tests_total": 9,
         "duration_ms": 5,
         "output_tail": "  9 passing (120ms)",
-        "started_at": "2026-10-28T11:37:09Z"
+        "started_at": "2026-10-29T07:08:03Z"
       }
     }
   ],
@@ -396,7 +404,7 @@
       "tests_total": 9,
       "duration_ms": 5,
       "output_tail": "  9 passing (120ms)",
-      "started_at": "2026-10-28T11:37:09Z"
+      "started_at": "2026-10-29T07:08:03Z"
     }
   },
   "evidence": {

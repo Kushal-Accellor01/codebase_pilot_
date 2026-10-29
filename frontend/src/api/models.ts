@@ -14,6 +14,21 @@ export type Graph = S["Graph"];
 export type GraphNode = S["GraphNode"];
 export type DecisionRequest = S["DecisionRequest"];
 export type Risk = S["BoardItem"]["risk"];
+export type ScanRequestOut = S["ScanRequestOut"];
+export type ScanStage = S["ScanStage"];
+export type ScanScope = S["ScanScope"];
+export type ScanSummary = S["ScanSummary"];
+export type RepoCheck = S["RepoCheck"];
+export type VulnRow = S["Vulnerability"];
+export type VulnList = S["VulnerabilityList"];
+export type SourceRow = S["SourceRow"];
+export type SourceList = S["SourceList"];
+export type RepoOut = S["RepoOut"];
+export type ChannelsView = S["ChannelsOut"];
+export type ChannelOut = S["ChannelOut"];
+export type ScheduleOut = S["ScheduleOut"];
+export type ChangeCard = S["ChangeCard"];
+export type ChangeFeed = S["ChangeFeed"];
 
 /** Shapes inside the loosely typed `event`, `findings`, `patches` ... parts of UpgradeDetail. */
 export interface ChangeRef {

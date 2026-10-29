@@ -1,5 +1,5 @@
 {
-  "scan_id": "5929e487-6457-4c97-baf9-435673629011",
+  "scan_id": "76a56fe3-100c-4300-bac0-3dcec2b5f57f",
   "headline": "1 upgrade needs a decision. Express 5 would break 7 lines, and 4 of them already warn in production.",
   "lede": "Pilot checked 3 dependencies against their registries, release notes and your code. Every finding links to its evidence.",
   "risk": {
@@ -13,9 +13,9 @@
   "upgrades": [
     {
       "id": 2,
-      "run_id": "829bf606-a994-4e4d-8ab1-9ddee36c6b2f",
+      "run_id": "e570d33a-d738-4ba7-b49d-ed6498ebf12e",
       "package": "express",
-      "type": "unknown",
+      "type": "runtime",
       "from": "4.21.2",
       "to": "5.3.0",
       "kind": "major",
@@ -32,9 +32,9 @@
   "waiting": [
     {
       "id": 2,
-      "run_id": "829bf606-a994-4e4d-8ab1-9ddee36c6b2f",
+      "run_id": "e570d33a-d738-4ba7-b49d-ed6498ebf12e",
       "package": "express",
-      "type": "unknown",
+      "type": "runtime",
       "from": "4.21.2",
       "to": "5.3.0",
       "kind": "major",

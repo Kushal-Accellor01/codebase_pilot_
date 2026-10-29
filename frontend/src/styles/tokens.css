@@ -1,7 +1,7 @@
 :root {
   --ink: #1c2632;
   --ink-2: #4a5765;
-  --ink-3: #6b7785;
+  --ink-3: #5f6b79;
   --bg: #fafbfc;
   --panel: #eef2f5;
   --panel-2: #f4f6f8;
@@ -9,7 +9,7 @@
   --white: #ffffff;
   --critical: #c4321c;
   --critical-bg: #fbeae6;
-  --high: #b86e00;
+  --high: #9a5c00;
   --high-bg: #fdf1dd;
   --medium: #2f6cb0;
   --medium-bg: #e6eff9;
@@ -26,7 +26,7 @@
   :root:not([data-theme="light"]) {
     --ink: #e6ecf2;
     --ink-2: #b3beca;
-    --ink-3: #8c98a6;
+    --ink-3: #97a3b1;
     --bg: #141b23;
     --panel: #1c252f;
     --panel-2: #18212a;

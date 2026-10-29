@@ -84,3 +84,31 @@ export function useRunEvents(runId: string, status: string | undefined): RunEven
 
   return events;
 }
+
+export const SCAN_DONE = ["complete", "failed", "cancelled"];
+
+/** The scan request and its stages; polls every 1.5 s until the request ends. */
+export const useScanRequest = (id: string) =>
+  useQuery({
+    queryKey: ["scan-request", id],
+    queryFn: () => api.scanRequest(id),
+    refetchInterval: (query) => (!live || SCAN_DONE.includes(query.state.data?.status ?? "") ? false : 1500),
+  });
+
+export const useScanSummary = (scan: string) =>
+  useQuery({ queryKey: ["summary", scan], queryFn: () => api.summary(scan), refetchInterval: live ? 8000 : false });
+
+export const useVulns = (scan: string) =>
+  useQuery({ queryKey: ["vulns", scan], queryFn: () => api.vulnerabilities(scan), refetchInterval: live ? 15000 : false });
+
+export const useSources = (scan = "latest") => useQuery({ queryKey: ["sources", scan], queryFn: () => api.sources(scan) });
+
+export const useRepos = () => useQuery({ queryKey: ["repos"], queryFn: () => api.repos() });
+
+export const useChannels = (repoId: string | undefined) =>
+  useQuery({ queryKey: ["channels", repoId], queryFn: () => api.channels(repoId!), enabled: !!repoId });
+
+export const useChanges = (filter: string) =>
+  useQuery({ queryKey: ["changes", filter], queryFn: () => api.changes(filter), refetchInterval: live ? 10000 : false });
+
+export const useHealth = () => useQuery({ queryKey: ["health"], queryFn: () => api.health(), refetchInterval: live ? 30000 : false });

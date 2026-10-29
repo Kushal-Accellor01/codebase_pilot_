@@ -15,12 +15,14 @@ def db(request, tmp_path):
 
 def test_migrations_apply_twice_and_are_recorded(db):
     conn = core_db.connect(str(db))
-    assert core_db.migrate(conn) == ["002_dependency_updates", "003_pipeline"]
+    assert core_db.migrate(conn) == ["002_dependency_updates", "003_pipeline", "004_scan_layers"]
     assert core_db.migrate(conn) == []
-    assert core_db.applied_versions(conn) == ["002_dependency_updates", "003_pipeline"]
+    assert core_db.applied_versions(conn) == ["002_dependency_updates", "003_pipeline", "004_scan_layers"]
     tables = core_db.table_names(conn)
     for t in ("dependency_updates", "jobs", "upgrade_runs", "run_events", "impact_findings", "telemetry_evidence",
-              "remediation_plans", "patches", "validations", "approvals", "pull_requests", "llm_cache", "feedback"):
+              "remediation_plans", "patches", "validations", "approvals", "pull_requests", "llm_cache", "feedback",
+              "sbom_components", "scan_vulns", "scan_requests", "scan_events", "channels", "schedules", "change_events",
+              "change_cursors"):
         assert t in tables, t
     assert conn.execute("PRAGMA foreign_key_check").fetchall() == []
     cols = {r["name"] for r in conn.execute("PRAGMA table_info(validations)")}
@@ -30,7 +32,7 @@ def test_migrations_apply_twice_and_are_recorded(db):
 def test_migrate_repairs_db_migrated_before_the_runner_existed(db):
     conn = core_db.connect(str(db))
     conn.executescript(core_db.MIGRATIONS[0].path.read_text(encoding="utf-8"))  # 002 only, no bookkeeping
-    assert core_db.migrate(conn) == ["002_dependency_updates", "003_pipeline"]
+    assert core_db.migrate(conn) == ["002_dependency_updates", "003_pipeline", "004_scan_layers"]
 
 
 def test_migrate_requires_ingestion_tables(tmp_path):

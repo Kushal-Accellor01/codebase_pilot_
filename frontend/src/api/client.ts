@@ -1,6 +1,7 @@
 import { fixtures } from "./fixtures";
 import type {
-  DecisionRequest, DependencyEvent, DependencyRow, Graph, Overview, RunEvent, Scan, UpgradeDetail, UpgradeSummary,
+  ChangeFeed, ChannelsView, DecisionRequest, Health, DependencyEvent, DependencyRow, Graph, Overview, RepoCheck, RepoOut, RunEvent,
+  Scan, ScanRequestOut, ScanScope, ScanSummary, ScheduleOut, SourceList, UpgradeDetail, UpgradeSummary, VulnList,
 } from "./models";
 
 /** `VITE_API_MODE=fixtures` serves the recorded responses; anything else talks to the API. */
@@ -63,6 +64,8 @@ const delay = <T>(value: T): Promise<T> => new Promise((resolve) => setTimeout((
 const fixtureMode = () => API_MODE === "fixtures";
 
 export const api = {
+  health: (): Promise<Health> =>
+    fixtureMode() ? delay({ status: "ok", migrations: [], llm_mode: "replay", jobs_queued: 0, embedded_worker: true }) : request("/health"),
   scans: (): Promise<Scan[]> => (fixtureMode() ? delay(fixtures.scans) : request("/scans")),
   overview: (scan = "latest"): Promise<Overview> =>
     fixtureMode() ? delay(fixtures.overview) : request(`/scans/${scan}/overview`),
@@ -82,10 +85,48 @@ export const api = {
     fixtureMode()
       ? delay({ status: "queued" })
       : request(`/upgrades/${runId}/decision`, { method: "POST", body: JSON.stringify(body) }),
-  startScan: (repoUrl: string, only?: string[]): Promise<{ job_id: string }> =>
+  startScan: (repoUrl: string, extra: { branch?: string; scope?: ScanScope; only?: string[] } = {}):
+    Promise<{ job_id: string; scan_request_id?: string | null }> =>
     fixtureMode()
-      ? delay({ job_id: "fixture" })
-      : request("/scans", { method: "POST", body: JSON.stringify({ repo_url: repoUrl, only: only?.length ? only : null }) }),
+      ? delay({ job_id: "fixture", scan_request_id: fixtures.scanRequest.id })
+      : request("/scans", {
+        method: "POST",
+        body: JSON.stringify({
+          repo_url: repoUrl, only: extra.only?.length ? extra.only : null, branch: extra.branch || null,
+          scope: extra.scope ?? null,
+        }),
+      }),
+  checkRepo: (repoUrl: string): Promise<RepoCheck> =>
+    fixtureMode()
+      ? delay({ provider: "github", repo: "pilot-sandbox-shop", allowed: true, ok: true, detail: "3 branches", branches: ["main"] })
+      : request("/scans/check", { method: "POST", body: JSON.stringify({ repo_url: repoUrl }) }),
+  scanRequest: (id: string): Promise<ScanRequestOut> =>
+    fixtureMode() ? delay(fixtures.scanRequest) : request(`/scan-requests/${id}`),
+  cancelScan: (id: string): Promise<ScanRequestOut> =>
+    fixtureMode() ? delay({ ...fixtures.scanRequest, status: "cancelled" }) : request(`/scan-requests/${id}/cancel`, { method: "POST" }),
+  summary: (scan = "latest"): Promise<ScanSummary> =>
+    fixtureMode() ? delay(fixtures.summary) : request(`/scans/${scan}/summary`),
+  vulnerabilities: (scan = "all"): Promise<VulnList> =>
+    fixtureMode() ? delay(fixtures.vulnerabilities) : request(scan === "all" ? "/vulnerabilities" : `/scans/${scan}/vulnerabilities`),
+  sources: (scan = "latest"): Promise<SourceList> =>
+    fixtureMode() ? delay(fixtures.sources) : request(`/scans/${scan}/sources`),
+  confirmSource: (name: string) =>
+    fixtureMode() ? delay({ confirmed: `npm/${name}` }) : request("/sources/confirm", { method: "POST", body: JSON.stringify({ ecosystem: "npm", name }) }),
+  repos: (): Promise<RepoOut[]> => (fixtureMode() ? delay(fixtures.repos) : request("/repos")),
+  channels: (repoId: string): Promise<ChannelsView> =>
+    fixtureMode() ? delay(fixtures.channels) : request(`/repos/${repoId}/channels`),
+  saveChannel: (repoId: string, kind: string, body: { enabled: boolean; config: Record<string, unknown>; secret_ref?: string | null }) =>
+    fixtureMode() ? delay(fixtures.channels) : request<ChannelsView>(`/repos/${repoId}/channels/${kind}`, { method: "PUT", body: JSON.stringify(body) }),
+  testChannel: (repoId: string, kind: string): Promise<{ ok: boolean; detail: string }> =>
+    fixtureMode() ? delay({ ok: true, detail: "Connected (recorded)" }) : request(`/repos/${repoId}/channels/${kind}/test`, { method: "POST" }),
+  installWebhook: (repoId: string): Promise<{ ok: boolean; detail: string }> =>
+    fixtureMode() ? delay({ ok: true, detail: "Webhook installed (recorded)" }) : request(`/repos/${repoId}/webhook`, { method: "POST" }),
+  publishConfluence: (repoId: string): Promise<{ ok: boolean; detail: string }> =>
+    fixtureMode() ? delay({ ok: true, detail: "Report page created (recorded)" }) : request(`/repos/${repoId}/publish/confluence`, { method: "POST" }),
+  updateSchedule: (id: string, body: { interval_minutes?: number; enabled?: boolean }): Promise<ScheduleOut> =>
+    fixtureMode() ? delay(fixtures.channels.schedules[0]) : request(`/schedules/${id}`, { method: "PUT", body: JSON.stringify(body) }),
+  changes: (filter?: string): Promise<ChangeFeed> =>
+    fixtureMode() ? delay(fixtures.changes) : request(`/changes${filter && filter !== "all" ? `?filter=${filter}` : ""}`),
   feedback: (body: {
     target_kind: "impact_finding" | "update_change";
     target_id: number;
@@ -93,9 +134,9 @@ export const api = {
     comment?: string;
   }): Promise<{ id: number }> =>
     fixtureMode() ? delay({ id: 1 }) : request("/feedback", { method: "POST", body: JSON.stringify(body) }),
-  overrideSource: (body: { name: string; owner: string; repo: string; directory?: string }) =>
+  overrideSource: (body: { name: string; kind?: string; owner?: string; repo?: string; url?: string; directory?: string }) =>
     fixtureMode()
       ? delay({ saved: `npm/${body.name}` })
-      : request("/sources/override", { method: "POST", body: JSON.stringify({ ecosystem: "npm", ...body }) }),
+      : request("/sources/override", { method: "POST", body: JSON.stringify({ ecosystem: "npm", kind: "repository", ...body }) }),
   fixtureEvents: (): RunEvent[] => fixtures.events,
 };

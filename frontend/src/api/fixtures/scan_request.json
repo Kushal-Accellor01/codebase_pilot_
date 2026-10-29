@@ -1,0 +1,72 @@
+{
+  "id": "bc65956f-1abf-48c9-aa8d-0c0ea025a3ca",
+  "repo": "pilot-sandbox-shop",
+  "repo_url": "C:\\Users\\KUSHAL~1\\AppData\\Local\\Temp\\tmpdgwqfduf\\origin\\pilot-sandbox-shop",
+  "branch": null,
+  "status": "complete",
+  "scan_id": "66e769f7-570b-432b-bdce-9a550f40cb4f",
+  "error": null,
+  "scope": {
+    "vulnerabilities": true,
+    "breaking_changes": true,
+    "internal_contracts": true,
+    "production_evidence": true,
+    "fixes": true,
+    "sbom": true
+  },
+  "stages": [
+    {
+      "stage": "clone",
+      "status": "done",
+      "summary": "Cloned at commit cd7cbef on master"
+    },
+    {
+      "stage": "layer1",
+      "status": "done",
+      "summary": "61 graph nodes, 35 imports traced, 3 packages declared"
+    },
+    {
+      "stage": "sbom",
+      "status": "done",
+      "summary": "159 packages from the lockfile, 3 declared directly"
+    },
+    {
+      "stage": "internal",
+      "status": "skipped",
+      "summary": "Internal specs, API clients and topics are not read in this version, so none were looked for"
+    },
+    {
+      "stage": "layer2",
+      "status": "skipped",
+      "summary": "The symbol index (scip-typescript) is not enabled in this version"
+    },
+    {
+      "stage": "vulnerabilities",
+      "status": "skipped",
+      "summary": "The advisory lookup is switched off for this run"
+    },
+    {
+      "stage": "versions",
+      "status": "done",
+      "summary": "3 dependencies checked, 3 have a newer version"
+    },
+    {
+      "stage": "changes",
+      "status": "done",
+      "summary": "1 upgrades with release notes read"
+    },
+    {
+      "stage": "impact",
+      "status": "done",
+      "summary": "1 upgrade analysed, 1 waiting for a decision"
+    }
+  ],
+  "found": {
+    "packages": 159,
+    "declared": 3,
+    "imports": 35,
+    "internal_contracts": 0
+  },
+  "steps_done": 9,
+  "steps_total": 9
+}

@@ -40,12 +40,18 @@ function Rail() {
       </div>
       <div className="nav">
         <NavLink to="/" end>Overview</NavLink>
+        <NavLink to="/scan">Scan a repository</NavLink>
         <NavLink to="/dependencies">Dependencies</NavLink>
+        <NavLink to="/vulnerabilities">Vulnerabilities</NavLink>
+        <NavLink to="/updates">Updates</NavLink>
         <NavLink to="/upgrades">Upgrades</NavLink>
         <NavLink to="/approvals">
           Approvals
           {waiting > 0 ? <span className="count" aria-label={`${waiting} waiting`}>{waiting}</span> : null}
         </NavLink>
+        <div className="railgroup">Setup</div>
+        <NavLink to="/setup/sources">Source mapping</NavLink>
+        <NavLink to="/setup/channels">Channels and schedules</NavLink>
       </div>
       <div className="rail-foot">{API_MODE === "fixtures" ? "Showing recorded data" : "Live"}</div>
     </nav>

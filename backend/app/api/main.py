@@ -309,6 +309,22 @@ def create_app(
             conn.close()
         return {"status": "queued", "job_id": job}
 
+    # --- the update feed (S7) ----------------------------------------------------------------------------------
+
+    @app.get("/api/changes", response_model=schemas.ChangeFeed)
+    def changes(repo: str | None = None, origin: str | None = Query(default=None, pattern="^(external|internal)$"),
+                source: str | None = None, status: str | None = None,
+                filter: str | None = Query(default=None, pattern="^(needs_decision|outside|inside|security)$"),
+                conn=Depends(get_conn)):
+        return queries.list_changes(conn, repo=repo, origin=origin, source=source, status=status, filter=filter)
+
+    @app.get("/api/changes/{event_id}", response_model=schemas.ChangeCard)
+    def change(event_id: str, conn=Depends(get_conn)):
+        try:
+            return queries.get_change(conn, event_id)
+        except queries.NotFound as exc:
+            raise not_found(exc) from exc
+
     # --- channels, schedules, webhook (S6) ---------------------------------------------------------------------
 
     secret_words = ("token", "secret", "password", "key", "credential")

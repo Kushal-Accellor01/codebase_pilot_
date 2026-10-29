@@ -69,11 +69,12 @@ describe("Dependencies", () => {
     expect(screen.getByText("Reachable in code")).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Dev" }));
-    expect(screen.getByText("No dependencies match this filter")).toBeInTheDocument();
+    expect(screen.queryByRole("cell", { name: "express" })).not.toBeInTheDocument();
+    expect(screen.getByRole("cell", { name: "mocha" })).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Major" }));
     expect(screen.getByRole("cell", { name: "express" })).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Security" }));
-    expect(screen.queryByRole("cell", { name: "express" })).not.toBeInTheDocument();
+    expect(screen.getByText("No dependencies match this filter")).toBeInTheDocument();
   });
 
   it("opens an upgrade run from its row", async () => {

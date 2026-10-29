@@ -1,0 +1,36 @@
+{
+  "scan_id": "66e769f7-570b-432b-bdce-9a550f40cb4f",
+  "to_confirm": 2,
+  "rows": [
+    {
+      "ecosystem": "npm",
+      "name": "mocha",
+      "kind": "npm · dev",
+      "source": null,
+      "detail": null,
+      "found_by": "Not found",
+      "status": "not_found",
+      "note": "Pilot could not find where this package publishes its changes."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "supertest",
+      "kind": "npm · dev",
+      "source": null,
+      "detail": null,
+      "found_by": "Not found",
+      "status": "not_found",
+      "note": "Pilot could not find where this package publishes its changes."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "express",
+      "kind": "npm · runtime",
+      "source": "github.com/expressjs/express",
+      "detail": "GitHub releases and History.md",
+      "found_by": "Registry metadata",
+      "status": "verified",
+      "note": null
+    }
+  ]
+}

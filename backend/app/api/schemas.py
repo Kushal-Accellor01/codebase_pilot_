@@ -394,3 +394,51 @@ class ChannelsOut(BaseModel):
 class ChannelTestOut(BaseModel):
     ok: bool
     detail: str
+
+
+class ChangeQuote(BaseModel):
+    text: str
+    source: str
+    url: str | None = None
+    verified: bool
+
+
+class ChangeAction(BaseModel):
+    kind: str  # approve | plan | affected | issue | pull_request | none
+    label: str
+    run_id: str | None = None
+
+
+class ChangeCard(BaseModel):
+    event_id: str
+    origin: str  # external | internal
+    source: str
+    source_label: str
+    severity: str
+    title: str
+    quote: ChangeQuote | None = None
+    impact: str | None = None
+    step: int  # 1..6
+    step_total: int = 6
+    step_label: str
+    tracker: list[str]  # six of: done | now | stop | todo
+    run_id: str | None = None
+    action: ChangeAction
+    detected_at: str
+    repo: str
+    subject: str
+    from_version: str | None = None
+    to_version: str | None = None
+
+
+class ChangeCounts(BaseModel):
+    all: int
+    needs_decision: int
+    outside: int
+    inside: int
+    security: int
+
+
+class ChangeFeed(BaseModel):
+    counts: ChangeCounts
+    cards: list[ChangeCard]

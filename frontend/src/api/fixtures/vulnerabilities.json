@@ -1,0 +1,108 @@
+{
+  "scan_id": "66e769f7-570b-432b-bdce-9a550f40cb4f",
+  "packages": 159,
+  "counts": {
+    "all": 4,
+    "applies": 1,
+    "runtime": 1,
+    "development": 3,
+    "transitive": 4
+  },
+  "rows": [
+    {
+      "vuln_id": "SAMPLE-1",
+      "aliases": [],
+      "severity": "high",
+      "summary": "Resource exhaustion on deeply nested input",
+      "name": "qs",
+      "version": "6.13.0",
+      "path": [
+        "express",
+        "qs"
+      ],
+      "scope": "runtime",
+      "direct": false,
+      "fixed_in": null,
+      "verdict": "applies",
+      "reason": "Your code reaches it through express.",
+      "sources": [
+        "osv"
+      ],
+      "url": null,
+      "repo": null,
+      "scan_id": "66e769f7-570b-432b-bdce-9a550f40cb4f"
+    },
+    {
+      "vuln_id": "SAMPLE-2",
+      "aliases": [],
+      "severity": "medium",
+      "summary": "Expensive pattern in a formatting helper",
+      "name": "debug",
+      "version": "4.4.3",
+      "path": [
+        "supertest",
+        "superagent",
+        "debug"
+      ],
+      "scope": "dev",
+      "direct": false,
+      "fixed_in": null,
+      "verdict": "does_not_apply",
+      "reason": "No call path from your code to the affected function.",
+      "sources": [
+        "osv"
+      ],
+      "url": null,
+      "repo": null,
+      "scan_id": "66e769f7-570b-432b-bdce-9a550f40cb4f"
+    },
+    {
+      "vuln_id": "SAMPLE-3",
+      "aliases": [],
+      "severity": "medium",
+      "summary": "Predictable boundary in multipart bodies",
+      "name": "form-data",
+      "version": "4.0.6",
+      "path": [
+        "supertest",
+        "superagent",
+        "form-data"
+      ],
+      "scope": "dev",
+      "direct": false,
+      "fixed_in": null,
+      "verdict": "not_shipped",
+      "reason": "Used only by tests; production builds leave it out.",
+      "sources": [
+        "osv"
+      ],
+      "url": null,
+      "repo": null,
+      "scan_id": "66e769f7-570b-432b-bdce-9a550f40cb4f"
+    },
+    {
+      "vuln_id": "SAMPLE-4",
+      "aliases": [],
+      "severity": "low",
+      "summary": "Slow expansion of crafted patterns",
+      "name": "brace-expansion",
+      "version": "2.1.7",
+      "path": [
+        "mocha",
+        "minimatch",
+        "brace-expansion"
+      ],
+      "scope": "dev",
+      "direct": false,
+      "fixed_in": null,
+      "verdict": "undetermined",
+      "reason": "Reached through a dynamic call Pilot cannot follow.",
+      "sources": [
+        "osv"
+      ],
+      "url": null,
+      "repo": null,
+      "scan_id": "66e769f7-570b-432b-bdce-9a550f40cb4f"
+    }
+  ]
+}

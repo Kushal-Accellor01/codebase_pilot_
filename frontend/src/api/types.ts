@@ -141,6 +141,60 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/scans/check": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Check Repository
+         * @description Can the server read this repository, and may Pilot work on it? Runs `git ls-remote` on the server.
+         */
+        post: operations["check_repository_api_scans_check_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/scan-requests/{request_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Scan Request */
+        get: operations["scan_request_api_scan_requests__request_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/scan-requests/{request_id}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Cancel Scan */
+        post: operations["cancel_scan_api_scan_requests__request_id__cancel_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/upgrades/{run_id}/decision": {
         parameters: {
             query?: never;
@@ -186,6 +240,316 @@ export interface paths {
         put?: never;
         /** Source Override */
         post: operations["source_override_api_sources_override_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/sources/confirm": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Source Confirm */
+        post: operations["source_confirm_api_sources_confirm_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/scans/{scan}/sources": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Scan Sources */
+        get: operations["scan_sources_api_scans__scan__sources_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/webhooks/github": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Github Webhook
+         * @description A push to the default branch of an allowed repository queues a scan (Step 8). Signed with
+         *     GITHUB_WEBHOOK_SECRET; without a secret the endpoint does not exist.
+         */
+        post: operations["github_webhook_api_webhooks_github_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/changes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Changes */
+        get: operations["changes_api_changes_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/changes/{event_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Change */
+        get: operations["change_api_changes__event_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/repos": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Repos */
+        get: operations["repos_api_repos_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/repos/{repo_id}/channels": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Repo Channels */
+        get: operations["repo_channels_api_repos__repo_id__channels_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/repos/{repo_id}/channels/{kind}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Save Channel */
+        put: operations["save_channel_api_repos__repo_id__channels__kind__put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/repos/{repo_id}/channels/{kind}/test": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Test Channel */
+        post: operations["test_channel_api_repos__repo_id__channels__kind__test_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/repos/{repo_id}/webhook": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Install Webhook */
+        post: operations["install_webhook_api_repos__repo_id__webhook_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/repos/{repo_id}/publish/confluence": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Publish Confluence */
+        post: operations["publish_confluence_api_repos__repo_id__publish_confluence_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/schedules": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Schedules */
+        get: operations["schedules_api_schedules_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/schedules/{schedule_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Update Schedule */
+        put: operations["update_schedule_api_schedules__schedule_id__put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/scans/{scan}/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Scan Summary */
+        get: operations["scan_summary_api_scans__scan__summary_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/scans/{scan}/vulnerabilities": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Scan Vulnerabilities */
+        get: operations["scan_vulnerabilities_api_scans__scan__vulnerabilities_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vulnerabilities": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** All Vulnerabilities */
+        get: operations["all_vulnerabilities_api_vulnerabilities_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/scans/{scan}/sbom": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Scan Sbom */
+        get: operations["scan_sbom_api_scans__scan__sbom_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/scan-requests/{request_id}/events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Scan Request Events */
+        get: operations["scan_request_events_api_scan_requests__request_id__events_get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -262,6 +626,144 @@ export interface components {
              * @default false
              */
             tests_pass: boolean;
+        };
+        /** ChangeAction */
+        ChangeAction: {
+            /** Kind */
+            kind: string;
+            /** Label */
+            label: string;
+            /** Run Id */
+            run_id?: string | null;
+        };
+        /** ChangeCard */
+        ChangeCard: {
+            /** Event Id */
+            event_id: string;
+            /** Origin */
+            origin: string;
+            /** Source */
+            source: string;
+            /** Source Label */
+            source_label: string;
+            /** Severity */
+            severity: string;
+            /** Title */
+            title: string;
+            quote?: components["schemas"]["ChangeQuote"] | null;
+            /** Impact */
+            impact?: string | null;
+            /** Step */
+            step: number;
+            /**
+             * Step Total
+             * @default 6
+             */
+            step_total: number;
+            /** Step Label */
+            step_label: string;
+            /** Tracker */
+            tracker: string[];
+            /** Run Id */
+            run_id?: string | null;
+            action: components["schemas"]["ChangeAction"];
+            /** Detected At */
+            detected_at: string;
+            /** Repo */
+            repo: string;
+            /** Subject */
+            subject: string;
+            /** From Version */
+            from_version?: string | null;
+            /** To Version */
+            to_version?: string | null;
+        };
+        /** ChangeCounts */
+        ChangeCounts: {
+            /** All */
+            all: number;
+            /** Needs Decision */
+            needs_decision: number;
+            /** Outside */
+            outside: number;
+            /** Inside */
+            inside: number;
+            /** Security */
+            security: number;
+        };
+        /** ChangeFeed */
+        ChangeFeed: {
+            counts: components["schemas"]["ChangeCounts"];
+            /** Cards */
+            cards: components["schemas"]["ChangeCard"][];
+        };
+        /** ChangeQuote */
+        ChangeQuote: {
+            /** Text */
+            text: string;
+            /** Source */
+            source: string;
+            /** Url */
+            url?: string | null;
+            /** Verified */
+            verified: boolean;
+        };
+        /** ChannelOut */
+        ChannelOut: {
+            /** Kind */
+            kind: string;
+            /** Enabled */
+            enabled: boolean;
+            /** Status */
+            status: string;
+            /** Config */
+            config: {
+                [key: string]: unknown;
+            };
+            /** Secret Ref */
+            secret_ref?: string | null;
+            /** Secret Set */
+            secret_set: boolean;
+            /** Last Checked At */
+            last_checked_at?: string | null;
+            /** Last Error */
+            last_error?: string | null;
+        };
+        /** ChannelTestOut */
+        ChannelTestOut: {
+            /** Ok */
+            ok: boolean;
+            /** Detail */
+            detail: string;
+        };
+        /** ChannelUpdate */
+        ChannelUpdate: {
+            /**
+             * Enabled
+             * @default true
+             */
+            enabled: boolean;
+            /**
+             * Config
+             * @default {}
+             */
+            config: {
+                [key: string]: unknown;
+            };
+            /** Secret Ref */
+            secret_ref?: string | null;
+        };
+        /** ChannelsOut */
+        ChannelsOut: {
+            /** Repo */
+            repo: string;
+            /** Repo Id */
+            repo_id: string;
+            /** Channels */
+            channels: components["schemas"]["ChannelOut"][];
+            /** Schedules */
+            schedules: components["schemas"]["ScheduleOut"][];
+            webhook: components["schemas"]["WebhookInfo"];
         };
         /** DecisionAccepted */
         DecisionAccepted: {
@@ -427,6 +929,8 @@ export interface components {
         JobAccepted: {
             /** Job Id */
             job_id: string;
+            /** Scan Request Id */
+            scan_request_id?: string | null;
         };
         /** Overview */
         Overview: {
@@ -452,6 +956,51 @@ export interface components {
             affected_files: components["schemas"]["AffectedFile"][];
             /** Approvals Waiting */
             approvals_waiting: number;
+        };
+        /** RepoCheck */
+        RepoCheck: {
+            /** Provider */
+            provider: string;
+            /** Repo */
+            repo: string;
+            /** Allowed */
+            allowed: boolean;
+            /** Ok */
+            ok: boolean;
+            /** Detail */
+            detail: string;
+            /**
+             * Branches
+             * @default []
+             */
+            branches: string[];
+        };
+        /** RepoCheckRequest */
+        RepoCheckRequest: {
+            /** Repo Url */
+            repo_url: string;
+        };
+        /** RepoOut */
+        RepoOut: {
+            /** Repo */
+            repo: string;
+            /** Repo Id */
+            repo_id: string;
+            /** Repo Url */
+            repo_url?: string | null;
+            /** Scan Id */
+            scan_id?: string | null;
+        };
+        /** ScanFound */
+        ScanFound: {
+            /** Packages */
+            packages: number;
+            /** Declared */
+            declared: number;
+            /** Imports */
+            imports: number;
+            /** Internal Contracts */
+            internal_contracts: number;
         };
         /** ScanOut */
         ScanOut: {
@@ -482,6 +1031,136 @@ export interface components {
             repo_url: string;
             /** Only */
             only?: string[] | null;
+            /** Branch */
+            branch?: string | null;
+            scope?: components["schemas"]["ScanScope"] | null;
+        };
+        /** ScanRequestOut */
+        ScanRequestOut: {
+            /** Id */
+            id: string;
+            /** Repo */
+            repo: string;
+            /** Repo Url */
+            repo_url: string;
+            /** Branch */
+            branch?: string | null;
+            /** Status */
+            status: string;
+            /** Scan Id */
+            scan_id?: string | null;
+            /** Error */
+            error?: string | null;
+            scope: components["schemas"]["ScanScope"];
+            /** Stages */
+            stages: components["schemas"]["ScanStage"][];
+            found: components["schemas"]["ScanFound"];
+            /** Steps Done */
+            steps_done: number;
+            /** Steps Total */
+            steps_total: number;
+        };
+        /**
+         * ScanScope
+         * @description What a scan should look for. Everything is on by default, which is what the CLI and the webhook do.
+         */
+        ScanScope: {
+            /**
+             * Vulnerabilities
+             * @default true
+             */
+            vulnerabilities: boolean;
+            /**
+             * Breaking Changes
+             * @default true
+             */
+            breaking_changes: boolean;
+            /**
+             * Internal Contracts
+             * @default true
+             */
+            internal_contracts: boolean;
+            /**
+             * Production Evidence
+             * @default true
+             */
+            production_evidence: boolean;
+            /**
+             * Fixes
+             * @default true
+             */
+            fixes: boolean;
+            /**
+             * Sbom
+             * @default true
+             */
+            sbom: boolean;
+        };
+        /** ScanStage */
+        ScanStage: {
+            /** Stage */
+            stage: string;
+            /** Status */
+            status: string;
+            /** Summary */
+            summary?: string | null;
+        };
+        /** ScanSummary */
+        ScanSummary: {
+            /** Scan Id */
+            scan_id: string;
+            /** Repo */
+            repo: string;
+            /** Repo Url */
+            repo_url?: string | null;
+            /** Branch */
+            branch?: string | null;
+            /** Commit Sha */
+            commit_sha?: string | null;
+            /** Scanned At */
+            scanned_at?: string | null;
+            /** Packages */
+            packages: number;
+            /** Declared */
+            declared: number;
+            /** Advisories */
+            advisories: number;
+            /** Advisories Apply */
+            advisories_apply: number;
+            /** Needs Decision */
+            needs_decision: number;
+            /** Internal Contracts */
+            internal_contracts: number;
+            /** Sources To Confirm */
+            sources_to_confirm: number;
+            /** Has Sbom */
+            has_sbom: boolean;
+            /** Scan Request Id */
+            scan_request_id?: string | null;
+        };
+        /** ScheduleOut */
+        ScheduleOut: {
+            /** Id */
+            id: string;
+            /** Source */
+            source: string;
+            /** Repo */
+            repo: string;
+            /** Interval Minutes */
+            interval_minutes: number;
+            /** Enabled */
+            enabled: boolean;
+            /** Last Run At */
+            last_run_at?: string | null;
+            /** Next Run At */
+            next_run_at?: string | null;
+        };
+        /** ScheduleUpdate */
+        ScheduleUpdate: {
+            /** Interval Minutes */
+            interval_minutes?: number | null;
+            /** Enabled */
+            enabled?: boolean | null;
         };
         /** SecurityItem */
         SecurityItem: {
@@ -496,6 +1175,25 @@ export interface components {
             /** Fixed In */
             fixed_in?: string | null;
         };
+        /** SourceConfirm */
+        SourceConfirm: {
+            /**
+             * Ecosystem
+             * @default npm
+             */
+            ecosystem: string;
+            /** Name */
+            name: string;
+        };
+        /** SourceList */
+        SourceList: {
+            /** Scan Id */
+            scan_id: string;
+            /** To Confirm */
+            to_confirm: number;
+            /** Rows */
+            rows: components["schemas"]["SourceRow"][];
+        };
         /** SourceOverride */
         SourceOverride: {
             /**
@@ -505,12 +1203,39 @@ export interface components {
             ecosystem: string;
             /** Name */
             name: string;
+            /**
+             * Kind
+             * @default repository
+             * @enum {string}
+             */
+            kind: "repository" | "changelog_url" | "confluence" | "slack";
             /** Owner */
-            owner: string;
+            owner?: string | null;
             /** Repo */
-            repo: string;
+            repo?: string | null;
+            /** Url */
+            url?: string | null;
             /** Directory */
             directory?: string | null;
+        };
+        /** SourceRow */
+        SourceRow: {
+            /** Ecosystem */
+            ecosystem: string;
+            /** Name */
+            name: string;
+            /** Kind */
+            kind: string;
+            /** Source */
+            source?: string | null;
+            /** Detail */
+            detail?: string | null;
+            /** Found By */
+            found_by: string;
+            /** Status */
+            status: string;
+            /** Note */
+            note?: string | null;
         };
         /** UpgradeDetail */
         UpgradeDetail: {
@@ -610,6 +1335,64 @@ export interface components {
             /** Context */
             ctx?: Record<string, never>;
         };
+        /** Vulnerability */
+        Vulnerability: {
+            /** Vuln Id */
+            vuln_id: string;
+            /** Aliases */
+            aliases: string[];
+            /** Severity */
+            severity: string;
+            /** Summary */
+            summary?: string | null;
+            /** Name */
+            name: string;
+            /** Version */
+            version: string;
+            /** Path */
+            path: string[];
+            /** Scope */
+            scope: string;
+            /** Direct */
+            direct: boolean;
+            /** Fixed In */
+            fixed_in?: string | null;
+            /** Verdict */
+            verdict: string;
+            /** Reason */
+            reason: string;
+            /** Sources */
+            sources: string[];
+            /** Url */
+            url?: string | null;
+            /** Repo */
+            repo?: string | null;
+            /** Scan Id */
+            scan_id?: string | null;
+        };
+        /** VulnerabilityCounts */
+        VulnerabilityCounts: {
+            /** All */
+            all: number;
+            /** Applies */
+            applies: number;
+            /** Runtime */
+            runtime: number;
+            /** Development */
+            development: number;
+            /** Transitive */
+            transitive: number;
+        };
+        /** VulnerabilityList */
+        VulnerabilityList: {
+            /** Scan Id */
+            scan_id?: string | null;
+            /** Packages */
+            packages: number;
+            counts: components["schemas"]["VulnerabilityCounts"];
+            /** Rows */
+            rows: components["schemas"]["Vulnerability"][];
+        };
         /** WaitingItem */
         WaitingItem: {
             /** Id */
@@ -653,6 +1436,17 @@ export interface components {
              * @default
              */
             detail: string;
+        };
+        /** WebhookInfo */
+        WebhookInfo: {
+            /** Url */
+            url?: string | null;
+            /** Public Url Set */
+            public_url_set: boolean;
+            /** Secret Set */
+            secret_set: boolean;
+            /** Token Set */
+            token_set: boolean;
         };
     };
     responses: never;
@@ -706,7 +1500,10 @@ export interface operations {
     start_scan_api_scans_post: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                authorization?: string | null;
+                "x-pilot-user"?: string | null;
+            };
             path?: never;
             cookie?: never;
         };
@@ -925,10 +1722,114 @@ export interface operations {
             };
         };
     };
-    decide_api_upgrades__run_id__decision_post: {
+    check_repository_api_scans_check_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "x-pilot-user"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RepoCheckRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RepoCheck"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    scan_request_api_scan_requests__request_id__get: {
         parameters: {
             query?: never;
             header?: never;
+            path: {
+                request_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ScanRequestOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    cancel_scan_api_scan_requests__request_id__cancel_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "x-pilot-user"?: string | null;
+            };
+            path: {
+                request_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ScanRequestOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    decide_api_upgrades__run_id__decision_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "x-pilot-user"?: string | null;
+            };
             path: {
                 run_id: string;
             };
@@ -963,7 +1864,10 @@ export interface operations {
     feedback_api_feedback_post: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                authorization?: string | null;
+                "x-pilot-user"?: string | null;
+            };
             path?: never;
             cookie?: never;
         };
@@ -996,7 +1900,10 @@ export interface operations {
     source_override_api_sources_override_post: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                authorization?: string | null;
+                "x-pilot-user"?: string | null;
+            };
             path?: never;
             cookie?: never;
         };
@@ -1008,6 +1915,570 @@ export interface operations {
         responses: {
             /** @description Successful Response */
             201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    source_confirm_api_sources_confirm_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "x-pilot-user"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SourceConfirm"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    scan_sources_api_scans__scan__sources_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                scan: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SourceList"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    github_webhook_api_webhooks_github_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-github-event"?: string | null;
+                "x-hub-signature-256"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    changes_api_changes_get: {
+        parameters: {
+            query?: {
+                repo?: string | null;
+                origin?: string | null;
+                source?: string | null;
+                status?: string | null;
+                filter?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChangeFeed"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    change_api_changes__event_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                event_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChangeCard"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    repos_api_repos_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RepoOut"][];
+                };
+            };
+        };
+    };
+    repo_channels_api_repos__repo_id__channels_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                repo_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChannelsOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    save_channel_api_repos__repo_id__channels__kind__put: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "x-pilot-user"?: string | null;
+            };
+            path: {
+                repo_id: string;
+                kind: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ChannelUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChannelsOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    test_channel_api_repos__repo_id__channels__kind__test_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "x-pilot-user"?: string | null;
+            };
+            path: {
+                repo_id: string;
+                kind: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChannelTestOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    install_webhook_api_repos__repo_id__webhook_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "x-pilot-user"?: string | null;
+            };
+            path: {
+                repo_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChannelTestOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    publish_confluence_api_repos__repo_id__publish_confluence_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "x-pilot-user"?: string | null;
+            };
+            path: {
+                repo_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChannelTestOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    schedules_api_schedules_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ScheduleOut"][];
+                };
+            };
+        };
+    };
+    update_schedule_api_schedules__schedule_id__put: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "x-pilot-user"?: string | null;
+            };
+            path: {
+                schedule_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ScheduleUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ScheduleOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    scan_summary_api_scans__scan__summary_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                scan: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ScanSummary"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    scan_vulnerabilities_api_scans__scan__vulnerabilities_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                scan: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VulnerabilityList"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    all_vulnerabilities_api_vulnerabilities_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VulnerabilityList"];
+                };
+            };
+        };
+    };
+    scan_sbom_api_scans__scan__sbom_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                scan: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    scan_request_events_api_scan_requests__request_id__events_get: {
+        parameters: {
+            query?: {
+                after?: number | null;
+            };
+            header?: {
+                "last-event-id"?: string | null;
+            };
+            path: {
+                request_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };

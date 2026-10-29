@@ -104,7 +104,17 @@
     },
     {
       "source": "file:app.js",
+      "target": "file:routes/orders.js",
+      "kind": "imports"
+    },
+    {
+      "source": "file:app.js",
       "target": "file:routes/invoices.js",
+      "kind": "imports"
+    },
+    {
+      "source": "file:app.js",
+      "target": "file:routes/admin.js",
       "kind": "imports"
     },
     {
@@ -115,16 +125,6 @@
     {
       "source": "file:app.js",
       "target": "file:routes/fallback.js",
-      "kind": "imports"
-    },
-    {
-      "source": "file:app.js",
-      "target": "file:routes/orders.js",
-      "kind": "imports"
-    },
-    {
-      "source": "file:app.js",
-      "target": "file:routes/admin.js",
       "kind": "imports"
     },
     {

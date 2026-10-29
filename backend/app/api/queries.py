@@ -682,7 +682,7 @@ def scan_summary(conn: sqlite3.Connection, scan_id: str) -> dict:
         "advisories_apply": sum(v["verdict"] == "applies" for v in vulns),
         "needs_decision": needs,
         "internal_contracts": 0,
-        "sources_to_confirm": 0,
+        "sources_to_confirm": list_sources(conn, scan_id)["to_confirm"],
         "has_sbom": (Path(get_settings().sbom_dir) / f"{scan_id}.cdx.json").is_file(),
         "scan_request_id": request["id"] if request else None,
     }
@@ -777,3 +777,157 @@ def channels_view(conn: sqlite3.Connection, repo_id: str, settings) -> dict:
                     "public_url_set": bool(settings.pilot_public_url),
                     "secret_set": bool(settings.github_webhook_secret), "token_set": bool(settings.github_token)},
     }
+
+
+# --- the update feed (S7) ---------------------------------------------------------------------------------------------
+
+SOURCE_LABELS = {
+    "registry": "New release", "osv": "Security advisory", "dependabot_alert": "Dependabot alert",
+    "bot_pr": "Bot pull request",
+    "openapi": "OpenAPI", "asyncapi": "AsyncAPI", "protobuf": "protobuf", "schema_registry": "Schema registry",
+    "confluence": "Confluence", "slack": "Slack", "push": "Push to the default branch", "changelog": "Changelog",
+    "relationships": "Relationships file", "manual": "Added by a person",
+}
+TRACKER_STEPS = 6
+
+
+def _tracker(step: int, state: str) -> list[str]:
+    """Six segments: done before `step`, then `state` (now | stop | done) at it, then todo."""
+    out = ["done"] * (step - 1) + [state] + ["todo"] * (TRACKER_STEPS - step)
+    return out[:TRACKER_STEPS]
+
+
+def _run_progress(conn: sqlite3.Connection, run) -> tuple[int, str, str]:
+    """(step 1..6, label, state) from the run's status and what it has produced."""
+    if run is None:
+        return 1, "detected", "now"
+    status = run["status"]
+    has_findings = bool(run_store.load_findings(conn, run["id"], include_rejected=False))
+    has_plan = run_store.load_plan(conn, run["id"]) is not None
+    if status == "resolved":
+        return 6, "done, resolved", "done"
+    if status in ("pr_opened", "issue_opened"):
+        return 6, "pull request opened" if status == "pr_opened" else "issue opened", "now"
+    if status == "needs_engineer":
+        return 4, "needs an engineer", "stop"
+    if status in ("awaiting_approval", "approved"):
+        return 5, "awaiting approval" if status == "awaiting_approval" else "approved", "now"
+    if status == "report_only":
+        return (3, "report only", "now") if has_plan else (2, "report only", "now")
+    if status == "rejected":
+        return 5, "rejected", "stop"
+    if status == "failed":
+        return 2, "failed", "stop"
+    if has_plan:
+        return 3, "plan ready", "now"
+    return (2, "impact found", "now") if has_findings else (1, "detected", "now")
+
+
+def _change_card(conn: sqlite3.Connection, event: dict) -> dict:
+    payload = event["payload"]
+    run = run_store.get_run(conn, event["run_id"]) if event["run_id"] else None
+    step, step_label, state = _run_progress(conn, run)
+    if event["status"] == "resolved" or (event["source"] == "push" and run is None):
+        step, step_label, state = 6, "done, resolved", "done"
+    findings = run_store.load_findings(conn, run["id"], include_rejected=False) if run else []
+    files = len({f.file_path for f in findings})
+    subject, from_v, to_v = payload["subject"]["name"], payload["from_version"], payload["to_version"]
+    items = payload.get("items") or []
+    breaking = [i for i in items if i["kind"] in ("breaking", "removal") and i.get("quote")]
+    chosen = (breaking or [i for i in items if i.get("quote")] or [None])[0]
+    vulns = payload.get("vulnerabilities") or []
+
+    if event["source"] in ("osv", "dependabot_alert"):
+        vid = vulns[0]["id"] if vulns else "An advisory"
+        row = conn.execute(
+            "SELECT verdict, reason FROM scan_vulns WHERE scan_id = ? AND name = ? AND vuln_id = ? LIMIT 1",
+            (event["scan_id"], subject, vid)).fetchone() if event["scan_id"] else None
+        phrase = {"applies": "reaches your code", "does_not_apply": "does not reach your code",
+                  "not_shipped": "is only in development tooling",
+                  "undetermined": "could not be checked against your code"}
+        title = f"{vid} in {subject} {phrase.get(row['verdict'], 'was reported') if row else 'was reported'}"
+        impact = (f"{'Applies: ' if row and row['verdict'] == 'applies' else ''}{row['reason']}" if row else None)
+        if to_v:
+            impact = f"{impact or ''} Fixed in {to_v}.".strip()
+    elif event["source"] == "push":
+        title = f"{subject} upgrade merged, the change is closed"
+        impact = "The re-scan after the push found the new version, so Pilot marked the upgrade resolved."
+    else:
+        if findings:
+            title = f"{subject} {from_v} \u2192 {to_v} changes APIs your code uses"
+            impact = f"{len(findings)} lines in {files} files use APIs that change."
+        elif breaking:
+            title = f"{subject} {from_v} \u2192 {to_v} has breaking changes"
+            impact = "Pilot has not found lines of your code that use them yet."
+        else:
+            title = f"{subject} {from_v} \u2192 {to_v} is available"
+            impact = None
+        if run is not None and run["status"] == "needs_engineer":
+            impact = (impact or "") + " Pilot could not write a fix that passes the tests."
+    if run is not None and event["source"] == "registry":
+        latest = (run_store.load_patches(conn, run["id"]) or [None])[-1]
+        validation = (latest or {}).get("validation") or {}
+        if validation.get("passed"):
+            impact = (impact or "") + " Tests fail on the new version as the code stands and pass with Pilot's fix."
+
+    action = {"kind": "none", "label": "No action needed", "run_id": run["id"] if run else None}
+    if run is not None:
+        status = run["status"]
+        if status == "awaiting_approval":
+            action = {"kind": "approve", "label": "Review and approve", "run_id": run["id"]}
+        elif status in ("pr_opened",):
+            action = {"kind": "pull_request", "label": "View the pull request", "run_id": run["id"]}
+        elif status in ("needs_engineer", "issue_opened"):
+            action = {"kind": "issue", "label": "Open the issue", "run_id": run["id"]}
+        else:
+            label = "Open the plan" if step >= 3 else "See affected code"
+            action = {"kind": "plan", "label": label, "run_id": run["id"]}
+    if event["source"] == "push":
+        action = {"kind": "pull_request", "label": "View the pull request", "run_id": event["run_id"]}
+    return {
+        "event_id": event["event_id"], "origin": event["origin"], "source": event["source"],
+        "source_label": SOURCE_LABELS.get(event["source"], event["source"]),
+        "severity": (run["risk_level"] if run is not None and event["source"] == "registry" and run["risk_level"]
+                     else payload.get("severity_hint") or "none"),  # the run's plan looks at the code: it wins
+        "title": title,
+        "quote": ({"text": chosen["quote"], "source": ("Quoted from the release notes, checked word for word"
+                                                      if chosen["verified"] and event["source"] == "registry"
+                                                      else "From the advisory"),
+                   "url": chosen.get("evidence_url"), "verified": chosen["verified"]} if chosen else None),
+        "impact": impact, "step": step, "step_label": step_label, "tracker": _tracker(step, state),
+        "run_id": run["id"] if run else None, "action": action, "detected_at": event["detected_at"],
+        "repo": _repo_label(event["repo"]), "subject": subject, "from_version": from_v, "to_version": to_v,
+    }
+
+
+def list_changes(conn: sqlite3.Connection, *, repo: str | None = None, origin: str | None = None,
+                 source: str | None = None, status: str | None = None, filter: str | None = None) -> dict:
+    """The feed: newest first, with counts for the filter chips. `filter` is one of the chip names."""
+    from app.changes import store as change_store
+
+    cards = [_change_card(conn, e) for e in change_store.list_events(conn, repo=repo, origin=origin, source=source,
+                                                                      status=status)]
+    counts = {
+        "all": len(cards), "needs_decision": sum(c["action"]["kind"] == "approve" for c in cards),
+        "outside": sum(c["origin"] == "external" for c in cards),
+        "inside": sum(c["origin"] == "internal" for c in cards),
+        "security": sum(c["source"] in ("osv", "dependabot_alert") for c in cards),
+    }
+    if filter == "needs_decision":
+        cards = [c for c in cards if c["action"]["kind"] == "approve"]
+    elif filter == "security":
+        cards = [c for c in cards if c["source"] in ("osv", "dependabot_alert")]
+    elif filter in ("outside", "inside"):
+        cards = [c for c in cards if c["origin"] == ("external" if filter == "outside" else "internal")]
+    cards.sort(key=lambda c: ({"critical": 0, "high": 1, "medium": 2, "low": 3, "none": 4}.get(c["severity"], 4),
+                              c["step"] == 6, c["detected_at"]), reverse=False)
+    return {"counts": counts, "cards": cards}
+
+
+def get_change(conn: sqlite3.Connection, event_id: str) -> dict:
+    from app.changes import store as change_store
+
+    event = change_store.get_event(conn, event_id)
+    if event is None:
+        raise NotFound(f"change {event_id}")
+    return _change_card(conn, event)

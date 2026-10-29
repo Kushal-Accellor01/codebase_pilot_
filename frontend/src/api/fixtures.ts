@@ -6,8 +6,16 @@ import overview from "./fixtures/overview.json";
 import scans from "./fixtures/scans.json";
 import upgrade from "./fixtures/upgrade.json";
 import upgrades from "./fixtures/upgrades.json";
+import channels from "./fixtures/channels.json";
+import changes from "./fixtures/changes.json";
+import repos from "./fixtures/repos.json";
+import scanRequest from "./fixtures/scan_request.json";
+import sources from "./fixtures/sources.json";
+import summary from "./fixtures/summary.json";
+import vulnerabilities from "./fixtures/vulnerabilities.json";
 import type {
-  DependencyEvent, DependencyRow, Graph, Overview, RunEvent, Scan, UpgradeDetail, UpgradeSummary,
+  ChangeFeed, ChannelsView, DependencyEvent, DependencyRow, Graph, Overview, RepoOut, RunEvent, Scan, ScanRequestOut,
+  ScanSummary, SourceList, UpgradeDetail, UpgradeSummary, VulnList,
 } from "./models";
 
 /** Real API responses captured from the offline golden path (`npm run gen:assets`). */
@@ -20,4 +28,11 @@ export const fixtures = {
   upgrade: upgrade as unknown as UpgradeDetail,
   graph: graph as unknown as Graph,
   events: events as unknown as RunEvent[],
+  scanRequest: scanRequest as unknown as ScanRequestOut,
+  repos: repos as unknown as RepoOut[],
+  summary: summary as unknown as ScanSummary,
+  vulnerabilities: vulnerabilities as unknown as VulnList,
+  sources: sources as unknown as SourceList,
+  channels: channels as unknown as ChannelsView,
+  changes: changes as unknown as ChangeFeed,
 };

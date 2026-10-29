@@ -17,6 +17,7 @@ from dataclasses import dataclass, field
 
 from app import notifications
 from app.actions.repo_actions import run_repo_actions
+from app.changes import feed
 from app.core import db as core_db
 from app.core import jobs
 from app.core.config import Settings, get_settings
@@ -123,8 +124,13 @@ async def _dependency_updates(conn, job: jobs.Job, db_path: str, settings: Setti
     pr_states = None
     if settings.github_token and services.http is not None:
         pr_states = await push_tracker.fetch_pr_states(conn, GitHubClient(services.http))
-    push_tracker.close_resolved_runs(conn, scan_id, pr_states)
+    closed = push_tracker.close_resolved_runs(conn, scan_id, pr_states)
     queued = runner.enqueue_runs_for_scan(conn, scan_id, only=payload.get("only"))
+    try:  # the update feed must never fail a scan
+        feed.record_closures(conn, closed)
+        feed.record_scan_changes(conn, scan_id)
+    except Exception:
+        logger.exception("could not record change events", extra={"scan_id": scan_id})
     if queued:
         stages("impact", "running", f"{len(queued)} upgrade{'s' if len(queued) != 1 else ''} are being analysed")
     scan_pipeline.finish_if_done(conn, scan_id)

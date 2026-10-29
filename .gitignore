@@ -27,3 +27,7 @@ frontend/test-results/
 frontend/playwright-report/
 *.tsbuildinfo
 frontend/screenshots/
+
+# CycloneDX files written by scans
+backend/sbom/
+sbom/

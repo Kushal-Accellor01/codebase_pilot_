@@ -5,6 +5,12 @@ from pathlib import Path
 
 import pytest
 
+@pytest.fixture(autouse=True)
+def _sbom_dir(tmp_path_factory, monkeypatch):
+    """Scans write a CycloneDX file; tests must never put them in the repository."""
+    monkeypatch.setenv("SBOM_DIR", str(tmp_path_factory.mktemp("sbom")))
+
+
 REPO_ROOT = Path(__file__).resolve().parents[2]
 SANDBOX = REPO_ROOT / "pilot-sandbox-shop"
 

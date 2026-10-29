@@ -3,6 +3,13 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <script>
+      // Apply the saved theme before first paint so there is no flash. Storage can be blocked: ignore that.
+      try {
+        var saved = localStorage.getItem("pilotTheme");
+        if (saved === "light" || saved === "dark") document.documentElement.setAttribute("data-theme", saved);
+      } catch (e) {}
+    </script>
     <title>Codebase Pilot dashboard</title>
   </head>
   <body>

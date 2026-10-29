@@ -58,6 +58,45 @@ function Rail() {
   );
 }
 
+type Theme = "system" | "light" | "dark";
+
+function storedTheme(): Theme {
+  try {
+    const value = localStorage.getItem("pilotTheme");
+    return value === "light" || value === "dark" ? value : "system";
+  } catch {
+    return "system";
+  }
+}
+
+export function applyTheme(theme: Theme): void {
+  if (theme === "system") document.documentElement.removeAttribute("data-theme");
+  else document.documentElement.setAttribute("data-theme", theme);
+  try {
+    if (theme === "system") localStorage.removeItem("pilotTheme");
+    else localStorage.setItem("pilotTheme", theme);
+  } catch {
+    /* storage blocked: the choice lasts until the page closes */
+  }
+}
+
+function ThemeSwitch() {
+  const [theme, setTheme] = useState<Theme>(storedTheme);
+  useEffect(() => { applyTheme(theme); }, [theme]);
+  return (
+    <div role="group" aria-label="Colour theme" style={{ display: "inline-flex", gap: 4 }}>
+      {(["system", "light", "dark"] as const).map((value) => (
+        <button
+          key={value} type="button" className="btn btn-sm" aria-pressed={theme === value}
+          style={theme === value ? { borderWidth: 2, fontWeight: 700 } : undefined} onClick={() => setTheme(value)}
+        >
+          {value === "system" ? "System" : value === "light" ? "Light" : "Dark"}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 function TopBar() {
   const scans = useScans().data;
   const scan = scans?.find((s) => s.has_nodes);
@@ -82,7 +121,8 @@ function TopBar() {
           </span>
         ) : null}
       </div>
-      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+        <ThemeSwitch />
         <button className="btn" onClick={() => scan?.repo_url && start.mutate(scan.repo_url)} disabled={!scan?.repo_url || start.isPending}>
           Scan now
         </button>
@@ -101,9 +141,10 @@ export function Shell() {
   }, [location.pathname]);
   return (
     <Toaster>
+      <a className="skip" href="#page" onClick={(e) => { e.preventDefault(); page.current?.focus(); }}>Skip to the page</a>
       <div className="shell">
         <Rail />
-        <main>
+        <main id="main">
           <TopBar />
           <div className="page" id="page" tabIndex={-1} ref={page}>
             <Outlet />

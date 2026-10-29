@@ -55,11 +55,12 @@ export function Loading({ what = "page" }: { what?: string }) {
   );
 }
 
-export function ErrorBox({ error }: { error: unknown }) {
+export function ErrorBox({ error, onRetry }: { error: unknown; onRetry?: () => void }) {
   const message = error instanceof Error ? error.message : "Something went wrong.";
   return (
     <div className="error-box" role="alert">
       <b>Could not load this.</b> {message}
+      {onRetry ? <> <button type="button" className="btn btn-sm" onClick={onRetry}>Try again</button></> : null}
     </div>
   );
 }
@@ -77,12 +78,12 @@ export function Empty({ title, children }: { title: string; children?: ReactNode
 export function Async<T>({
   query, what, children,
 }: {
-  query: { isLoading: boolean; isError: boolean; error: unknown; data: T | undefined };
+  query: { isLoading: boolean; isError: boolean; error: unknown; data: T | undefined; refetch?: () => unknown };
   what?: string;
   children: (data: T) => ReactNode;
 }) {
   if (query.isLoading) return <Loading what={what} />;
-  if (query.isError) return <ErrorBox error={query.error} />;
+  if (query.isError) return <ErrorBox error={query.error} onRetry={query.refetch ? () => { void query.refetch?.(); } : undefined} />;
   if (query.data === undefined) return <Empty title="Nothing here yet" />;
   return <>{children(query.data)}</>;
 }

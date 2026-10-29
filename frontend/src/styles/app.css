@@ -183,3 +183,7 @@ label { display: block; margin: 12px 0 4px; }
 }
 .scanform { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .scanform input { min-width: 280px; padding: 7px 10px; border: 1px solid var(--rule); border-radius: 6px; background: var(--paper, transparent); color: inherit; font: inherit; }
+
+.skip { position: absolute; left: 8px; top: -48px; z-index: 50; background: var(--ink); color: var(--bg); padding: 10px 14px; border-radius: var(--r-md); }
+.skip:focus { top: 8px; }
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }

@@ -43,3 +43,24 @@
     --focus: #6fa6e8;
   }
 }
+
+/* The theme switch sets data-theme explicitly; "system" removes it and the media query decides. */
+:root[data-theme="dark"] {
+  --ink: #e6ecf2;
+  --ink-2: #b3beca;
+  --ink-3: #97a3b1;
+  --bg: #141b23;
+  --panel: #1c252f;
+  --panel-2: #18212a;
+  --rule: #2c3743;
+  --white: #1a232c;
+  --critical: #f0715c;
+  --critical-bg: #3a1f1b;
+  --high: #e7a440;
+  --high-bg: #36291a;
+  --medium: #6fa6e8;
+  --medium-bg: #1c2c40;
+  --low: #67c08c;
+  --low-bg: #1a3226;
+  --focus: #6fa6e8;
+}

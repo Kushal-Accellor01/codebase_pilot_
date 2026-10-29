@@ -142,6 +142,26 @@ describe("Scan progress", () => {
 });
 
 describe("Results and vulnerabilities", () => {
+  it("sorts by package, explains the verdicts and offers a retry when loading fails", async () => {
+    const user = userEvent.setup();
+    renderAt("/vulnerabilities");
+    await user.click(await screen.findByRole("button", { name: /^Package/ }));
+    const names = within(screen.getAllByRole("table")[0]).getAllByRole("row").slice(1).map((r) => within(r).getAllByRole("cell")[2].textContent ?? "");
+    expect(names.length).toBeGreaterThan(1);
+    expect(names.map((n) => n.replace(/Copy.*/, ""))).toEqual([...names.map((n) => n.replace(/Copy.*/, ""))].sort((a, b) => a.localeCompare(b)));
+    expect(screen.getByText("What do the verdicts mean?")).toBeInTheDocument();
+  });
+
+  it("shows the API message with a retry when the results cannot load", async () => {
+    const summary = vi.spyOn(api, "summary").mockRejectedValueOnce(new Error("API returned 500"));
+    const user = userEvent.setup();
+    renderAt("/scans/latest");
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent("API returned 500");
+    await user.click(within(alert).getByRole("button", { name: "Try again" }));
+    expect(summary).toHaveBeenCalledTimes(2);
+  });
+
   it("lists a failed step at the top and retries only that step", async () => {
     const failed = {
       ...fixtures.scanRequest,
@@ -165,7 +185,7 @@ describe("Results and vulnerabilities", () => {
     expect(screen.getByRole("link", { name: "Download SBOM" })).toHaveAttribute("href", expect.stringContaining("/sbom"));
     const table = screen.getByRole("table", { name: "" });
     expect(within(table).getAllByRole("row").length).toBeGreaterThan(2);
-    await user.click(screen.getByRole("button", { name: /Applies to your code/ }));
+    await user.click(screen.getByRole("button", { name: /^Applies to your code \d/ }));
     const rows = within(screen.getAllByRole("table")[0]).getAllByRole("row");
     expect(rows).toHaveLength(2); // header + the one advisory that applies
     expect(rows[1]).toHaveTextContent("Applies");
@@ -301,5 +321,21 @@ describe("Navigation", () => {
       expect(within(nav).getByRole("link", { name })).toBeInTheDocument();
     }
     expect(within(nav).getByRole("link", { name: "Scan a repository" })).toHaveAttribute("aria-current", "page");
+  });
+});
+
+describe("Theme switch", () => {
+  it("applies and remembers the chosen theme, and survives blocked storage", async () => {
+    const user = userEvent.setup();
+    renderAt("/scan");
+    const group = await screen.findByRole("group", { name: "Colour theme" });
+    await user.click(within(group).getByRole("button", { name: "Dark" }));
+    expect(document.documentElement.getAttribute("data-theme")).toBe("dark");
+    expect(localStorage.getItem("pilotTheme")).toBe("dark");
+    vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => { throw new Error("blocked"); });
+    await user.click(within(group).getByRole("button", { name: "Light" }));
+    expect(document.documentElement.getAttribute("data-theme")).toBe("light");
+    await user.click(within(group).getByRole("button", { name: "System" }));
+    expect(document.documentElement.hasAttribute("data-theme")).toBe(false);
   });
 });

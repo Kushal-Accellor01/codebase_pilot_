@@ -114,3 +114,8 @@ tr.ask td { background: var(--high-bg); }
   .item .body { padding: 16px; }
   h1 { font-size: 26px; }
 }
+
+.linkbtn { background: none; border: 0; padding: 0; font: inherit; font-weight: 700; color: inherit; cursor: pointer; min-height: 32px; }
+.linkbtn:hover { text-decoration: underline; }
+table.sticky thead th { position: sticky; top: 0; background: var(--panel); z-index: 1; }
+.legend summary { cursor: pointer; }

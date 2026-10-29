@@ -83,7 +83,9 @@ export default function ScanProgressPage() {
             <div className="progress" role="progressbar" aria-label="Scan progress" aria-valuenow={percent} aria-valuemin={0} aria-valuemax={100}>
               <span style={{ width: `${percent}%` }} />
             </div>
-            <p className="small muted" style={{ margin: "0 0 26px" }}>{scan.steps_done} of {scan.steps_total} steps done</p>
+            <p className="small muted" role="status" aria-live="polite" style={{ margin: "0 0 26px" }}>
+              {scan.steps_done} of {scan.steps_total} steps done{scan.stages.find((s) => s.status === "running") ? `. Now: ${STAGE_TEXT[scan.stages.find((s) => s.status === "running")!.stage]?.title ?? ""}` : ""}
+            </p>
             {scan.error ? <div className="error-box" role="alert" style={{ marginBottom: 20 }}>{scan.error}</div> : null}
             <div className="split wide">
               <ol className="card stages" aria-label="Scan steps">

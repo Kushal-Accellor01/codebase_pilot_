@@ -87,13 +87,32 @@ export function useRunEvents(runId: string, status: string | undefined): RunEven
 
 export const SCAN_DONE = ["complete", "failed", "cancelled"];
 
-/** The scan request and its stages; polls every 1.5 s until the request ends. */
-export const useScanRequest = (id: string) =>
-  useQuery({
+/**
+ * The scan request and its stages. Live: a server-sent event stream (replayed after a reconnect) tells the page to
+ * refetch the moment a stage changes; if the stream cannot open or drops, it polls every 1.5 s instead.
+ */
+export function useScanRequest(id: string) {
+  const client = useQueryClient();
+  const [streaming, setStreaming] = useState(false);
+  const query = useQuery({
     queryKey: ["scan-request", id],
     queryFn: () => api.scanRequest(id),
-    refetchInterval: (query) => (!live || SCAN_DONE.includes(query.state.data?.status ?? "") ? false : 1500),
+    refetchInterval: (q) => (!live || streaming || SCAN_DONE.includes(q.state.data?.status ?? "") ? false : 1500),
   });
+  const status = query.data?.status;
+  const finished = status !== undefined && SCAN_DONE.includes(status);
+  useEffect(() => {
+    if (!live || !id || finished || typeof EventSource === "undefined") return;
+    const source = new EventSource(`/api/scan-requests/${id}/events`);
+    const refresh = () => { void client.invalidateQueries({ queryKey: ["scan-request", id] }); };
+    source.onopen = () => setStreaming(true);
+    source.addEventListener("scan_event", refresh);
+    source.addEventListener("end", () => { source.close(); setStreaming(false); refresh(); });
+    source.onerror = () => { source.close(); setStreaming(false); };
+    return () => { source.close(); setStreaming(false); };
+  }, [id, finished, client]);
+  return query;
+}
 
 export function useRetryStage(requestId: string) {
   const client = useQueryClient();

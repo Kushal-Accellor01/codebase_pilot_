@@ -335,3 +335,62 @@ class SourceList(BaseModel):
     scan_id: str
     to_confirm: int
     rows: list[SourceRow]
+
+
+class RepoOut(BaseModel):
+    repo: str  # label, for example acme/shop
+    repo_id: str  # the key channels and schedules use
+    repo_url: str | None = None
+    scan_id: str | None = None
+
+
+class ChannelOut(BaseModel):
+    kind: str
+    enabled: bool
+    status: str  # not_connected | connected | needs_permission | error
+    config: dict
+    secret_ref: str | None = None
+    secret_set: bool  # whether the server has a value for the named secret (the value itself is never sent)
+    last_checked_at: str | None = None
+    last_error: str | None = None
+
+
+class ChannelUpdate(BaseModel):
+    enabled: bool = True
+    config: dict = {}
+    secret_ref: str | None = Field(default=None, max_length=80)
+
+
+class ScheduleOut(BaseModel):
+    id: str
+    source: str
+    repo: str
+    interval_minutes: int
+    enabled: bool
+    last_run_at: str | None = None
+    next_run_at: str | None = None
+
+
+class ScheduleUpdate(BaseModel):
+    interval_minutes: int | None = Field(default=None, ge=5, le=60 * 24 * 7)
+    enabled: bool | None = None
+
+
+class WebhookInfo(BaseModel):
+    url: str | None = None
+    public_url_set: bool
+    secret_set: bool
+    token_set: bool
+
+
+class ChannelsOut(BaseModel):
+    repo: str
+    repo_id: str
+    channels: list[ChannelOut]
+    schedules: list[ScheduleOut]
+    webhook: WebhookInfo
+
+
+class ChannelTestOut(BaseModel):
+    ok: bool
+    detail: str

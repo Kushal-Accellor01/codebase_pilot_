@@ -22,6 +22,8 @@ from fastapi.responses import FileResponse
 from sse_starlette.sse import EventSourceResponse
 
 from app.api import queries, schemas
+from app.channels import service as channel_service
+from app.channels import store as channel_store
 from app.core import db as core_db
 from app.core import events, jobs, preflight, workspace
 from app.core.config import Settings, get_settings
@@ -33,6 +35,7 @@ from app.scan import pipeline as scan_pipeline
 from app.scan import store as scan_store
 from app.updates import sources
 from app.updates import store as updates_store
+from app.updates.http import HttpClient
 
 logger = logging.getLogger(__name__)
 
@@ -45,7 +48,7 @@ def create_app(
 ) -> FastAPI:
     settings = settings or get_settings()
     db = db_path or settings.codebase_pilot_db
-    state: dict = {"stop": None, "task": None, "rescan": None}
+    state: dict = {"stop": None, "task": None, "rescan": None, "ticks": None}
 
     @asynccontextmanager
     async def lifespan(_app: FastAPI):
@@ -61,13 +64,18 @@ def create_app(
             state["task"] = asyncio.create_task(
                 run_worker(db, services=services, settings=settings, stop=state["stop"], poll_s=0.5)
             )
+        if settings.pilot_embedded_worker:
+            state["stop"] = state["stop"] or asyncio.Event()
+            state["ticks"] = asyncio.create_task(schedule.schedule_loop(db, settings, state["stop"]))
         if settings.pilot_embedded_worker and settings.pilot_rescan_minutes > 0:
             state["stop"] = state["stop"] or asyncio.Event()
             state["rescan"] = asyncio.create_task(schedule.rescan_loop(db, settings, state["stop"]))
         yield
-        if state["rescan"]:
+        if state["stop"]:
             state["stop"].set()
-            await asyncio.wait_for(state["rescan"], timeout=30)
+        for background in (state["rescan"], state["ticks"]):
+            if background:
+                await asyncio.wait_for(background, timeout=30)
         if state["task"]:
             state["stop"].set()
             await asyncio.wait_for(state["task"], timeout=30)
@@ -300,6 +308,70 @@ def create_app(
         finally:
             conn.close()
         return {"status": "queued", "job_id": job}
+
+    # --- channels, schedules, webhook (S6) ---------------------------------------------------------------------
+
+    secret_words = ("token", "secret", "password", "key", "credential")
+
+    @app.get("/api/repos", response_model=list[schemas.RepoOut])
+    def repos(conn=Depends(get_conn)):
+        return queries.list_repos(conn)
+
+    @app.get("/api/repos/{repo_id:path}/channels", response_model=schemas.ChannelsOut)
+    def repo_channels(repo_id: str, conn=Depends(get_conn)):
+        return queries.channels_view(conn, repo_id, settings)
+
+    @app.put("/api/repos/{repo_id:path}/channels/{kind}", response_model=schemas.ChannelsOut)
+    def save_channel(repo_id: str, kind: str, body: schemas.ChannelUpdate, conn=Depends(get_conn),
+                     _who=Depends(writer)):
+        # Config is for non-secret values (channel, recipients, page id). A secret is only ever named, never sent.
+        bad = [k for k in body.config if any(w in k.lower() for w in secret_words)]
+        if bad:
+            raise HTTPException(
+                422, f"config must not hold secrets ({', '.join(bad)}): name a server secret in secret_ref")
+        try:
+            channel_store.save_channel(conn, repo_id, kind, enabled=body.enabled, config=body.config,
+                                       secret_ref=body.secret_ref)
+        except ValueError as exc:
+            raise HTTPException(422, str(exc)) from exc
+        return queries.channels_view(conn, repo_id, settings)
+
+    @app.post("/api/repos/{repo_id:path}/channels/{kind}/test", response_model=schemas.ChannelTestOut)
+    async def test_channel(repo_id: str, kind: str, conn=Depends(get_conn), _who=Depends(writer)):
+        if kind not in channel_store.KINDS:
+            raise HTTPException(404, f"unknown channel {kind}")
+        async with HttpClient() as http:
+            result = await channel_service.test_channel(conn, http, settings, repo_id, kind)
+        return {"ok": result.ok, "detail": result.detail}
+
+    @app.post("/api/repos/{repo_id:path}/webhook", response_model=schemas.ChannelTestOut)
+    async def install_webhook(repo_id: str, conn=Depends(get_conn), _who=Depends(writer)):
+        async with HttpClient() as http:
+            result = await channel_service.install_webhook(conn, http, settings, repo_id)
+        return {"ok": result.ok, "detail": result.detail}
+
+    @app.post("/api/repos/{repo_id:path}/publish/confluence", response_model=schemas.ChannelTestOut)
+    async def publish_confluence(repo_id: str, conn=Depends(get_conn), _who=Depends(writer)):
+        repo = next((r for r in queries.list_repos(conn) if r["repo_id"] == repo_id), None)
+        if repo is None:
+            raise HTTPException(404, f"no scan for {repo_id}")
+        try:
+            async with HttpClient() as http:
+                result = await channel_service.publish_confluence(conn, http, settings, repo_id, repo["scan_id"])
+        except Exception as exc:
+            raise HTTPException(502, f"Confluence refused the page: {type(exc).__name__}") from exc
+        return {"ok": result.ok, "detail": result.detail}
+
+    @app.get("/api/schedules", response_model=list[schemas.ScheduleOut])
+    def schedules(conn=Depends(get_conn)):
+        return channel_store.list_schedules(conn)
+
+    @app.put("/api/schedules/{schedule_id:path}", response_model=schemas.ScheduleOut)
+    def update_schedule(schedule_id: str, body: schemas.ScheduleUpdate, conn=Depends(get_conn), _who=Depends(writer)):
+        if not channel_store.update_schedule(conn, schedule_id, interval_minutes=body.interval_minutes,
+                                             enabled=body.enabled):
+            raise HTTPException(404, f"no schedule {schedule_id}")
+        return channel_store.get_schedule(conn, schedule_id)
 
     # --- scan results (S3) ------------------------------------------------------------------------------------
 

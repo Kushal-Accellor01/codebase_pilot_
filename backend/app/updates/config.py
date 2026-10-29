@@ -13,7 +13,7 @@ USER_AGENT = "codebase-pilot/0.1 (hackathon)"
 REGISTRY_TTL_HOURS = 6
 
 # Max concurrent requests per host.
-HOST_CONCURRENCY = {"npm": 8, "github": 4, "deps_dev": 4, "osv": 4}
+HOST_CONCURRENCY = {"npm": 8, "github": 4, "deps_dev": 4, "osv": 4, "slack": 2, "confluence": 2}
 
 
 def default_db_path() -> str:

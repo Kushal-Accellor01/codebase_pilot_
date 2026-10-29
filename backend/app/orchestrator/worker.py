@@ -7,6 +7,7 @@ Job kinds
   upgrade_run           {run_id}                 run the graph to the approval pause
   resume_upgrade        {run_id, decision, decided_by, comment?}
   repo_actions          {scan_id}                comment on bot PRs, publish the dashboard and team issues (token only)
+  dependabot_alerts     {repo_id}                read open Dependabot alerts into the latest scan (token only)
 """
 import asyncio
 import logging
@@ -14,6 +15,7 @@ import os
 import socket
 from dataclasses import dataclass, field
 
+from app import notifications
 from app.actions.repo_actions import run_repo_actions
 from app.core import db as core_db
 from app.core import jobs
@@ -130,6 +132,18 @@ async def _dependency_updates(conn, job: jobs.Job, db_path: str, settings: Setti
         jobs.enqueue(conn, "repo_actions", {"scan_id": scan_id}, dedupe_key=f"repo_actions:{scan_id}")
 
 
+async def _dependabot_alerts(conn, repo_id: str, settings: Settings, services: Services) -> None:
+    """Scheduled read of the open Dependabot alerts into the repository's latest scan."""
+    from app.changes.sources import dependabot
+    from app.orchestrator.schedule import _latest_scan_for, _repo_url_for
+
+    scan_id = _latest_scan_for(conn, repo_id)
+    if scan_id is None or not settings.github_token or services.http is None or "/" not in repo_id or ":" in repo_id:
+        return  # not a GitHub repository, or nothing to merge the alerts into
+    repo_url = _repo_url_for(conn, repo_id) or repo_id
+    await dependabot.sync_scan(conn, GitHubClient(services.http), repo_id, repo_url, scan_id)
+
+
 async def dispatch(job: jobs.Job, db_path: str, settings: Settings, services: Services) -> None:
     conn = core_db.connect(db_path)
     try:
@@ -146,12 +160,16 @@ async def dispatch(job: jobs.Job, db_path: str, settings: Settings, services: Se
             run = run_store.get_run(conn, payload["run_id"])
             if run is not None:
                 scan_pipeline.finish_if_done(conn, run["scan_id"])
+            await notifications.after_run(conn, services.http, settings, payload["run_id"])
         elif job.kind == "resume_upgrade":
             ctx = runner.make_context(conn, services.http, settings, llm=services.llm, publisher=services.publisher)
             await runner.resume_run(
                 ctx, payload["run_id"], payload["decision"], payload["decided_by"], payload.get("comment"),
                 overrides=services.graph_overrides,
             )
+            await notifications.after_run(conn, services.http, settings, payload["run_id"])
+        elif job.kind == "dependabot_alerts":
+            await _dependabot_alerts(conn, payload["repo_id"], settings, services)
         else:
             raise ValueError(f"unknown job kind {job.kind!r}")
     finally:

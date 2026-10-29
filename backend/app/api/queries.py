@@ -730,3 +730,50 @@ def list_sources(conn: sqlite3.Connection, scan_id: str, overrides: dict[str, di
                      "found_by": FOUND_BY.get(saved["method"], saved["method"]), "status": status, "note": None})
     rows.sort(key=lambda r: ({"not_found": 0, "confirm": 1, "saved": 2, "verified": 3}[r["status"]], r["name"]))
     return {"scan_id": scan_id, "to_confirm": sum(r["status"] in ("confirm", "not_found") for r in rows), "rows": rows}
+
+
+# --- channels and schedules (S6) -------------------------------------------------------------------------------------
+
+
+def list_repos(conn: sqlite3.Connection) -> list[dict]:
+    """Every repository that has been scanned, newest scan first, with the key channels use."""
+    from app.notifications import repo_id
+
+    seen: dict[str, dict] = {}
+    for s in conn.execute("SELECT id FROM scans ORDER BY scanned_at DESC, rowid DESC"):
+        meta = run_store.scan_repo(conn, s["id"])
+        url = meta["repo_url"]
+        if not url or url in seen:
+            continue
+        seen[url] = {"repo": _repo_label(url), "repo_id": repo_id(url), "repo_url": url, "scan_id": s["id"]}
+    return list(seen.values())
+
+
+def channels_view(conn: sqlite3.Connection, repo_id: str, settings) -> dict:
+    from app.channels import store as channel_store
+    from app.connectors.base import secret
+    from app.connectors.github_hooks import hook_url
+
+    stored = channel_store.list_channels(conn, repo_id)
+    default_secret = {"slack": "SLACK_BOT_TOKEN", "email": "SMTP_PASSWORD", "confluence": "CONFLUENCE_API_TOKEN",
+                      "github_webhook": "GITHUB_WEBHOOK_SECRET", "dependabot": "GITHUB_TOKEN",
+                      "schema_registry": "SCHEMA_REGISTRY_AUTH"}
+    channels = []
+    for kind in channel_store.KINDS:
+        row = stored.get(kind)
+        ref = (row or {}).get("secret_ref") or default_secret.get(kind)
+        channels.append({
+            "kind": kind, "enabled": bool(row and row["enabled"]), "status": row["status"] if row else "not_connected",
+            "config": row["config"] if row else {}, "secret_ref": ref,
+            "secret_set": bool(secret(ref)) if ref else True,
+            "last_checked_at": row["last_checked_at"] if row else None,
+            "last_error": row["last_error"] if row else None,
+        })
+    channel_store.ensure_schedules(conn, repo_id)
+    return {
+        "repo": _repo_label(repo_id), "repo_id": repo_id, "channels": channels,
+        "schedules": channel_store.list_schedules(conn, repo_id),
+        "webhook": {"url": hook_url(settings.pilot_public_url) if settings.pilot_public_url else None,
+                    "public_url_set": bool(settings.pilot_public_url),
+                    "secret_set": bool(settings.github_webhook_secret), "token_set": bool(settings.github_token)},
+    }

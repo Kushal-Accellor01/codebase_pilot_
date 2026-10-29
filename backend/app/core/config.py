@@ -55,6 +55,22 @@ class Settings(BaseSettings):
     pilot_repo_actions: bool = False
     # Where CycloneDX bills of materials are written (<scan id>.cdx.json)
     sbom_dir: str = "sbom"
+    # Public address of this server (used in webhook installs and links in notifications)
+    pilot_public_url: str | None = None
+    # Connectors (all optional; the values are server secrets and never leave the server)
+    slack_bot_token: str | None = None
+    slack_webhook_url: str | None = None
+    smtp_host: str | None = None
+    smtp_port: int = 587
+    smtp_user: str | None = None
+    smtp_password: str | None = None
+    smtp_from: str = "codebase-pilot@localhost"
+    confluence_base_url: str | None = None
+    confluence_email: str | None = None
+    confluence_api_token: str | None = None
+    schema_registry_url: str | None = None
+    schema_registry_auth: str | None = None
+    pilot_internal_scopes: str = ""
 
     @field_validator("*", mode="before")
     @classmethod

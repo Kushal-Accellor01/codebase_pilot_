@@ -138,3 +138,28 @@ model is flaky on the day.
 | Scan fails at `git clone` | Private repository without a credential helper; run `git ls-remote <url>` yourself |
 | Notes empty, `GitHub calls are limited to 60 per hour` | No token set |
 | Dashboard buttons answer 401 | `PILOT_API_TOKEN` is set; give the dashboard the token |
+
+## 8. Scan page, vulnerabilities, channels and the update feed
+
+- **Scan a repository** (`/scan`): paste a link, optionally a branch and package filter, choose what to look for
+  (the production-evidence tile starts off), press **Check access first** (runs `git ls-remote` on the server) and then
+  **Start scan**. The progress page shows nine steps; steps that are switched off or not built say why. The results
+  page has the four numbers, the advisories with a verdict each, the dependency lists and a CycloneDX download.
+- **Verdicts** are computed in code: *applies* (a package your code imports leads to it), *does not apply*,
+  *not shipped* (development tooling only) and *undetermined*. Without a symbol index, *applies* means the vulnerable
+  package is on a path your code loads. Advisories come from OSV for every package in the lockfile, plus Dependabot alerts
+  when `GITHUB_TOKEN` has "Dependabot alerts: read".
+- **Source mapping** (`/setup/sources`): confirm what Pilot found, or tell it where an unknown package publishes its
+  changes. Repositories are used today; changelog URL, Confluence page and Slack channel are saved for a later reader.
+- **Channels and schedules** (`/setup/channels`): per repository. Slack and email are the only automatic messages, sent
+  when an upgrade needs a decision and when a pull request is opened, with names and counts and no code. Confluence
+  publishes one report page when you press Publish. The webhook can be installed from here when `PILOT_PUBLIC_URL` and
+  `GITHUB_WEBHOOK_SECRET` are set. Schedules (re-scan, Dependabot alerts, new releases) run inside the API process with
+  `PILOT_EMBEDDED_WORKER=1`.
+- **Updates** (`/updates`): one card per change, whatever its source, with the quote, the impact and a six-step tracker.
+
+Server secrets for the connectors are named in `.env.example` (`SLACK_BOT_TOKEN`, `SMTP_*`, `CONFLUENCE_*`). The browser
+only ever sees whether a named secret is set.
+
+Not in this version: internal contracts (OpenAPI, AsyncAPI, protobuf, topics), the symbol index, reading Confluence and
+Slack as change sources, Bitbucket, other model providers.

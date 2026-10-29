@@ -72,18 +72,29 @@ def check_directories(settings: Settings) -> list[Check]:
 
 def check_settings(settings: Settings) -> list[Check]:
     out = []
-    azure = {
-        "AZURE_OPENAI_ENDPOINT": settings.azure_openai_endpoint,
-        "AZURE_OPENAI_DEPLOYMENT_STRONG": settings.azure_openai_deployment_strong,
-        "AZURE_OPENAI_DEPLOYMENT_FAST": settings.azure_openai_deployment_fast,
-        "AZURE_OPENAI_API_VERSION": settings.azure_openai_api_version,
-    }
+    if settings.llm_provider == "openai_compatible":
+        azure = {
+            "LLM_BASE_URL": settings.llm_base_url,
+            "LLM_API_KEY": settings.llm_api_key,
+            "LLM_MODEL_STRONG": settings.llm_model_strong,
+            "LLM_MODEL_FAST": settings.llm_model_fast,
+        }
+    else:
+        azure = {
+            "AZURE_OPENAI_ENDPOINT": settings.azure_openai_endpoint,
+            "AZURE_OPENAI_DEPLOYMENT_STRONG": settings.azure_openai_deployment_strong,
+            "AZURE_OPENAI_DEPLOYMENT_FAST": settings.azure_openai_deployment_fast,
+            "AZURE_OPENAI_API_VERSION": settings.azure_openai_api_version,
+        }
     missing = [k for k, v in azure.items() if not v]
     if settings.llm_mode == "replay":
         out.append(Check("model settings", OK, "LLM_MODE=replay: answers come from the recorded cache"))
     elif missing:
         out.append(Check("model settings", FAIL, "missing " + ", ".join(missing),
                          "fill them in backend/.env (deployment names, not model names)"))
+    elif settings.llm_provider == "openai_compatible":
+        out.append(Check("model settings", OK, f"{settings.llm_base_url}, models: "
+                         f"{settings.llm_model_strong} / {settings.llm_model_fast}"))
     else:
         auth = "API key" if settings.azure_openai_api_key else "Entra ID (az login / managed identity)"
         out.append(Check("model settings", OK, f"{settings.azure_openai_endpoint}, auth: {auth}"))

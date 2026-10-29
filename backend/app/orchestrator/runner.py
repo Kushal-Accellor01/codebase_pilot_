@@ -30,7 +30,10 @@ class RunConflict(RuntimeError):
 
 def build_llm(conn: sqlite3.Connection, http: HttpClient | None, settings: Settings) -> LLM | None:
     """An LLM only when one can answer: Azure configured, or replay mode (answers come from the cache)."""
-    configured = bool(settings.azure_openai_endpoint and settings.azure_openai_deployment_strong)
+    if settings.llm_provider == "openai_compatible":
+        configured = bool(settings.llm_base_url and settings.llm_api_key and settings.llm_model_strong)
+    else:
+        configured = bool(settings.azure_openai_endpoint and settings.azure_openai_deployment_strong)
     if http is None or not (configured or settings.llm_mode == "replay"):
         return None
     return LLM(conn, http, settings)

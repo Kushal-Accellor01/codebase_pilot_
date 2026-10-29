@@ -27,6 +27,12 @@ class Settings(BaseSettings):
     azure_openai_deployment_fast: str | None = None
     azure_openai_api_key: str | None = None
     llm_mode: Literal["live", "record", "replay"] = "live"
+    # azure_openai (default) or openai_compatible (DeepInfra, OpenAI, local servers); base URL has no /chat/completions
+    llm_provider: Literal["azure_openai", "openai_compatible"] = "azure_openai"
+    llm_base_url: str | None = None
+    llm_api_key: str | None = None
+    llm_model_strong: str | None = None
+    llm_model_fast: str | None = None
 
     exec_allowed_repos: str = ""
     seeded_logs_dir: str | None = None

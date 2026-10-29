@@ -56,6 +56,11 @@ def sha256_json(value) -> str:
 
 
 def deployment_for(settings: Settings, tier: Tier) -> str:
+    if settings.llm_provider == "openai_compatible":
+        name = settings.llm_model_strong if tier == "strong" else settings.llm_model_fast
+        if not name:
+            raise LLMNotConfigured(f"LLM_MODEL_{tier.upper()} is not set")
+        return name
     name = settings.azure_openai_deployment_strong if tier == "strong" else settings.azure_openai_deployment_fast
     if not name:
         raise LLMNotConfigured(f"AZURE_OPENAI_DEPLOYMENT_{tier.upper()} is not set")
@@ -77,6 +82,10 @@ class LLM:
     # -- auth ------------------------------------------------------------------------------------------
 
     def _auth_headers(self) -> dict[str, str]:
+        if self._settings.llm_provider == "openai_compatible":
+            if not self._settings.llm_api_key:
+                raise LLMNotConfigured("LLM_API_KEY is not set")
+            return {"Authorization": f"Bearer {self._settings.llm_api_key}"}
         if self._settings.azure_openai_api_key:  # hackathon
             return {"api-key": self._settings.azure_openai_api_key}
         try:  # production: managed identity / az login
@@ -92,6 +101,10 @@ class LLM:
 
     def _url(self, deployment: str) -> str:
         s = self._settings
+        if s.llm_provider == "openai_compatible":
+            if not s.llm_base_url:
+                raise LLMNotConfigured("LLM_BASE_URL must be set")
+            return f"{s.llm_base_url.rstrip('/')}/chat/completions"
         if not s.azure_openai_endpoint or not s.azure_openai_api_version:
             raise LLMNotConfigured("AZURE_OPENAI_ENDPOINT and AZURE_OPENAI_API_VERSION must be set")
         return (
@@ -101,6 +114,8 @@ class LLM:
 
     async def _complete(self, deployment: str, messages: list[dict]) -> str:
         body: dict = {"messages": messages, "response_format": {"type": "json_object"}}
+        if self._settings.llm_provider == "openai_compatible":
+            body["model"] = deployment  # Azure puts the deployment in the URL; others name the model in the body
         for _ in range(2):
             if self._send_temperature:
                 body["temperature"] = 0
@@ -120,6 +135,8 @@ class LLM:
                     continue
             if resp.status_code in (401, 403):
                 raise LLMError(f"Azure OpenAI rejected the credentials (HTTP {resp.status_code})")
+            if resp.status_code == 402:
+                raise LLMError("The model provider says payment is required (HTTP 402): add funds to the account")
             resp.raise_for_status()
             choice = resp.json()["choices"][0]
             if choice.get("finish_reason") == "content_filter":
@@ -131,7 +148,10 @@ class LLM:
     def model_label(self, tier: Tier = "strong") -> str:
         """Recorded with every analysis for audit."""
         s = self._settings
-        deployment = s.azure_openai_deployment_strong if tier == "strong" else s.azure_openai_deployment_fast
+        if s.llm_provider == "openai_compatible":
+            deployment = s.llm_model_strong if tier == "strong" else s.llm_model_fast
+        else:
+            deployment = s.azure_openai_deployment_strong if tier == "strong" else s.azure_openai_deployment_fast
         return f"{tier}:{deployment or tier}"
 
     # -- public ----------------------------------------------------------------------------------------

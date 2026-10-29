@@ -83,7 +83,7 @@ def test_exit_code_follows_failures(tmp_path, monkeypatch, capsys):
     monkeypatch.setenv("CODEBASE_PILOT_WORKSPACE", str(tmp_path / "ws"))
     monkeypatch.setenv("REPORTS_DIR", str(tmp_path / "rep"))
     monkeypatch.setenv("LLM_MODE", "replay")
-    monkeypatch.delenv("EXEC_ALLOWED_REPOS", raising=False)
+    monkeypatch.setenv("EXEC_ALLOWED_REPOS", "")  # empty beats a local backend/.env
     monkeypatch.delenv("GITHUB_TOKEN", raising=False)
     with respx.mock:
         respx.get("https://registry.npmjs.org/express").respond(200, json={})

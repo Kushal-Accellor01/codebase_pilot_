@@ -97,7 +97,7 @@ npm run gen:types                                      # after any API change (o
 Environment: `backend/.env.example` lists every variable. New in this phase (add to `.env.example`, all
 optional): `SBOM_DIR`, `SLACK_BOT_TOKEN`, `SLACK_WEBHOOK_URL`, `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`,
 `SMTP_PASSWORD`, `SMTP_FROM`, `CONFLUENCE_BASE_URL`, `CONFLUENCE_EMAIL`, `CONFLUENCE_API_TOKEN`,
-`SCHEMA_REGISTRY_URL`, `SCHEMA_REGISTRY_AUTH`, `BITBUCKET_USERNAME`, `BITBUCKET_APP_PASSWORD`, `LLM_PROVIDER`,
+`SCHEMA_REGISTRY_URL`, `SCHEMA_REGISTRY_AUTH`, `LLM_PROVIDER`,
 `LLM_BASE_URL`, `LLM_API_KEY`, `LLM_MODEL_STRONG`, `LLM_MODEL_FAST`, `PILOT_PUBLIC_URL`, `PILOT_INTERNAL_SCOPES`.
 
 ## 1.4 Conventions
@@ -137,83 +137,40 @@ stated · Part 6 board updated · UI tickets: screenshot at 1440 px and 390 px c
 
 ---
 
-# Part 2: Where we are (verified at `47341a6` + patch)
+# Part 2: Where we are (after Phase S, K1 and Phases R/B/U)
 
-**Alignment with the original plan.** The flow in this file is the original plan's loop with wider inputs: the
-same detect → impact → plan → fix → approve → PR → re-scan steps, now fed by internal sources (specs, topics,
-Confluence, Slack, merged code) as well as external ones, with two more scan layers (symbols, meaning),
-connectors and a self-hosted package. Everything in the loop is built for **external npm packages**; the
-largest planned piece still missing is the original plan's second use case, **internal API contract changes**
-(Phase I), followed by Layer 2 (SCIP) and self-hosting with other models and Bitbucket.
+**Alignment with the original plan.** The loop is unchanged: detect, impact, plan, fix, approve, PR, re-scan. Everything
+in it is built for **external npm packages**, now with scan-from-the-UI, SBOM, transitive advisories, connectors and a
+update feed. The largest planned piece still missing is the original plan's second use case, **internal API
+contract changes** (Phase I), then Layer 2 (SCIP), Bitbucket and self-hosting.
 
 ## 2.1 The original loop: done for external npm packages
 
-| Step | Status | Where |
+Scan, knowledge base, dependency list, release notes with verified quotes, impact (scope, patterns, runtime warnings,
+failing tests), plan, fix (3 attempts, rule-checked edits), approval (LangGraph interrupt, UI, CLI), PR or issue (GitHub
+with a local fallback), push webhook and re-scan that closes the loop: all **Done** (see `docs/LIVE.md`).
+
+## 2.2 Your flow, item by item
+
+| Item | Status | Where |
 | --- | --- | --- |
-| 1 Scan repo (structure graph) | Done; ingestion patch applied (scans keep their nodes, `DECLARES` has runtime/dev, `IMPORTS` has lines) | `orchestrator/ingest.py` → ingestion modules |
-| 2 Knowledge base | Done (SQLite) | `scans`, `nodes`, `edges`, `scan_meta` |
-| 3 List dependencies | Done for **direct** npm dependencies, lockfile versions | `updates/pipeline.py`, `updates/lockfile.py` |
-| 4 What changed (release notes + LLM, quotes verified) | Done | `updates/{registry,versions,sources,notes,analysis,evidence,risk}.py` |
-| 5 Impact (scope, patterns, runtime warnings, failing tests, logs) | Done | `impact/*`, `telemetry/*` |
-| Plan, fix, test (3 attempts, rule-checked edits) | Done | `planning/*`, `remediation/*` |
-| 6 Approval (LangGraph interrupt, UI, CLI) | Done | `orchestrator/{graph,runner,nodes}.py`, API decision + SSE |
-| 7 PR or issue (GitHub + local fallback) | Done | `actions/*` |
-| 8 Track pushes, close the loop | Done: signed push webhook, scheduled re-scan (off by default), `resolved` status | `api/main.py` webhook, `orchestrator/{schedule,push_tracker}.py` |
-| 9 Update the dependency list | Done on each scan | — |
-| Dashboard | Done: Overview, Dependencies, Dependency detail (source form when unknown), Upgrades, Upgrade detail (7 tabs incl. blast radius), Approvals, scan form in the top bar | `frontend/src` |
-
-Backend: 268 tests pass where `langgraph`/`respx` are unavailable; the full suite needs them (CI has them).
-
-## 2.2 Your flow, item by item: what exists and what is missing
-
-| Your item | Status | Notes | Ticket |
-| --- | --- | --- | --- |
-| **Repo scanning** | | | |
-| GitHub triggers | Partial | Push webhook exists; nothing installs it from the UI | S6 |
-| Initial scans | Done | From CLI and the top-bar form; no scope options, no progress view | S2 |
-| Layer 1 · structural graph (parser) | Done | Ingestion team's parser | — |
-| Layer 2 · symbols and references (SCIP) | **Missing** | Impact uses scope + pattern search instead | J1–J2 |
-| Layer 3 · meaning (static + AI analysis) | Partial | LLM reads release notes; nothing extracts internal dependencies or reads docs | I3, I6 |
-| SBOM | **Missing** | Lockfile read for top-level versions only | S1 |
-| Listing deps · external | Partial | Direct npm only; **transitive packages are never checked for vulnerabilities** | S1 |
-| Listing deps · internal (APIs, Kafka topics, private npm) | **Missing** | Private registry works, but private packages are treated as external | I2–I5 |
-| Saving to database, documentation | Partial | DB yes; Markdown reports; no Confluence page | S6, I7 |
-| **Fetchers** | | | |
-| Custom fetcher (registry, OSV, release notes) | Done | | — |
-| Dependabot fetcher | Partial | Bot PRs detected and commented (G1, opt-in); **alerts API not read**; a bot PR does not start an analysis | S5, I8 |
-| Renovate | Partial | Bot PRs by author; Renovate's own dashboard issue not read | I8 |
-| **Open-source SDK, self-hosted** | | | |
-| Run on your server, your repo, your LLM keys | Partial | Dockerfile, `.env`, preflight; **Azure OpenAI only**; GitHub and local only | K1–K4 |
-| Bitbucket checkout and PRs | **Missing** | | K2 |
-| **Connectors** | | | |
-| Confluence (read changes, publish reports) | **Missing** | | S6 (publish), I6 (read) |
-| Slack (read channel, notify) | **Missing** | | S6 (notify), I6 (read) |
-| Mail | **Missing** | | S6 |
-| **Change detection** | | | |
-| Common interface for every source | **Missing** | `DependencyChangeEvent` is npm-specific | S7, I1 |
-| External: Dependabot, Renovate, third-party fixes | Partial | Registry and OSV yes; Dependabot alerts no | S5 |
-| Internal: Confluence, Slack | **Missing** | | I6 |
-| Internal: code, contracts, docs, changelogs, PR merges | Partial | Push → re-scan → closure yes; contract and changelog extraction no | I2–I4 |
-| Cross-repository imports and package references | **Missing** | One repository per graph | J3 |
-| OpenAPI, protobuf, AsyncAPI specs | **Missing** | Was use case 2 of the original plan (G7) | I2, I4 |
-| Service catalogs, deployment config, injected URLs | **Missing** | | I5 |
-| API clients, HTTP calls, message topics, shared schemas | **Missing** | | I3 |
-| Explicit relationships maintained by the organization | **Missing** | | I5 |
-| **Impact analysis** with common input and structured output | Partial | Works for packages; input and output are package-shaped | I1 |
-| **Insight and report**, schedule a job for the action | Partial | Plan + report + jobs; no digest, no per-severity action job for internal changes | I7 |
-| **Action**: PR for the fix | Done (GitHub) | Bitbucket missing | K2 |
-| **Schedulers** | | | |
-| Internal: webhooks | Done (GitHub push) | | — |
-| Internal: polling | Partial | Re-scan every N minutes; no per-source polling | S6, I6 |
-| External: Dependabot polling | **Missing** | | S5 |
-| External: new releases | Partial | Only as part of a re-scan | S6 |
-| **UI dashboard** | | | |
-| Scan from a repo link, choose what to look for | Partial | Top-bar input only | S2 |
-| Show vulnerabilities and other details | Partial | Overview "security" box, direct packages only | S3 |
-| 1. Source library mapping | Partial | Form only when a source is unknown, on one dependency's page | S4 |
-| 2. Channels, webhook installation, Confluence link with access | **Missing** | | S6 |
-| 3. Regular update feed: impact, fixes, PRs | **Missing** | Overview and Upgrades list exist | S7 |
-| Visual polish | Partial | Mockup tokens used; two colours fail contrast (`--ink-3`, `--high` on `--high-bg`) | S8 |
+| Scan from the UI (scope, branch, live stages, cancel, retry a failed stage) | Done | S2, B-S6 |
+| Read-only scan of any public https GitHub or Bitbucket repository (no code is run; clone capped) | Done | B-S1 |
+| Layer 1 structure graph | Done | ingestion |
+| SBOM (CycloneDX 1.6, direct and transitive, shortest paths) | Done | S1 |
+| Vulnerabilities for every package with verdicts (OSV and Dependabot alerts) | Done | S1, S5 |
+| Source mapping with confirm and override | Done; Confluence, Slack and changelog sources are saved, not read | S4 |
+| Channels: Slack, email, Confluence publish, GitHub webhook install, schedules | Done; tested against recorded requests only (see Phase V) | S6 |
+| Update feed on the common change event | Done | S7 |
+| LLM providers | Azure OpenAI and any OpenAI-compatible endpoint (DeepInfra, OpenAI, local) | K1 |
+| Dashboard polish: theme switch, skip link, contrast report, retry on errors | Done | S8, U1, U2, U4, U8 |
+| Layer 2 symbols (SCIP) | **Missing** | J1-J2 |
+| Internal dependencies: OpenAPI, AsyncAPI, protobuf, topics, HTTP clients, env URLs, catalog | **Missing** | I1-I5 |
+| Confluence and Slack as change **sources** (read) | **Missing** | I6 |
+| Weekly digest, severity thresholds | **Missing** | I7 |
+| Bot PRs start an analysis; Renovate dashboard | **Missing** | I8 |
+| Cross-repository graph | **Missing** | J3 |
+| Bitbucket checkout and PRs, packaging, SSO | **Missing** | K2-K4 |
 
 ## 2.3 Your question: will Dependabot give us the changes, or do we keep our own list?
 
@@ -416,7 +373,7 @@ are URL-encoded canonical identities.
 | Slack | `conversations.history` (`channels:history`, private: `groups:history`; `oldest` + `cursor`) | `chat.postMessage` (`chat:write`) or an incoming webhook | `SLACK_BOT_TOKEN` or `SLACK_WEBHOOK_URL` | Web API |
 | Email | — | SMTP with STARTTLS | `SMTP_*` | stdlib `smtplib` |
 | Schema registry | subjects, compatibility | — | `SCHEMA_REGISTRY_AUTH` | Confluent REST |
-| Bitbucket Cloud | clone, PRs | PRs | `BITBUCKET_USERNAME` + `BITBUCKET_APP_PASSWORD` | REST 2.0 (K2; verify before coding) |
+| Bitbucket Cloud | clone, PRs | PRs | `BITBUCKET_USERNAME` + `BITBUCKET_APP_PASSWORD` (add to `.env.example` when K2 starts) | REST 2.0 (K2; verify before coding) |
 
 `channels` table: `(repo, kind, enabled, config JSON, secret_ref, status, last_checked_at, last_error)`.
 `config` holds non-secret values only (page id, channel id, recipients, options).
@@ -690,9 +647,22 @@ cd ../frontend && npm run build && npm test
 | S6 Channels, webhook install, notifications, schedules | H | Done (connectors tested against recorded requests only) | P4 |
 | S7 Update feed on the common change event | H | Done | Kushal |
 | S8 Visual pass | H | Done (contrast report in `src/__tests__/contrast.test.ts`; screenshots via `SHOTS=1 npx playwright test e2e/shots.spec.ts`) | P6 |
+| R1 Untrack generated SBOMs, tests use a temp SBOM dir | R | Done | Kushal |
+| R2 Full gate on a real machine | R | Done (see the commit report) | Kushal |
+| R3 Part 2 brought up to date | R | Done | Kushal |
+| B-S1 Read-only scans of public https repositories, clone caps | B | Done (decision taken: allowlist is still required to run code) | Kushal |
+| B-S2 Empty scan form with recent chips | B | Done | Kushal |
+| B-S3 Scan progress over a stream, polling as fallback | B | Done | Kushal |
+| B-S4 Unread sources say "Not read in this version" | B | Done | Kushal |
+| B-S5 No-model notices on plan and fix | B | Done | Kushal |
+| B-S6 Failed stages listed with "Retry this step" | B | Done | Kushal |
+| U1, U2, U3, U4, U8 theme switch, states, scan form, advisory table, accessibility | U | Done | Kushal |
+| U5, U6, U7 graph legend, channel cards, feed grouping | U | Partly: existing screens kept; not redesigned | — |
+| V1–V6 Live checks against GitHub, Slack, SMTP, Confluence, the model | V | Needs tokens and a public URL; V6 blocked until DeepInfra has funds | — |
 | I1–I8 Internal changes | I | Not started | — |
 | J1–J3 Precision and scale | J | Not started | — |
-| K1–K4 SDK and self-hosting | K | Not started | — |
+| K1 Extra LLM provider (`LLM_PROVIDER=openai_compatible`) | K | Done | Kushal |
+| K2–K4 Bitbucket, packaging, SSO | K | Not started | — |
 | G7 OpenAPI contract changes | — | Superseded by I2 | — |
 
 **Schedule (Thu 29 → Fri 30 Oct).** Thu 13:00: S0, S1 backend, S2 API. Thu 18:00: S2 UI, S3, S4. Thu 22:00:

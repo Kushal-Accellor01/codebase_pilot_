@@ -65,6 +65,9 @@ export function VulnTable({ data, showRepo = false }: { data: VulnList; showRepo
     const key = (r: VulnRow) => (sort === "package" ? 0 : (rank(r) < 0 ? 99 : rank(r)));
     return [...filtered].sort((a, b) => key(a) - key(b) || (sort === "package" ? a.name.localeCompare(b.name) : 0));
   }, [data.rows, active, sort]);
+  if (data.rows.length === 0 && data.packages === 0) {
+    return <Empty title="No packages were checked">This repository has no lockfile (package-lock.json), so Pilot cannot list its packages. Commit a lockfile and scan again.</Empty>;
+  }
   if (data.rows.length === 0) {
     return <Empty title={`No known advisories in ${data.packages} packages`}>Pilot checks every package in the lockfile against OSV, and Dependabot alerts when a token can read them.</Empty>;
   }

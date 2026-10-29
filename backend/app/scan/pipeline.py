@@ -135,6 +135,8 @@ async def run_layers(
             rows = scan_store.list_scan_vulns(conn, scan_id)
             applies = sum(r["verdict"] == "applies" for r in rows)
             total = scan_store.component_counts(conn, scan_id)["total"]
+            if total == 0:
+                return "Nothing to check: the repository has no lockfile, so its packages are unknown" + extra
             if not rows:
                 return f"No known advisories in {total} packages{extra}"
             return f"{len(rows)} advisories in {total} packages, {applies} apply to your code{extra}"

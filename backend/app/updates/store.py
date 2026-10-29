@@ -437,6 +437,21 @@ def load_package_source(
     return source, resolved_at
 
 
+def confirm_package_source(conn: sqlite3.Connection, ecosystem: str, name: str) -> bool:
+    """A person checked the source: verified, and trusted as much as an override. False when nothing resolved."""
+    with conn:
+        cur = conn.execute(
+            """UPDATE package_sources SET verified = 1, confidence = 'high'
+               WHERE ecosystem = ? AND name = ? AND status = 'resolved'""",
+            (ecosystem, name),
+        )
+    return cur.rowcount > 0
+
+
+def list_package_sources(conn: sqlite3.Connection) -> dict[tuple[str, str], sqlite3.Row]:
+    return {(r["ecosystem"], r["name"]): r for r in conn.execute("SELECT * FROM package_sources")}
+
+
 def save_package_source(conn: sqlite3.Connection, ecosystem: str, name: str, source: SourceRepo) -> None:
     with conn:
         conn.execute(

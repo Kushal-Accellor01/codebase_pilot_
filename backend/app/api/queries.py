@@ -686,3 +686,47 @@ def scan_summary(conn: sqlite3.Connection, scan_id: str) -> dict:
         "has_sbom": (Path(get_settings().sbom_dir) / f"{scan_id}.cdx.json").is_file(),
         "scan_request_id": request["id"] if request else None,
     }
+
+
+# --- source mapping (S4) ---------------------------------------------------------------------------------------------
+
+FOUND_BY = {
+    "override": "A person's override", "registry": "Registry metadata", "deps_dev": "deps.dev",
+    "homepage": "Package homepage", "manual": "A person",
+}
+SAVED_NOTE = {
+    "changelog_url": "Saved. Other changelog pages are read in a later release; the repository is used meanwhile.",
+    "confluence": "Saved. Confluence pages are read as a change source in a later release.",
+    "slack": "Saved. Slack channels are read as a change source in a later release.",
+}
+
+
+def list_sources(conn: sqlite3.Connection, scan_id: str, overrides: dict[str, dict] | None = None) -> dict:
+    """Where each dependency of the scan publishes its changes, and whether a person should look at it."""
+    from app.updates import sources as sources_module
+
+    overrides = sources_module.load_overrides() if overrides is None else overrides
+    stored = updates_store.list_package_sources(conn)
+    rows = []
+    for dep in updates_store.list_dependency_updates(conn, scan_id):
+        key = (dep["ecosystem"], dep["name"])
+        kind = f"{dep['ecosystem']} \u00b7 {dep['dependency_type'] or 'unknown'}"
+        override = overrides.get(f"{dep['ecosystem']}/{dep['name']}") or {}
+        saved = stored.get(key)
+        if override.get("kind") in SAVED_NOTE and not (saved and saved["status"] == "resolved"):
+            rows.append({"ecosystem": key[0], "name": key[1], "kind": kind, "source": override.get("url"),
+                         "detail": override["kind"].replace("_", " "), "found_by": FOUND_BY["manual"],
+                         "status": "saved", "note": SAVED_NOTE[override["kind"]]})
+            continue
+        if saved is None or saved["status"] != "resolved" or not saved["owner"]:
+            rows.append({"ecosystem": key[0], "name": key[1], "kind": kind, "source": None, "detail": None,
+                         "found_by": "Not found", "status": "not_found",
+                         "note": "Pilot could not find where this package publishes its changes."})
+            continue
+        status = "verified" if saved["verified"] and saved["confidence"] == "high" else "confirm"
+        detail = "GitHub releases" + (f" and {saved['changelog_path']}" if saved["changelog_path"] else "")
+        rows.append({"ecosystem": key[0], "name": key[1], "kind": kind,
+                     "source": f"github.com/{saved['owner']}/{saved['repo']}", "detail": detail,
+                     "found_by": FOUND_BY.get(saved["method"], saved["method"]), "status": status, "note": None})
+    rows.sort(key=lambda r: ({"not_found": 0, "confirm": 1, "saved": 2, "verified": 3}[r["status"]], r["name"]))
+    return {"scan_id": scan_id, "to_confirm": sum(r["status"] in ("confirm", "not_found") for r in rows), "rows": rows}

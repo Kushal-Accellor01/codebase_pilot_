@@ -237,11 +237,28 @@ def create_app(
 
     @app.post("/api/sources/override", status_code=201)
     def source_override(body: schemas.SourceOverride, conn=Depends(get_conn), _who=Depends(writer)):
-        sources.save_override(
-            sources.overrides_path(), body.ecosystem, body.name, body.owner, body.repo, body.directory
-        )
+        try:
+            sources.save_override(
+                sources.overrides_path(), body.ecosystem, body.name, body.owner, body.repo, body.directory,
+                kind=body.kind, url=body.url,
+            )
+        except ValueError as exc:
+            raise HTTPException(422, str(exc)) from exc
         updates_store.delete_package_source(conn, body.ecosystem, body.name)
         return {"saved": f"{body.ecosystem}/{body.name}", "next": "re-run the dependency update step to use it"}
+
+    @app.post("/api/sources/confirm", status_code=200)
+    def source_confirm(body: schemas.SourceConfirm, conn=Depends(get_conn), _who=Depends(writer)):
+        if not updates_store.confirm_package_source(conn, body.ecosystem, body.name):
+            raise HTTPException(404, f"no resolved source for {body.ecosystem}/{body.name} to confirm")
+        return {"confirmed": f"{body.ecosystem}/{body.name}"}
+
+    @app.get("/api/scans/{scan}/sources", response_model=schemas.SourceList)
+    def scan_sources(scan: str, conn=Depends(get_conn)):
+        try:
+            return queries.list_sources(conn, queries.resolve_scan(conn, scan))
+        except queries.NotFound as exc:
+            raise not_found(exc) from exc
 
     @app.post("/api/webhooks/github", status_code=202)
     async def github_webhook(

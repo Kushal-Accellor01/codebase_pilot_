@@ -308,6 +308,30 @@ class FeedbackSaved(BaseModel):
 class SourceOverride(BaseModel):
     ecosystem: str = "npm"
     name: str = Field(min_length=1)
-    owner: str = Field(min_length=1)
-    repo: str = Field(min_length=1)
+    kind: Literal["repository", "changelog_url", "confluence", "slack"] = "repository"
+    owner: str | None = None
+    repo: str | None = None
+    url: str | None = Field(default=None, max_length=500)
     directory: str | None = None
+
+
+class SourceConfirm(BaseModel):
+    ecosystem: str = "npm"
+    name: str = Field(min_length=1)
+
+
+class SourceRow(BaseModel):
+    ecosystem: str
+    name: str
+    kind: str  # "npm · runtime"
+    source: str | None = None
+    detail: str | None = None
+    found_by: str
+    status: str  # verified | confirm | not_found | saved
+    note: str | None = None
+
+
+class SourceList(BaseModel):
+    scan_id: str
+    to_confirm: int
+    rows: list[SourceRow]

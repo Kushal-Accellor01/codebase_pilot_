@@ -82,6 +82,20 @@ def replace_scan_vulns(conn: sqlite3.Connection, scan_id: str, rows: list[dict])
         )
 
 
+def insert_scan_vuln(conn: sqlite3.Connection, scan_id: str, row: dict) -> None:
+    """Add one advisory row if (scan, advisory, package, version) is not there yet."""
+    with conn:
+        conn.execute(
+            """INSERT OR IGNORE INTO scan_vulns
+                   (scan_id, vuln_id, name, version, purl, scope, direct, path, severity, summary, aliases, fixed_in,
+                    verdict, reason, sources, url)
+               VALUES (:scan_id, :vuln_id, :name, :version, :purl, :scope, :direct, :path, :severity, :summary,
+                       :aliases, :fixed_in, :verdict, :reason, :sources, :url)""",
+            {**row, "scan_id": scan_id, "direct": int(row["direct"]), "path": json.dumps(row["path"]),
+             "aliases": json.dumps(row.get("aliases") or []), "sources": json.dumps(row["sources"])},
+        )
+
+
 def list_scan_vulns(conn: sqlite3.Connection, scan_id: str) -> list[dict]:
     rows = []
     for r in conn.execute("SELECT * FROM scan_vulns WHERE scan_id = ?", (scan_id,)):

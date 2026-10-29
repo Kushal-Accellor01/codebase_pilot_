@@ -64,11 +64,31 @@ def load_overrides(path: Path | None = None) -> dict[str, dict]:
     return data
 
 
-def save_override(path: Path, ecosystem: str, name: str, owner: str, repo: str, directory: str | None = None) -> None:
-    """Add or replace one override (used by the manual-mapping API)."""
+OVERRIDE_KINDS = ("repository", "changelog_url", "confluence", "slack")
+
+
+def save_override(
+    path: Path, ecosystem: str, name: str, owner: str | None = None, repo: str | None = None,
+    directory: str | None = None, *, kind: str = "repository", url: str | None = None,
+) -> None:
+    """Add or replace one override (used by the manual-mapping API).
+
+    `kind` is the source type a person chose: a GitHub repository (the only one the notes fetcher reads today), a
+    changelog URL, a Confluence page or a Slack channel. The last three are recorded for the readers that come later;
+    old files without `kind` are repositories."""
+    if kind not in OVERRIDE_KINDS:
+        raise ValueError(f"unknown source kind {kind!r}")
     data = load_overrides(path)
-    entry = {"owner": owner, "repo": repo}
-    if directory:
+    entry: dict = {}
+    if kind == "repository":
+        if not (owner and repo):
+            raise ValueError("a repository override needs an owner and a repo")
+        entry = {"owner": owner, "repo": repo}
+    else:
+        if not url:
+            raise ValueError(f"a {kind} override needs a url or channel")
+        entry = {"kind": kind, "url": url}
+    if directory and kind == "repository":
         entry["directory"] = directory
     data[f"{ecosystem}/{name}"] = entry
     path.parent.mkdir(parents=True, exist_ok=True)

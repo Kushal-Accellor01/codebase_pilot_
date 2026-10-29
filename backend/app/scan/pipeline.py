@@ -117,17 +117,37 @@ async def run_layers(
         async def vuln_stage() -> str:
             if http is None:
                 raise RuntimeError("no HTTP client available for the advisory lookup")
-            rows = await vulns_module.scan_vulnerabilities(
+            await vulns_module.scan_vulnerabilities(
                 conn, http, scan_id, scan_store.load_components(conn, scan_id) if components_ready else None)
+            extra = await _dependabot(conn, http, settings, scan_id)
+            rows = scan_store.list_scan_vulns(conn, scan_id)
             applies = sum(r["verdict"] == "applies" for r in rows)
             total = scan_store.component_counts(conn, scan_id)["total"]
             if not rows:
-                return f"No known advisories in {total} packages"
-            return f"{len(rows)} advisories in {total} packages, {applies} apply to your code"
+                return f"No known advisories in {total} packages{extra}"
+            return f"{len(rows)} advisories in {total} packages, {applies} apply to your code{extra}"
 
         await stages.guard("vulnerabilities", vuln_stage)
     else:
         stages("vulnerabilities", "skipped", "Not selected for this scan")
+
+
+async def _dependabot(conn: sqlite3.Connection, http: HttpClient, settings: Settings, scan_id: str) -> str:
+    """Add Dependabot's open alerts when a token can read them. Returns a sentence fragment for the stage summary."""
+    import re
+
+    from app.changes.sources import dependabot
+    from app.core.workspace import repo_identity
+    from app.updates.github import GitHubClient
+
+    repo_url = run_store.scan_repo(conn, scan_id)["repo_url"]
+    slug = repo_identity(repo_url)
+    if not settings.github_token or not (slug and re.fullmatch(r"[\w.-]+/[\w.-]+", slug)):
+        return ""
+    result = await dependabot.sync_scan(conn, GitHubClient(http), slug, repo_url or slug, scan_id)
+    if result["status"] == "needs_permission":
+        return " (Dependabot alerts could not be read: see Channels)"
+    return f"; Dependabot reports {result['alerts']} open alert{'s' if result['alerts'] != 1 else ''}"
 
 
 def finish_if_done(conn: sqlite3.Connection, scan_id: str) -> bool:
